@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { AppProviders } from "./providers";
@@ -14,15 +16,21 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let household: HouseholdContextValue = MOCK_HOUSEHOLD;
+  const cookieStore = await cookies();
+  const hasDevSession = cookieStore.get("dev-session")?.value === "1";
 
+  // Dev bypass activo: mostrar mock sin auth real
+  if (hasDevSession) {
+    return <AppProviders household={MOCK_HOUSEHOLD}>{children}</AppProviders>;
+  }
+
+  // Sin dev bypass: requerir sesión real de Supabase
   try {
     const user = await getUser();
     const userHousehold = await getUserHousehold(user.id);
-    if (userHousehold) household = userHousehold;
+    if (!userHousehold) redirect("/onboarding");
+    return <AppProviders household={userHousehold}>{children}</AppProviders>;
   } catch {
-    // Sin sesión activa — se usa el hogar de demo
+    redirect("/auth/login");
   }
-
-  return <AppProviders household={household}>{children}</AppProviders>;
 }
