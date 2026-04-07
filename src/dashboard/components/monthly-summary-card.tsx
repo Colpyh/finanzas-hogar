@@ -7,7 +7,7 @@ type Props = {
 
 export function MonthlySummaryCard({ summary }: Props) {
   return (
-    <div className="rounded-2xl bg-primary p-5 text-primary-foreground shadow-md shadow-primary/25">
+    <div className="rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-500 p-5 text-white shadow-lg shadow-purple-500/30">
       {/* Total grande */}
       <p className="text-sm font-medium opacity-80 mb-1">Total del mes</p>
       <p className="text-4xl font-bold tracking-tight">
