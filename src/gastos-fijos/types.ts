@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const recurrenceDayField = z
-  .number({ invalid_type_error: "Debe ser un número" })
+  .number({ error: "Debe ser un número" })
   .int()
   .min(1, "Mínimo día 1")
   .max(31, "Máximo día 31");

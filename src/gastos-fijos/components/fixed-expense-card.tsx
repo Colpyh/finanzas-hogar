@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PaymentStatusBadge } from "./payment-status-badge";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { toggleFixedExpenseActive } from "@/gastos-fijos/actions";
+import { formatCurrency } from "@/shared/components/currency-display";
+import { CheckCircle2, Clock } from "lucide-react";
 
 type Props = {
   expense: {
@@ -24,46 +24,50 @@ export function FixedExpenseCard({ expense, isPaidThisMonth }: Props) {
 
   return (
     <>
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-0.5">
-              <p className="font-medium">{expense.description}</p>
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            {isPaidThisMonth ? (
+              <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+            ) : (
+              <Clock size={18} className="text-amber-500 shrink-0" />
+            )}
+            <div className="min-w-0">
+              <p className="font-medium text-sm text-foreground truncate">
+                {expense.description}
+              </p>
               {expense.categoryName && (
                 <p className="text-xs text-muted-foreground">{expense.categoryName}</p>
               )}
             </div>
-            <PaymentStatusBadge isPaid={isPaidThisMonth} />
           </div>
-
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-mono">${expense.amount}</span>
+          <div className="text-right shrink-0">
+            <p className="text-sm font-semibold text-foreground">
+              {formatCurrency(parseFloat(expense.amount))}
+            </p>
             {expense.recurrenceDay && (
-              <span className="text-muted-foreground">
-                Vence día {expense.recurrenceDay}
-              </span>
+              <p className="text-xs text-muted-foreground">día {expense.recurrenceDay}</p>
             )}
           </div>
+        </div>
 
-          <div className="flex gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isPaidThisMonth}
-              onClick={() => setDialogOpen(true)}
-              className="flex-1"
-            >
-              {isPaidThisMonth ? "Pagado" : "Marcar pagado"}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={isPaidThisMonth ? "ghost" : "outline"}
+            disabled={isPaidThisMonth}
+            onClick={() => setDialogOpen(true)}
+            className="flex-1"
+          >
+            {isPaidThisMonth ? "Pagado este mes" : "Marcar como pagado"}
+          </Button>
+          <form action={toggleFixedExpenseActive.bind(null, expense.id)}>
+            <Button size="sm" variant="ghost" type="submit" className="text-muted-foreground">
+              {expense.isActive ? "Desactivar" : "Activar"}
             </Button>
-
-            <form action={toggleFixedExpenseActive.bind(null, expense.id)}>
-              <Button size="sm" variant="ghost" type="submit">
-                {expense.isActive ? "Desactivar" : "Activar"}
-              </Button>
-            </form>
-          </div>
-        </CardContent>
-      </Card>
+          </form>
+        </div>
+      </div>
 
       <MarkPaidDialog
         expenseId={expense.id}

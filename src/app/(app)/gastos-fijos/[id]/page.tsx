@@ -1,7 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/shared/lib/db";
 import { expense } from "@/shared/lib/db/schema";
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getFixedExpensePayments } from "@/gastos-fijos/queries";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
@@ -9,6 +10,8 @@ import { getUserHousehold } from "@/onboarding/queries";
 type Props = {
   params: Promise<{ id: string }>;
 };
+
+export const metadata: Metadata = { title: "Detalle de Gasto Fijo" };
 
 export default async function GastoFijoDetailPage({ params }: Props) {
   const { id } = await params;
@@ -19,7 +22,7 @@ export default async function GastoFijoDetailPage({ params }: Props) {
   const [exp] = await db
     .select()
     .from(expense)
-    .where(eq(expense.id, id), isNull(expense.deletedAt))
+    .where(and(eq(expense.id, id), isNull(expense.deletedAt)))
     .limit(1);
 
   if (!exp || exp.householdId !== household.id) notFound();

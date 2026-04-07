@@ -16,7 +16,7 @@ export function PurchaseForm({ categories }: Props) {
     description: "",
     categoryId: categories[0]?.id ?? "",
     amount: "",
-    currency: "ARS",
+    currency: "CLP",
     expenseDate: today,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,35 +42,77 @@ export function PurchaseForm({ categories }: Props) {
     try {
       await createPurchase(parsed.data);
     } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : "Error" });
+      setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
       setLoading(false);
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <Label htmlFor="desc">Descripción</Label>
-        <Input id="desc" value={form.description} onChange={(e) => set("description", e.target.value)} disabled={loading} />
+        <Input
+          id="desc"
+          value={form.description}
+          onChange={(e) => set("description", e.target.value)}
+          placeholder="Ej: Supermercado"
+          disabled={loading}
+          className="h-11"
+        />
         {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
       </div>
-      <div className="space-y-1">
+
+      <div className="space-y-1.5">
         <Label htmlFor="cat">Categoría</Label>
-        <select id="cat" value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)} disabled={loading} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        <select
+          id="cat"
+          value={form.categoryId}
+          onChange={(e) => set("categoryId", e.target.value)}
+          disabled={loading}
+          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+        >
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
         </select>
       </div>
-      <div className="space-y-1">
-        <Label htmlFor="amount">Monto</Label>
-        <Input id="amount" type="number" step="0.01" min="0" value={form.amount} onChange={(e) => set("amount", e.target.value)} disabled={loading} />
+
+      <div className="space-y-1.5">
+        <Label htmlFor="amount">Monto (CLP)</Label>
+        <Input
+          id="amount"
+          type="number"
+          min="0"
+          value={form.amount}
+          onChange={(e) => set("amount", e.target.value)}
+          placeholder="Ej: 45000"
+          disabled={loading}
+          className="h-11"
+        />
         {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
       </div>
-      <div className="space-y-1">
+
+      <div className="space-y-1.5">
         <Label htmlFor="date">Fecha</Label>
-        <Input id="date" type="date" value={form.expenseDate} onChange={(e) => set("expenseDate", e.target.value)} disabled={loading} />
+        <Input
+          id="date"
+          type="date"
+          value={form.expenseDate}
+          onChange={(e) => set("expenseDate", e.target.value)}
+          disabled={loading}
+          className="h-11"
+        />
       </div>
-      {errors.general && <p className="text-sm text-destructive">{errors.general}</p>}
-      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando..." : "Registrar compra"}</Button>
+
+      {errors.general && (
+        <p className="text-sm text-destructive bg-destructive/8 rounded-lg px-3 py-2">
+          {errors.general}
+        </p>
+      )}
+
+      <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
+        {loading ? "Guardando..." : "Registrar compra"}
+      </Button>
     </form>
   );
 }

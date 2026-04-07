@@ -1,5 +1,6 @@
 import { PurchaseCard } from "./purchase-card";
 import { InstallmentCard } from "./installment-card";
+import { EmptyState } from "@/shared/components/empty-state";
 
 type Expense = {
   id: string;
@@ -18,10 +19,10 @@ type Props = { expenses: Expense[] };
 export function PurchaseList({ expenses }: Props) {
   if (expenses.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>No hay compras registradas.</p>
-        <p className="text-sm mt-1">Usá el botón + para agregar una.</p>
-      </div>
+      <EmptyState
+        message="No hay compras registradas."
+        description="Usá el botón + para agregar una."
+      />
     );
   }
 

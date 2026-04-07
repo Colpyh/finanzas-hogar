@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
@@ -7,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { InstallmentProgress } from "@/compras/components/installment-progress";
 
 type Props = { params: Promise<{ id: string }> };
+
+export const metadata: Metadata = { title: "Detalle de Gasto" };
 
 export default async function GastoDetailPage({ params }: Props) {
   const { id } = await params;
@@ -50,7 +53,12 @@ export default async function GastoDetailPage({ params }: Props) {
       </div>
 
       {isCreator && (
-        <form action={deleteExpense.bind(null, exp.id)}>
+        <form
+          action={async () => {
+            "use server";
+            await deleteExpense(exp.id);
+          }}
+        >
           <Button variant="destructive" size="sm" type="submit" className="w-full">
             Eliminar gasto
           </Button>

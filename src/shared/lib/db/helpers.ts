@@ -1,3 +1,14 @@
+import { isNull } from "drizzle-orm";
+import type { Column } from "drizzle-orm";
+
+/**
+ * Returns a Drizzle condition for filtering soft-deleted rows.
+ * Usage: .where(withNotDeleted(table.deletedAt))
+ */
+export function withNotDeleted(deletedAtColumn: Column) {
+  return isNull(deletedAtColumn);
+}
+
 /**
  * Returns the first day of the current UTC month as a 'YYYY-MM-01' string.
  * Used as period_month for fixed_expense_payment records.

@@ -1,86 +1,135 @@
+import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers, getActiveInvites } from "@/household/queries";
 import { createInvite, revokeInvite } from "@/household/actions";
+import { signOut } from "@/auth/actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Users, Home, Link2, LogOut } from "lucide-react";
+
+export const metadata: Metadata = { title: "Ajustes" };
+
+const MOCK_MEMBERS = [
+  { id: "1", userId: "Matías (tú)", role: "owner" as const },
+  { id: "2", userId: "Cónyuge", role: "member" as const },
+];
 
 export default async function AjustesPage() {
-  const user = await getUser();
-  const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) return null;
-
-  const [members, invites] = await Promise.all([
-    getHouseholdMembers(userHousehold.id),
-    getActiveInvites(userHousehold.id),
-  ]);
-
-  const isOwner = userHousehold.role === "owner";
-  const canInvite = isOwner && members.length < 2;
+  let householdName = "Hogar Demo";
+  let members: { id: string; userId: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
+  let invites: { id: string; token: string }[] = [];
+  let isOwner = true;
+  let canInvite = false;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+  try {
+    const user = await getUser();
+    const userHousehold = await getUserHousehold(user.id);
+    if (userHousehold) {
+      householdName = userHousehold.name;
+      isOwner = userHousehold.role === "owner";
+      const [dbMembers, dbInvites] = await Promise.all([
+        getHouseholdMembers(userHousehold.id),
+        getActiveInvites(userHousehold.id),
+      ]);
+      members = dbMembers;
+      invites = dbInvites;
+      canInvite = isOwner && dbMembers.length < 2;
+    }
+  } catch {
+    // Sin sesión — datos de ejemplo
+  }
+
+  async function handleCreateInvite() {
+    "use server";
+    await createInvite();
+  }
+
   return (
-    <div className="p-4 space-y-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-semibold">Ajustes</h1>
+    <div className="p-4 space-y-4 max-w-lg mx-auto pb-24">
+      <div className="pt-2">
+        <h1 className="text-2xl font-bold tracking-tight">Ajustes</h1>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Hogar</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <p className="font-medium">{userHousehold.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {members.length} miembro{members.length !== 1 ? "s" : ""}
-          </p>
-        </CardContent>
-      </Card>
+      {/* Hogar */}
+      <div className="rounded-2xl bg-card border border-border p-4 space-y-2">
+        <div className="flex items-center gap-2 text-muted-foreground mb-1">
+          <Home size={15} />
+          <span className="text-xs font-medium uppercase tracking-wide">Tu hogar</span>
+        </div>
+        <p className="text-base font-semibold text-foreground">{householdName}</p>
+        <p className="text-sm text-muted-foreground">
+          {members.length} miembro{members.length !== 1 ? "s" : ""}
+        </p>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Miembros</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+      {/* Miembros */}
+      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Users size={15} />
+          <span className="text-xs font-medium uppercase tracking-wide">Miembros</span>
+        </div>
+        <ul className="space-y-2.5">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center justify-between">
-              <span className="text-sm">{m.userId}</span>
-              <Badge variant={m.role === "owner" ? "default" : "secondary"}>
+            <li key={m.id} className="flex items-center justify-between">
+              <span className="text-sm text-foreground">{m.userId}</span>
+              <Badge variant={m.role === "owner" ? "default" : "secondary"} className="text-xs">
                 {m.role === "owner" ? "Propietario" : "Miembro"}
               </Badge>
-            </div>
+            </li>
           ))}
-        </CardContent>
-      </Card>
+        </ul>
+      </div>
 
+      {/* Invitaciones */}
       {isOwner && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Invitación</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {invites.map((inv) => (
-              <div key={inv.id} className="space-y-1">
-                <p className="text-xs font-mono break-all bg-muted p-2 rounded">
-                  {siteUrl}/invite/{inv.token}
-                </p>
-                <form action={revokeInvite.bind(null, inv.id)}>
-                  <Button variant="ghost" size="sm" className="text-destructive">
-                    Revocar
-                  </Button>
-                </form>
-              </div>
-            ))}
+        <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Link2 size={15} />
+            <span className="text-xs font-medium uppercase tracking-wide">Invitar miembro</span>
+          </div>
 
-            {canInvite && (
-              <form action={createInvite}>
-                <Button variant="outline" size="sm" className="w-full">
-                  Generar enlace de invitación
+          {invites.map((inv) => (
+            <div key={inv.id} className="space-y-2">
+              <p className="text-xs text-muted-foreground bg-muted rounded-lg p-3 break-all font-mono">
+                {siteUrl}/invite/{inv.token}
+              </p>
+              <form action={revokeInvite.bind(null, inv.id)}>
+                <Button variant="ghost" size="sm" className="text-destructive w-full">
+                  Revocar enlace
                 </Button>
               </form>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          ))}
+
+          {canInvite && (
+            <form action={handleCreateInvite}>
+              <Button variant="outline" size="sm" className="w-full gap-2">
+                <Link2 size={14} />
+                Generar enlace de invitación
+              </Button>
+            </form>
+          )}
+
+          {!canInvite && invites.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              El hogar ya tiene el máximo de miembros.
+            </p>
+          )}
+        </div>
       )}
+
+      {/* Cerrar sesión */}
+      <form action={signOut}>
+        <button
+          type="submit"
+          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10 transition-colors py-3.5 text-sm font-medium"
+        >
+          <LogOut size={16} />
+          Cerrar sesión
+        </button>
+      </form>
     </div>
   );
 }

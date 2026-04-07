@@ -1,5 +1,6 @@
-import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import { formatCurrency } from "@/shared/components/currency-display";
+import { ChevronRight } from "lucide-react";
 
 type Props = {
   expense: {
@@ -11,23 +12,33 @@ type Props = {
   };
 };
 
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  return date.toLocaleDateString("es-CL", { day: "numeric", month: "short" });
+}
+
 export function PurchaseCard({ expense }: Props) {
   return (
     <Link href={`/gastos/${expense.id}`}>
-      <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-        <CardContent className="p-4 flex items-center justify-between gap-2">
-          <div className="space-y-0.5">
-            <p className="font-medium">{expense.description}</p>
+      <div className="flex items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 hover:bg-muted/40 active:scale-[0.99] transition-all cursor-pointer">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
+          <div className="flex items-center gap-2 mt-0.5">
             {expense.categoryName && (
-              <p className="text-xs text-muted-foreground">{expense.categoryName}</p>
+              <span className="text-xs text-muted-foreground">{expense.categoryName}</span>
             )}
             {expense.expenseDate && (
-              <p className="text-xs text-muted-foreground">{expense.expenseDate}</p>
+              <span className="text-xs text-muted-foreground">
+                {expense.categoryName ? "·" : ""} {formatDate(expense.expenseDate)}
+              </span>
             )}
           </div>
-          <span className="font-mono text-sm shrink-0">${expense.amount}</span>
-        </CardContent>
-      </Card>
+        </div>
+        <span className="text-sm font-semibold text-foreground shrink-0">
+          {formatCurrency(parseFloat(expense.amount))}
+        </span>
+        <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+      </div>
     </Link>
   );
 }

@@ -2,6 +2,41 @@
 
 import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+
+// Acceso temporal de desarrollo — reemplazar con Supabase auth cuando esté listo
+const DEV_USER = process.env.DEV_USERNAME ?? "admin";
+const DEV_PASS = process.env.DEV_PASSWORD ?? "admin";
+
+export async function signInWithCredentials(
+  username: string,
+  password: string
+): Promise<{ error?: string }> {
+  // Acceso de desarrollo
+  if (username === DEV_USER && password === DEV_PASS) {
+    const cookieStore = await cookies();
+    cookieStore.set("dev-session", "1", {
+      httpOnly: true,
+      path: "/",
+      maxAge: 60 * 60 * 24, // 24 horas
+      sameSite: "lax",
+    });
+    redirect("/dashboard");
+  }
+
+  // Intentar con Supabase (usuario real)
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: username,
+    password,
+  });
+
+  if (error) {
+    return { error: "Usuario o contraseña incorrectos." };
+  }
+
+  redirect("/dashboard");
+}
 
 export async function signInWithMagicLink(email: string): Promise<{ error?: string }> {
   const supabase = await createClient();
@@ -21,6 +56,9 @@ export async function signInWithMagicLink(email: string): Promise<{ error?: stri
 }
 
 export async function signOut(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete("dev-session");
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/auth/login");

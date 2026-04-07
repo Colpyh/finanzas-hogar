@@ -1,4 +1,5 @@
 import { FixedExpenseCard } from "./fixed-expense-card";
+import { EmptyState } from "@/shared/components/empty-state";
 
 type Payment = { expenseId: string };
 
@@ -18,10 +19,10 @@ type Props = {
 export function FixedExpenseList({ expenses, paymentsThisMonth }: Props) {
   if (expenses.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>No tenés gastos fijos registrados.</p>
-        <p className="text-sm mt-1">Agregá uno con el botón de arriba.</p>
-      </div>
+      <EmptyState
+        message="No tenés gastos fijos registrados."
+        description="Agregá uno con el botón de arriba."
+      />
     );
   }
 

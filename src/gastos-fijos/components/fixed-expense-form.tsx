@@ -8,17 +8,14 @@ import { createFixedExpenseSchema } from "@/gastos-fijos/types";
 import { createFixedExpense } from "@/gastos-fijos/actions";
 
 type Category = { id: string; name: string };
-
-type Props = {
-  categories: Category[];
-};
+type Props = { categories: Category[] };
 
 export function FixedExpenseForm({ categories }: Props) {
   const [form, setForm] = useState({
     description: "",
     categoryId: categories[0]?.id ?? "",
     amount: "",
-    currency: "ARS",
+    currency: "CLP",
     recurrenceDay: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -31,22 +28,18 @@ export function FixedExpenseForm({ categories }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     const parsed = createFixedExpenseSchema.safeParse({
       ...form,
       recurrenceDay: Number(form.recurrenceDay),
     });
-
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       parsed.error.issues.forEach((issue) => {
-        const key = issue.path[0]?.toString() ?? "general";
-        fieldErrors[key] = issue.message;
+        fieldErrors[issue.path[0]?.toString() ?? "general"] = issue.message;
       });
       setErrors(fieldErrors);
       return;
     }
-
     setLoading(true);
     try {
       await createFixedExpense(parsed.data);
@@ -58,26 +51,27 @@ export function FixedExpenseForm({ categories }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <Label htmlFor="description">Descripción</Label>
         <Input
           id="description"
           value={form.description}
           onChange={(e) => set("description", e.target.value)}
-          placeholder="Ej: Alquiler"
+          placeholder="Ej: Arriendo"
           disabled={loading}
+          className="h-11"
         />
         {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <Label htmlFor="category">Categoría</Label>
         <select
           id="category"
           value={form.categoryId}
           onChange={(e) => set("categoryId", e.target.value)}
           disabled={loading}
-          className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
@@ -86,23 +80,23 @@ export function FixedExpenseForm({ categories }: Props) {
         {errors.categoryId && <p className="text-xs text-destructive">{errors.categoryId}</p>}
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="amount">Monto estimado</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="amount">Monto estimado (CLP)</Label>
         <Input
           id="amount"
           type="number"
-          step="0.01"
           min="0"
           value={form.amount}
           onChange={(e) => set("amount", e.target.value)}
-          placeholder="0.00"
+          placeholder="Ej: 650000"
           disabled={loading}
+          className="h-11"
         />
         {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="recurrenceDay">Día de vencimiento (1–31)</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="recurrenceDay">Día de vencimiento</Label>
         <Input
           id="recurrenceDay"
           type="number"
@@ -110,15 +104,21 @@ export function FixedExpenseForm({ categories }: Props) {
           max="31"
           value={form.recurrenceDay}
           onChange={(e) => set("recurrenceDay", e.target.value)}
-          placeholder="10"
+          placeholder="Ej: 5"
           disabled={loading}
+          className="h-11"
         />
+        <p className="text-xs text-muted-foreground">Entre 1 y 31</p>
         {errors.recurrenceDay && <p className="text-xs text-destructive">{errors.recurrenceDay}</p>}
       </div>
 
-      {errors.general && <p className="text-sm text-destructive">{errors.general}</p>}
+      {errors.general && (
+        <p className="text-sm text-destructive bg-destructive/8 rounded-lg px-3 py-2">
+          {errors.general}
+        </p>
+      )}
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
         {loading ? "Guardando..." : "Crear gasto fijo"}
       </Button>
     </form>
