@@ -19,18 +19,28 @@ export default async function AppLayout({
   const cookieStore = await cookies();
   const hasDevSession = cookieStore.get("dev-session")?.value === "1";
 
-  // Dev bypass activo: mostrar mock sin auth real
+  // Dev bypass: solo cuando hay cookie de sesión local
   if (hasDevSession) {
     return <AppProviders household={MOCK_HOUSEHOLD}>{children}</AppProviders>;
   }
 
-  // Sin dev bypass: requerir sesión real de Supabase
+  // Sin dev bypass: verificar sesión real de Supabase
+  // Nota: redirect() no va dentro de try/catch — lanza NEXT_REDIRECT que no debe ser atrapado
+  let user;
   try {
-    const user = await getUser();
-    const userHousehold = await getUserHousehold(user.id);
-    if (!userHousehold) redirect("/onboarding");
-    return <AppProviders household={userHousehold}>{children}</AppProviders>;
+    user = await getUser();
   } catch {
     redirect("/auth/login");
   }
+
+  let userHousehold;
+  try {
+    userHousehold = await getUserHousehold(user.id);
+  } catch {
+    redirect("/auth/login");
+  }
+
+  if (!userHousehold) redirect("/onboarding");
+
+  return <AppProviders household={userHousehold}>{children}</AppProviders>;
 }
