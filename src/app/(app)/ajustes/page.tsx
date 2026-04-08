@@ -6,7 +6,8 @@ import { createInvite, revokeInvite } from "@/household/actions";
 import { signOut } from "@/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Home, Link2, LogOut } from "lucide-react";
+import { Users, Home, Link2, LogOut, Palette } from "lucide-react";
+import { ThemeToggle } from "@/shared/components/theme-toggle";
 
 export const metadata: Metadata = { title: "Ajustes" };
 
@@ -119,6 +120,15 @@ export default async function AjustesPage() {
           )}
         </div>
       )}
+
+      {/* Apariencia */}
+      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Palette size={15} />
+          <span className="text-xs font-medium uppercase tracking-wide">Apariencia</span>
+        </div>
+        <ThemeToggle />
+      </div>
 
       {/* Cerrar sesión */}
       <form action={signOut}>
