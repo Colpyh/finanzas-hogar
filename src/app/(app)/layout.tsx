@@ -25,22 +25,13 @@ export default async function AppLayout({
   }
 
   // Sin dev bypass: verificar sesión real de Supabase
-  // Nota: redirect() no va dentro de try/catch — lanza NEXT_REDIRECT que no debe ser atrapado
-  let user;
-  try {
-    user = await getUser();
-  } catch {
-    redirect("/auth/login");
-  }
+  const result = await getUser()
+    .then(async (u) => ({ ok: true as const, user: u, household: await getUserHousehold(u.id) }))
+    .catch(() => ({ ok: false as const }));
 
-  let userHousehold;
-  try {
-    userHousehold = await getUserHousehold(user.id);
-  } catch {
-    redirect("/auth/login");
-  }
+  if (!result.ok) redirect("/auth/login");
 
-  if (!userHousehold) redirect("/onboarding");
+  if (!result.household) redirect("/onboarding");
 
-  return <AppProviders household={userHousehold}>{children}</AppProviders>;
+  return <AppProviders household={result.household}>{children}</AppProviders>;
 }
