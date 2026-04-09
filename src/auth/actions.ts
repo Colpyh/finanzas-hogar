@@ -25,13 +25,19 @@ export async function signInWithCredentials(
   }
 
   // Intentar con Supabase (usuario real)
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: username,
-    password,
-  });
+  let signInError: string | null = null;
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: username,
+      password,
+    });
+    if (error) signInError = error.message;
+  } catch (e) {
+    return { error: `Error de conexión: ${e instanceof Error ? e.message : String(e)}` };
+  }
 
-  if (error) {
+  if (signInError) {
     return { error: "Usuario o contraseña incorrectos." };
   }
 

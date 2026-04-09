@@ -9,7 +9,12 @@ type Props = {
 };
 
 export default async function OnboardingPage({ searchParams }: Props) {
-  const user = await getUser();
+  let user;
+  try {
+    user = await getUser();
+  } catch {
+    redirect("/auth/login");
+  }
   const params = await searchParams;
 
   // If user already has a household, send to dashboard
