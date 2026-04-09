@@ -37,7 +37,7 @@ function getDb(): DbClient {
     );
   }
 
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
   cached = drizzle(pool, { schema });
   return cached;
 }
