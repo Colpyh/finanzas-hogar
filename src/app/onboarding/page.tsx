@@ -3,6 +3,8 @@ import { getUser } from "@/auth/queries";
 import { getUserHousehold, getInviteByToken } from "@/onboarding/queries";
 import { CreateHouseholdForm } from "@/onboarding/components/create-household-form";
 import { InviteRedemption } from "@/onboarding/components/invite-redemption";
+import { signOut } from "@/auth/actions";
+import { LogOut } from "lucide-react";
 
 type Props = {
   searchParams: Promise<{ invite?: string }>;
@@ -57,11 +59,22 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Configurar hogar</h1>
-          <p className="text-muted-foreground text-sm">
-            Creá tu hogar o unite a uno existente
-          </p>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold">Configurar hogar</h1>
+            <p className="text-muted-foreground text-sm">
+              Creá tu hogar o unite a uno existente
+            </p>
+          </div>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+            >
+              <LogOut size={13} />
+              Salir
+            </button>
+          </form>
         </div>
         {children}
       </div>
