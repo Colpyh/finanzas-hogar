@@ -10,8 +10,11 @@ const DEV_PASS = process.env.DEV_PASSWORD ?? "admin";
 
 export async function signInWithCredentials(
   username: string,
-  password: string
+  password: string,
+  returnTo?: string
 ): Promise<{ error?: string }> {
+  const destination = returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard";
+
   // Acceso de desarrollo
   if (username === DEV_USER && password === DEV_PASS) {
     const cookieStore = await cookies();
@@ -21,7 +24,7 @@ export async function signInWithCredentials(
       maxAge: 60 * 60 * 24, // 24 horas
       sameSite: "lax",
     });
-    redirect("/dashboard");
+    redirect(destination);
   }
 
   // Intentar con Supabase (usuario real)
@@ -41,7 +44,7 @@ export async function signInWithCredentials(
     return { error: "Usuario o contraseña incorrectos." };
   }
 
-  redirect("/dashboard");
+  redirect(destination);
 }
 
 export async function signInWithMagicLink(email: string): Promise<{ error?: string }> {

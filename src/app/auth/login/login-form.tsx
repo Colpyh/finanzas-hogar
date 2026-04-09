@@ -25,7 +25,7 @@ function HomeIcon() {
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ returnTo }: { returnTo?: string }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +37,7 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const result = await signInWithCredentials(username, password);
+    const result = await signInWithCredentials(username, password, returnTo);
 
     if (result?.error) {
       setError(result.error);
