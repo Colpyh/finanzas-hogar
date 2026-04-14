@@ -50,6 +50,10 @@ export async function createInvite() {
   return invite;
 }
 
+export async function generateInvite(): Promise<void> {
+  await createInvite();
+}
+
 export async function revokeInvite(inviteId: string) {
   await getUser();
 

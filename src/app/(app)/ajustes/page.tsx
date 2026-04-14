@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers, getActiveInvites } from "@/household/queries";
-import { createInvite, revokeInvite } from "@/household/actions";
+import { generateInvite, revokeInvite } from "@/household/actions";
 import { signOut } from "@/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,13 +12,13 @@ import { ThemeToggle } from "@/shared/components/theme-toggle";
 export const metadata: Metadata = { title: "Ajustes" };
 
 const MOCK_MEMBERS = [
-  { id: "1", userId: "Matías (tú)", role: "owner" as const },
-  { id: "2", userId: "Cónyuge", role: "member" as const },
+  { id: "1", userId: "mock-1", displayName: "Matías (tú)", role: "owner" as const },
+  { id: "2", userId: "mock-2", displayName: "Cónyuge", role: "member" as const },
 ];
 
 export default async function AjustesPage() {
   let householdName = "Hogar Demo";
-  let members: { id: string; userId: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
+  let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
   let invites: { id: string; token: string }[] = [];
   let isOwner = true;
   let canInvite = false;
@@ -40,11 +40,6 @@ export default async function AjustesPage() {
     }
   } catch {
     // Sin sesión — datos de ejemplo
-  }
-
-  async function handleCreateInvite() {
-    "use server";
-    await createInvite();
   }
 
   return (
@@ -74,7 +69,7 @@ export default async function AjustesPage() {
         <ul className="space-y-2.5">
           {members.map((m) => (
             <li key={m.id} className="flex items-center justify-between">
-              <span className="text-sm text-foreground">{m.userId}</span>
+              <span className="text-sm text-foreground">{m.displayName}</span>
               <Badge variant={m.role === "owner" ? "default" : "secondary"} className="text-xs">
                 {m.role === "owner" ? "Propietario" : "Miembro"}
               </Badge>
@@ -105,7 +100,7 @@ export default async function AjustesPage() {
           ))}
 
           {canInvite && (
-            <form action={handleCreateInvite}>
+            <form action={generateInvite}>
               <Button variant="outline" size="sm" className="w-full gap-2">
                 <Link2 size={14} />
                 Generar enlace de invitación
