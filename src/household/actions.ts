@@ -2,7 +2,7 @@
 
 import crypto from "crypto";
 import { db } from "@/shared/lib/db";
-import { household, householdInvite } from "@/shared/lib/db/schema";
+import { household, householdInvite, householdMember } from "@/shared/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/auth/queries";
@@ -61,6 +61,26 @@ export async function revokeInvite(inviteId: string) {
     .update(householdInvite)
     .set({ redeemedAt: new Date() })
     .where(eq(householdInvite.id, inviteId));
+
+  revalidatePath("/ajustes");
+}
+
+export async function removeMember(memberId: string) {
+  const user = await getUser();
+  const userHousehold = await getUserHousehold(user.id);
+  if (!userHousehold) throw new Error("No household");
+  if (userHousehold.role !== "owner") throw new Error("Solo el propietario puede eliminar miembros");
+
+  const [target] = await db
+    .select()
+    .from(householdMember)
+    .where(eq(householdMember.id, memberId))
+    .limit(1);
+
+  if (!target) throw new Error("Miembro no encontrado");
+  if (target.userId === user.id) throw new Error("No puedes eliminarte a ti mismo");
+
+  await db.delete(householdMember).where(eq(householdMember.id, memberId));
 
   revalidatePath("/ajustes");
 }

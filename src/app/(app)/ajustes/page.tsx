@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers, getActiveInvites } from "@/household/queries";
-import { generateInvite, revokeInvite } from "@/household/actions";
+import { generateInvite, revokeInvite, removeMember } from "@/household/actions";
 import { signOut } from "@/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Home, Link2, LogOut, Palette } from "lucide-react";
+import { Users, Home, Link2, LogOut, Palette, UserMinus } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 
 export const metadata: Metadata = { title: "Ajustes" };
@@ -36,7 +36,7 @@ export default async function AjustesPage() {
       ]);
       members = dbMembers;
       invites = dbInvites;
-      canInvite = isOwner && dbMembers.length < 2;
+      canInvite = isOwner;
     }
   } catch {
     // Sin sesión — datos de ejemplo
@@ -68,11 +68,24 @@ export default async function AjustesPage() {
         </div>
         <ul className="space-y-2.5">
           {members.map((m) => (
-            <li key={m.id} className="flex items-center justify-between">
-              <span className="text-sm text-foreground">{m.displayName}</span>
-              <Badge variant={m.role === "owner" ? "default" : "secondary"} className="text-xs">
-                {m.role === "owner" ? "Propietario" : "Miembro"}
-              </Badge>
+            <li key={m.id} className="flex items-center justify-between gap-2">
+              <span className="text-sm text-foreground flex-1 min-w-0 truncate">{m.displayName}</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant={m.role === "owner" ? "default" : "secondary"} className="text-xs">
+                  {m.role === "owner" ? "Propietario" : "Miembro"}
+                </Badge>
+                {isOwner && m.role !== "owner" && (
+                  <form action={removeMember.bind(null, m.id)}>
+                    <button
+                      type="submit"
+                      title="Eliminar miembro"
+                      className="text-destructive hover:text-destructive/80 transition-colors"
+                    >
+                      <UserMinus size={15} />
+                    </button>
+                  </form>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -108,11 +121,6 @@ export default async function AjustesPage() {
             </form>
           )}
 
-          {!canInvite && invites.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              El hogar ya tiene el máximo de miembros.
-            </p>
-          )}
         </div>
       )}
 
