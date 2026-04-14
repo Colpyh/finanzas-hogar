@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { canMarkInstallmentPaid } from "./installment-utils";
-import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema } from "./types";
+import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
 
 export async function createPurchase(rawData: unknown) {
   const user = await getUser();
@@ -105,6 +105,36 @@ export async function updateExpense(expenseId: string, rawData: unknown) {
 
   revalidatePath("/compras");
   return updated;
+}
+
+export async function updateInstallment(
+  expenseId: string,
+  rawData: unknown,
+): Promise<{ error?: string }> {
+  await getUser();
+
+  const [current] = await db
+    .select({ installmentsTotal: expense.installmentsTotal })
+    .from(expense)
+    .where(eq(expense.id, expenseId))
+    .limit(1);
+
+  if (!current) return { error: "Gasto no encontrado" };
+
+  const data = updateInstallmentSchema.parse(rawData);
+
+  if (data.installmentsPaid > (current.installmentsTotal ?? 0)) {
+    return { error: "Las cuotas pagadas no pueden superar el total" };
+  }
+
+  await db
+    .update(expense)
+    .set({ description: data.description, installmentsPaid: data.installmentsPaid })
+    .where(eq(expense.id, expenseId));
+
+  revalidatePath("/compras");
+  revalidatePath("/dashboard");
+  return {};
 }
 
 export async function deleteExpense(expenseId: string): Promise<{ error?: string }> {

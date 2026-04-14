@@ -36,6 +36,12 @@ export const updateExpenseSchema = z.object({
   amount: amountField.optional(),
 });
 
+export const updateInstallmentSchema = z.object({
+  description: z.string().min(1, "La descripción es requerida").max(200),
+  installmentsPaid: z.number().int().min(0),
+});
+
 export type CreatePurchaseInput = z.input<typeof createPurchaseSchema>;
 export type CreateInstallmentInput = z.input<typeof createInstallmentSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
+export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;

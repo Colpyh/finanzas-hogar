@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { markInstallmentPaid } from "@/compras/actions";
 import { canMarkInstallmentPaid } from "@/compras/installment-utils";
 import { formatCurrency } from "@/shared/components/currency-display";
+import { EditInstallmentDialog } from "./edit-installment-dialog";
 import Link from "next/link";
 
 type Props = {
@@ -44,9 +45,19 @@ export function InstallmentCard({ expense }: Props) {
             <p className="text-xs text-muted-foreground mt-0.5">{expense.categoryName}</p>
           )}
         </Link>
-        <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
-          {paid}/{total} cuotas
-        </span>
+        <div className="flex items-center gap-2 shrink-0 mt-0.5">
+          <span className="text-xs text-muted-foreground">
+            {paid}/{total} cuotas
+          </span>
+          <EditInstallmentDialog
+            expense={{
+              id: expense.id,
+              description: expense.description,
+              installmentsPaid: paid,
+              installmentsTotal: total,
+            }}
+          />
+        </div>
       </div>
 
       {/* Barra de progreso */}
