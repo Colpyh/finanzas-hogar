@@ -9,9 +9,13 @@ export function createAdminClient() {
 }
 
 export async function getUserDisplayName(userId: string): Promise<string> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-  if (error || !data?.user) return userId;
-  const meta = data.user.user_metadata;
-  return meta?.full_name ?? meta?.name ?? data.user.email ?? userId;
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    if (error || !data?.user) return userId;
+    const meta = data.user.user_metadata;
+    return meta?.full_name ?? meta?.name ?? data.user.email ?? userId;
+  } catch {
+    return userId;
+  }
 }
