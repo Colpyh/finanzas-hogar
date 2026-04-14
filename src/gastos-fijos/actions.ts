@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
@@ -33,7 +34,7 @@ export async function createFixedExpense(rawData: unknown) {
 
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
-  return created;
+  redirect("/gastos-fijos");
 }
 
 export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: string }> {

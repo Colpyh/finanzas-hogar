@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { expense } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { canMarkInstallmentPaid } from "./installment-utils";
@@ -28,7 +29,7 @@ export async function createPurchase(rawData: unknown) {
 
   revalidatePath("/compras");
   revalidatePath("/dashboard");
-  return created;
+  redirect("/compras");
 }
 
 export async function createInstallment(rawData: unknown) {
@@ -57,7 +58,7 @@ export async function createInstallment(rawData: unknown) {
 
   revalidatePath("/compras");
   revalidatePath("/dashboard");
-  return created;
+  redirect("/compras");
 }
 
 export async function markInstallmentPaid(expenseId: string): Promise<{ error?: string }> {
