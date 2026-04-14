@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { getActiveFixedExpenses, getPaymentForCurrentMonth } from "@/gastos-fijos/queries";
+import { getActiveFixedExpenses, getPaymentsForCurrentMonth } from "@/gastos-fijos/queries";
+import { getHouseholdMembers } from "@/household/queries";
 import { FixedExpenseList } from "@/gastos-fijos/components/fixed-expense-list";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -10,38 +11,63 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Gastos Fijos" };
 
-type ExpenseRow = {
+type EnrichedExpense = {
   id: string;
   description: string;
   amount: string;
   recurrenceDay: number | null;
   isActive: boolean | null;
+  isShared: boolean;
+  isPaidThisMonth: boolean;
+  currentUserConfirmed: boolean;
+  confirmedCount: number;
 };
 
-const MOCK_EXPENSES: ExpenseRow[] = [
-  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true },
-  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true },
-  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true },
-  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true },
+const MOCK_EXPENSES: EnrichedExpense[] = [
+  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, isPaidThisMonth: true, currentUserConfirmed: true, confirmedCount: 1 },
+  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, isPaidThisMonth: true, currentUserConfirmed: true, confirmedCount: 1 },
+  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, isPaidThisMonth: false, currentUserConfirmed: false, confirmedCount: 0 },
+  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, isPaidThisMonth: false, currentUserConfirmed: false, confirmedCount: 0 },
 ];
-const MOCK_PAYMENTS = [{ expenseId: "1" }, { expenseId: "2" }];
 
 export default async function GastosFijosPage() {
-  let expenses: ExpenseRow[] = MOCK_EXPENSES;
-  let paymentsThisMonth: { expenseId: string }[] = MOCK_PAYMENTS;
+  let expenses: EnrichedExpense[] = MOCK_EXPENSES;
+  let memberCount = 1;
 
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const dbExpenses = await getActiveFixedExpenses(household.id);
-      const dbPayments = await Promise.all(
-        dbExpenses.map((exp) => getPaymentForCurrentMonth(exp.id))
+      const [dbExpenses, members] = await Promise.all([
+        getActiveFixedExpenses(household.id),
+        getHouseholdMembers(household.id),
+      ]);
+      memberCount = members.length || 1;
+
+      const paymentsPerExpense = await Promise.all(
+        dbExpenses.map((exp) => getPaymentsForCurrentMonth(exp.id))
       );
-      expenses = dbExpenses.map((e) => ({ ...e, amount: e.amount ?? "0" }));
-      paymentsThisMonth = dbPayments
-        .filter(Boolean)
-        .map((p) => ({ expenseId: p!.expenseId }));
+
+      expenses = dbExpenses.map((e, i) => {
+        const payments = paymentsPerExpense[i] ?? [];
+        const isShared = e.isShared ?? false;
+        const confirmedCount = payments.length;
+        const isPaidThisMonth = isShared
+          ? confirmedCount >= memberCount
+          : confirmedCount >= 1;
+        const currentUserConfirmed = payments.some((p) => p.paidBy === user.id);
+        return {
+          id: e.id,
+          description: e.description,
+          amount: e.amount ?? "0",
+          recurrenceDay: e.recurrenceDay,
+          isActive: e.isActive,
+          isShared,
+          isPaidThisMonth,
+          currentUserConfirmed,
+          confirmedCount,
+        };
+      });
     }
   } catch {
     // Sin sesión — datos de ejemplo
@@ -56,7 +82,7 @@ export default async function GastosFijosPage() {
           Nuevo
         </Link>
       </div>
-      <FixedExpenseList expenses={expenses} paymentsThisMonth={paymentsThisMonth} />
+      <FixedExpenseList expenses={expenses} memberCount={memberCount} />
     </div>
   );
 }

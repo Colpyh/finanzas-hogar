@@ -20,7 +20,7 @@ export const fixedExpensePayment = pgTable(
     notes: text("notes"),
   },
   (table) => [
-    // Prevents double-payment for the same bill in the same month (Scenario 2.6)
-    unique("uq_expense_period").on(table.expenseId, table.periodMonth),
+    // Prevents double-payment for the same bill in the same month by the same user
+    unique("uq_expense_period_user").on(table.expenseId, table.periodMonth, table.paidBy),
   ]
 );

@@ -8,6 +8,13 @@
       "when": 1775508346742,
       "tag": "0000_sticky_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1744588800000,
+      "tag": "0001_shared_fixed_expenses",
+      "breakpoints": true
     }
   ]
 }

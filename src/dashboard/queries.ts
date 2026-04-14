@@ -5,7 +5,7 @@ import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
 import {
   getActiveFixedExpenses,
-  getPaymentForCurrentMonth,
+  getPaymentsForCurrentMonth,
 } from "@/gastos-fijos/queries";
 import type {
   DashboardSummary,
@@ -90,12 +90,12 @@ export async function getFixedExpenseStatusThisMonth(
 
   const results = await Promise.all(
     expenses.map(async (exp) => {
-      const payment = await getPaymentForCurrentMonth(exp.id);
+      const payments = await getPaymentsForCurrentMonth(exp.id);
       return {
         id: exp.id,
         description: exp.description,
         amount: Number(exp.amount ?? 0),
-        paid: payment !== null,
+        paid: payments.length > 0,
       };
     })
   );

@@ -17,6 +17,7 @@ export function FixedExpenseForm({ categories }: Props) {
     amount: "",
     currency: "CLP",
     recurrenceDay: "",
+    isShared: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -31,6 +32,7 @@ export function FixedExpenseForm({ categories }: Props) {
     const parsed = createFixedExpenseSchema.safeParse({
       ...form,
       recurrenceDay: Number(form.recurrenceDay),
+      isShared: form.isShared,
     });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
@@ -111,6 +113,21 @@ export function FixedExpenseForm({ categories }: Props) {
         <p className="text-xs text-muted-foreground">Entre 1 y 31</p>
         {errors.recurrenceDay && <p className="text-xs text-destructive">{errors.recurrenceDay}</p>}
       </div>
+
+      <div className="flex items-center justify-between rounded-xl border border-input bg-background px-4 h-11">
+        <Label htmlFor="isShared" className="cursor-pointer">Gasto compartido</Label>
+        <input
+          id="isShared"
+          type="checkbox"
+          checked={form.isShared}
+          onChange={(e) => setForm((prev) => ({ ...prev, isShared: e.target.checked }))}
+          disabled={loading}
+          className="h-4 w-4"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Cada miembro del hogar debe confirmar su parte
+      </p>
 
       {errors.general && (
         <p className="text-sm text-destructive bg-destructive/8 rounded-lg px-3 py-2">

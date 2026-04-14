@@ -1,22 +1,25 @@
 import { FixedExpenseCard } from "./fixed-expense-card";
 import { EmptyState } from "@/shared/components/empty-state";
 
-type Payment = { expenseId: string };
-
-type Expense = {
+type EnrichedExpense = {
   id: string;
   description: string;
   amount: string;
   recurrenceDay: number | null;
   isActive: boolean | null;
+  categoryName?: string;
+  isShared: boolean;
+  isPaidThisMonth: boolean;
+  currentUserConfirmed: boolean;
+  confirmedCount: number;
 };
 
 type Props = {
-  expenses: Expense[];
-  paymentsThisMonth: Payment[];
+  expenses: EnrichedExpense[];
+  memberCount: number;
 };
 
-export function FixedExpenseList({ expenses, paymentsThisMonth }: Props) {
+export function FixedExpenseList({ expenses, memberCount }: Props) {
   if (expenses.length === 0) {
     return (
       <EmptyState
@@ -26,15 +29,16 @@ export function FixedExpenseList({ expenses, paymentsThisMonth }: Props) {
     );
   }
 
-  const paidIds = new Set(paymentsThisMonth.map((p) => p.expenseId));
-
   return (
     <div className="space-y-3">
       {expenses.map((exp) => (
         <FixedExpenseCard
           key={exp.id}
           expense={exp}
-          isPaidThisMonth={paidIds.has(exp.id)}
+          isPaidThisMonth={exp.isPaidThisMonth}
+          currentUserConfirmed={exp.currentUserConfirmed}
+          confirmedCount={exp.confirmedCount}
+          memberCount={memberCount}
         />
       ))}
     </div>

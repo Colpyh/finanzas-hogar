@@ -29,6 +29,7 @@ export async function createFixedExpense(rawData: unknown) {
       householdId: household.id,
       createdBy: user.id,
       isActive: true,
+      isShared: data.isShared,
     })
     .returning();
 
@@ -57,8 +58,8 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
   } catch (err: unknown) {
     // UNIQUE constraint violation — already paid this month (Scenario 2.6)
     const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("uq_expense_period") || msg.includes("unique")) {
-      return { error: "Este gasto ya fue registrado como pagado este mes" };
+    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
+      return { error: "Ya confirmaste tu pago este mes" };
     }
     throw err;
   }

@@ -17,6 +17,7 @@ export const createFixedExpenseSchema = z.object({
   amount: amountField,
   currency: z.string().default("ARS"),
   recurrenceDay: recurrenceDayField,
+  isShared: z.boolean().default(false),
 });
 
 export const updateFixedExpenseSchema = z.object({
@@ -25,6 +26,7 @@ export const updateFixedExpenseSchema = z.object({
   amount: amountField.optional(),
   currency: z.string().optional(),
   recurrenceDay: recurrenceDayField.optional(),
+  isShared: z.boolean().optional(),
 });
 
 export const markPaidSchema = z.object({

@@ -25,9 +25,9 @@ export async function getFixedExpensePayments(expenseId: string) {
     .orderBy(fixedExpensePayment.periodMonth);
 }
 
-export async function getPaymentForCurrentMonth(expenseId: string) {
+export async function getPaymentsForCurrentMonth(expenseId: string) {
   const periodMonth = currentPeriodMonth();
-  const rows = await db
+  return db
     .select()
     .from(fixedExpensePayment)
     .where(
@@ -35,7 +35,5 @@ export async function getPaymentForCurrentMonth(expenseId: string) {
         eq(fixedExpensePayment.expenseId, expenseId),
         eq(fixedExpensePayment.periodMonth, periodMonth)
       )
-    )
-    .limit(1);
-  return rows[0] ?? null;
+    );
 }
