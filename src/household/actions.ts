@@ -79,9 +79,15 @@ export async function addMemberByEmail(
   const query = (formData.get("query") as string | null)?.trim().toLowerCase() ?? "";
   if (!query) return { error: "Ingresa un nombre o correo" };
 
-  const supabase = createAdminClient();
-  const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  if (listError) return { error: "Error al buscar usuarios. Verificá la configuración del servidor." };
+  let users: { id: string; email?: string; user_metadata: Record<string, string> }[];
+  try {
+    const supabase = createAdminClient();
+    const { data, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    if (listError) return { error: "Error al buscar usuarios. Verificá que SUPABASE_SERVICE_ROLE_KEY esté configurada." };
+    users = data.users;
+  } catch {
+    return { error: "Error de configuración del servidor. SUPABASE_SERVICE_ROLE_KEY no está disponible." };
+  }
 
   const target = users.find((u) => {
     const name = (u.user_metadata?.full_name ?? u.user_metadata?.name ?? "").toLowerCase();
@@ -99,14 +105,10 @@ export async function addMemberByEmail(
 
   if (existing) return { error: "Este usuario ya es miembro del hogar" };
 
-  const displayName =
-    target.user_metadata?.full_name ?? target.user_metadata?.name ?? target.email ?? null;
-
   await db.insert(householdMember).values({
     householdId: userHousehold.id,
     userId: target.id,
     role: "member",
-    displayName,
   });
 
   revalidatePath("/ajustes");
