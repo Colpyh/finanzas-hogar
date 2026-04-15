@@ -40,11 +40,9 @@ export function AddMemberModal() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full gap-2">
-          <UserPlus size={14} />
-          Agregar miembro
-        </Button>
+      <DialogTrigger render={<Button variant="outline" size="sm" className="w-full gap-2" />}>
+        <UserPlus size={14} />
+        Agregar miembro
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
