@@ -68,7 +68,7 @@ export function FixedExpenseCard({
 
   return (
     <>
-      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+      <div className="bg-card border border-border shadow-sm rounded-2xl p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             {icon}
@@ -78,7 +78,7 @@ export function FixedExpenseCard({
                   {expense.description}
                 </p>
                 {expense.isShared && (
-                  <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 shrink-0">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary shrink-0">
                     Compartido
                   </span>
                 )}

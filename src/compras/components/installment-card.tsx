@@ -37,7 +37,7 @@ export function InstallmentCard({ expense }: Props) {
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+    <div className="bg-card border border-border shadow-sm rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <Link href={`/gastos/${expense.id}`} className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
@@ -61,11 +61,16 @@ export function InstallmentCard({ expense }: Props) {
       </div>
 
       {/* Barra de progreso */}
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary transition-all"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0">
+          {progress}%
+        </span>
       </div>
 
       <div className="flex items-center justify-between">

@@ -20,16 +20,19 @@ function formatDate(dateStr: string): string {
 export function PurchaseCard({ expense }: Props) {
   return (
     <Link href={`/gastos/${expense.id}`}>
-      <div className="flex items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 hover:bg-muted/40 active:scale-[0.99] transition-all cursor-pointer">
+      <div className="flex items-center gap-3 bg-card border border-border shadow-sm rounded-2xl px-4 py-3.5 hover:bg-muted/40 active:scale-[0.99] transition-all cursor-pointer">
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-1.5 mt-0.5">
             {expense.categoryName && (
               <span className="text-xs text-muted-foreground">{expense.categoryName}</span>
             )}
+            {expense.expenseDate && expense.categoryName && (
+              <span className="text-xs text-muted-foreground/50">·</span>
+            )}
             {expense.expenseDate && (
               <span className="text-xs text-muted-foreground">
-                {expense.categoryName ? "·" : ""} {formatDate(expense.expenseDate)}
+                {formatDate(expense.expenseDate)}
               </span>
             )}
           </div>
@@ -37,7 +40,7 @@ export function PurchaseCard({ expense }: Props) {
         <span className="text-sm font-semibold text-foreground shrink-0">
           {formatCurrency(parseFloat(expense.amount))}
         </span>
-        <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+        <ChevronRight size={14} className="text-muted-foreground/60 shrink-0" />
       </div>
     </Link>
   );

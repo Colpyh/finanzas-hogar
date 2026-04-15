@@ -23,15 +23,19 @@ export function InstallmentsWidget({ installments }: Props) {
                     {item.description}
                   </span>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {item.installmentsPaid}/{item.installmentsTotal} • {formatCurrency(item.amount)}
+                    {item.installmentsPaid}/{item.installmentsTotal} · {formatCurrency(item.amount)}
                   </span>
                 </div>
-                {/* Barra de progreso */}
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0">
+                    {progress}%
+                  </span>
                 </div>
               </li>
             );
