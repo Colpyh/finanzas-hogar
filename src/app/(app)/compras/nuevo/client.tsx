@@ -7,6 +7,7 @@ import { InstallmentForm } from "@/compras/components/installment-form";
 import { Receipt, ShoppingCart, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Category = { id: string; name: string };
+type Member = { userId: string; displayName: string };
 type ExpenseType = "purchase" | "installment" | null;
 
 const OPTIONS = [
@@ -33,7 +34,7 @@ const OPTIONS = [
   },
 ];
 
-export function NuevoCompraClient({ categories }: { categories: Category[] }) {
+export function NuevoCompraClient({ categories, members }: { categories: Category[]; members: Member[] }) {
   const [selected, setSelected] = useState<ExpenseType>(null);
 
   if (selected === "purchase") {
@@ -45,7 +46,7 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
           </button>
           <h1 className="text-2xl font-bold tracking-tight">Nueva compra</h1>
         </div>
-        <PurchaseForm categories={categories} />
+        <PurchaseForm categories={categories} members={members} />
       </div>
     );
   }
@@ -59,7 +60,7 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
           </button>
           <h1 className="text-2xl font-bold tracking-tight">Compra en cuotas</h1>
         </div>
-        <InstallmentForm categories={categories} />
+        <InstallmentForm categories={categories} members={members} />
       </div>
     );
   }

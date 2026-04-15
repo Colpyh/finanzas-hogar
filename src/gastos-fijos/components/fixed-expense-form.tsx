@@ -8,9 +8,10 @@ import { createFixedExpenseSchema } from "@/gastos-fijos/types";
 import { createFixedExpense } from "@/gastos-fijos/actions";
 
 type Category = { id: string; name: string };
-type Props = { categories: Category[] };
+type Member = { userId: string; displayName: string };
+type Props = { categories: Category[]; members: Member[] };
 
-export function FixedExpenseForm({ categories }: Props) {
+export function FixedExpenseForm({ categories, members }: Props) {
   const [form, setForm] = useState({
     description: "",
     categoryId: categories[0]?.id ?? "",
@@ -18,6 +19,7 @@ export function FixedExpenseForm({ categories }: Props) {
     currency: "CLP",
     recurrenceDay: "",
     isShared: false,
+    responsibleId: "" as string,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -33,6 +35,7 @@ export function FixedExpenseForm({ categories }: Props) {
       ...form,
       recurrenceDay: Number(form.recurrenceDay),
       isShared: form.isShared,
+      responsibleId: form.responsibleId || null,
     });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
@@ -128,6 +131,25 @@ export function FixedExpenseForm({ categories }: Props) {
       <p className="text-xs text-muted-foreground -mt-2">
         Cada miembro del hogar debe confirmar su parte
       </p>
+
+      {members.length > 0 && (
+        <div className="space-y-1.5">
+          <Label htmlFor="responsible">Responsable de pago</Label>
+          <select
+            id="responsible"
+            value={form.responsibleId}
+            onChange={(e) => set("responsibleId", e.target.value)}
+            disabled={loading}
+            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+          >
+            <option value="">Sin responsable definido</option>
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>{m.displayName}</option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">¿Quién paga físicamente este gasto?</p>
+        </div>
+      )}
 
       {errors.general && (
         <p className="text-sm text-destructive bg-destructive/8 rounded-lg px-3 py-2">

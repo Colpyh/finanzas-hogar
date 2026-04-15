@@ -19,6 +19,8 @@ export const expense = pgTable("expense", {
   createdBy: uuid("created_by").notNull(), // references auth.users(id)
   // Null = gasto del hogar completo. Uuid = gasto personal de ese miembro.
   ownerId: uuid("owner_id"),
+  // Null = sin responsable definido. Uuid = miembro que paga físicamente (tarjeta/cuenta).
+  responsibleId: uuid("responsible_id"),
   categoryId: uuid("category_id")
     .notNull()
     .references(() => category.id),

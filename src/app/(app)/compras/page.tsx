@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getExpenses } from "@/compras/queries";
+import { getHouseholdMembers } from "@/household/queries";
 import { PurchaseList } from "@/compras/components/purchase-list";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -24,6 +25,7 @@ type ExpenseRow = {
   installmentsPaid: number | null;
   installmentsTotal: number | null;
   categoryName?: string;
+  responsibleName?: string | null;
 };
 
 const MOCK_EXPENSES: ExpenseRow[] = [
@@ -64,11 +66,11 @@ export default async function ComprasPage({ searchParams }: Props) {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const dbExpenses = await getExpenses(household.id, {
-        type: typeFilter,
-        dateFrom: params.from,
-        dateTo: params.to,
-      });
+      const [dbExpenses, members] = await Promise.all([
+        getExpenses(household.id, { type: typeFilter, dateFrom: params.from, dateTo: params.to }),
+        getHouseholdMembers(household.id),
+      ]);
+      const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
       expenses = dbExpenses.map((e) => ({
         id: e.id,
         type: e.type,
@@ -79,6 +81,7 @@ export default async function ComprasPage({ searchParams }: Props) {
         installmentsPaid: e.installmentsPaid ?? null,
         installmentsTotal: e.installmentsTotal ?? null,
         categoryName: undefined,
+        responsibleName: e.responsibleId ? (memberMap.get(e.responsibleId) ?? null) : null,
       }));
     }
   } catch {

@@ -11,6 +11,7 @@ export const createPurchaseSchema = z.object({
   amount: amountField,
   currency: z.string().default("ARS"),
   expenseDate: z.string().date("Fecha inválida"),
+  responsibleId: z.string().uuid().nullable().optional(),
 });
 
 export const createInstallmentSchema = z
@@ -24,6 +25,7 @@ export const createInstallmentSchema = z
       .min(2, "Debe tener al menos 2 cuotas"),
     installmentAmount: amountField,
     startMonth: z.string().date("Mes de inicio inválido"),
+    responsibleId: z.string().uuid().nullable().optional(),
   })
   .transform((data) => ({
     ...data,

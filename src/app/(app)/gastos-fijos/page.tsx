@@ -18,16 +18,17 @@ type EnrichedExpense = {
   recurrenceDay: number | null;
   isActive: boolean | null;
   isShared: boolean;
+  responsibleName?: string | null;
   isPaidThisMonth: boolean;
   currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;
 };
 
 const MOCK_EXPENSES: EnrichedExpense[] = [
-  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, isPaidThisMonth: true, currentUserStatus: "paid", confirmedCount: 1 },
-  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, isPaidThisMonth: false, currentUserStatus: "reserved", confirmedCount: 1 },
-  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
-  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
+  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: true, currentUserStatus: "paid", confirmedCount: 1 },
+  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, currentUserStatus: "reserved", confirmedCount: 1 },
+  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
+  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
 ];
 
 export default async function GastosFijosPage() {
@@ -43,6 +44,7 @@ export default async function GastosFijosPage() {
         getHouseholdMembers(household.id),
       ]);
       memberCount = members.length || 1;
+      const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
 
       const paymentsPerExpense = await Promise.all(
         dbExpenses.map((exp) => getPaymentsForCurrentMonth(exp.id))
@@ -68,6 +70,7 @@ export default async function GastosFijosPage() {
           recurrenceDay: e.recurrenceDay,
           isActive: e.isActive,
           isShared,
+          responsibleName: e.responsibleId ? (memberMap.get(e.responsibleId) ?? null) : null,
           isPaidThisMonth,
           currentUserStatus,
           confirmedCount,

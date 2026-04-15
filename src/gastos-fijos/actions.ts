@@ -30,6 +30,7 @@ export async function createFixedExpense(rawData: unknown) {
       createdBy: user.id,
       isActive: true,
       isShared: data.isShared,
+      responsibleId: data.responsibleId ?? null,
     })
     .returning();
 

@@ -16,6 +16,7 @@ type Props = {
     isActive: boolean | null;
     categoryName?: string;
     isShared: boolean;
+    responsibleName?: string | null;
   };
   isPaidThisMonth: boolean;
   currentUserStatus: "none" | "reserved" | "paid";
@@ -133,6 +134,11 @@ export function FixedExpenseCard({
                 {currentUserStatus === "reserved" && (
                   <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 shrink-0">
                     🐷 Chanchito
+                  </span>
+                )}
+                {expense.responsibleName && (
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary/80 shrink-0">
+                    Paga: {expense.responsibleName}
                   </span>
                 )}
               </div>

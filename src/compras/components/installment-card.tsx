@@ -16,6 +16,7 @@ type Props = {
     installmentsPaid: number | null;
     installmentsTotal: number | null;
     categoryName?: string;
+    responsibleName?: string | null;
   };
 };
 
@@ -41,9 +42,17 @@ export function InstallmentCard({ expense }: Props) {
       <div className="flex items-start justify-between gap-2">
         <Link href={`/gastos/${expense.id}`} className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
-          {expense.categoryName && (
-            <p className="text-xs text-muted-foreground mt-0.5">{expense.categoryName}</p>
-          )}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {expense.categoryName && (
+              <span className="text-xs text-muted-foreground">{expense.categoryName}</span>
+            )}
+            {expense.responsibleName && (
+              <>
+                {expense.categoryName && <span className="text-xs text-muted-foreground/50">·</span>}
+                <span className="text-xs font-medium text-primary/80">Paga: {expense.responsibleName}</span>
+              </>
+            )}
+          </div>
         </Link>
         <div className="flex items-center gap-2 shrink-0 mt-0.5">
           <span className="text-xs text-muted-foreground">

@@ -18,6 +18,7 @@ export const createFixedExpenseSchema = z.object({
   currency: z.string().default("ARS"),
   recurrenceDay: recurrenceDayField,
   isShared: z.boolean().default(false),
+  responsibleId: z.string().uuid().nullable().optional(),
 });
 
 export const updateFixedExpenseSchema = z.object({

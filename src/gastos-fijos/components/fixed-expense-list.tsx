@@ -9,6 +9,7 @@ type EnrichedExpense = {
   isActive: boolean | null;
   categoryName?: string;
   isShared: boolean;
+  responsibleName?: string | null;
   isPaidThisMonth: boolean;
   currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;

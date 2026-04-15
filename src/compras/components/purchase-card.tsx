@@ -9,6 +9,7 @@ type Props = {
     amount: string;
     expenseDate: string | null;
     categoryName?: string;
+    responsibleName?: string | null;
   };
 };
 
@@ -23,7 +24,7 @@ export function PurchaseCard({ expense }: Props) {
       <div className="flex items-center gap-3 bg-card border border-border shadow-sm rounded-2xl px-4 py-3.5 hover:bg-muted/40 active:scale-[0.99] transition-all cursor-pointer">
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
-          <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             {expense.categoryName && (
               <span className="text-xs text-muted-foreground">{expense.categoryName}</span>
             )}
@@ -34,6 +35,12 @@ export function PurchaseCard({ expense }: Props) {
               <span className="text-xs text-muted-foreground">
                 {formatDate(expense.expenseDate)}
               </span>
+            )}
+            {expense.responsibleName && (
+              <>
+                <span className="text-xs text-muted-foreground/50">·</span>
+                <span className="text-xs font-medium text-primary/80">Paga: {expense.responsibleName}</span>
+              </>
             )}
           </div>
         </div>

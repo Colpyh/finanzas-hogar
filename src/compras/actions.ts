@@ -24,6 +24,7 @@ export async function createPurchase(rawData: unknown) {
       type: "one_time",
       householdId: household.id,
       createdBy: user.id,
+      responsibleId: data.responsibleId ?? null,
     })
     .returning();
 
@@ -53,6 +54,7 @@ export async function createInstallment(rawData: unknown) {
       installmentsPaid: 0,
       householdId: household.id,
       createdBy: user.id,
+      responsibleId: data.responsibleId ?? null,
     })
     .returning();
 

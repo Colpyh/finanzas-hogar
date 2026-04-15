@@ -15,6 +15,7 @@ type Expense = {
   installmentsPaid: number | null;
   installmentsTotal: number | null;
   categoryName?: string;
+  responsibleName?: string | null;
 };
 
 type Props = { expenses: Expense[] };
@@ -40,11 +41,11 @@ export function PurchaseList({ expenses }: Props) {
         >
           {exp.type === "installment" ? (
             <InstallmentCard
-              expense={{ ...exp, installmentAmount: exp.installmentAmount }}
+              expense={{ ...exp, installmentAmount: exp.installmentAmount, responsibleName: exp.responsibleName }}
             />
           ) : (
             <PurchaseCard
-              expense={{ ...exp, amount: exp.amount ?? "0" }}
+              expense={{ ...exp, amount: exp.amount ?? "0", responsibleName: exp.responsibleName }}
             />
           )}
         </motion.div>

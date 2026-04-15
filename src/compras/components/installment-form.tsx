@@ -9,9 +9,10 @@ import { createInstallment } from "@/compras/actions";
 import { calculateInstallmentPreview } from "@/compras/installment-utils";
 
 type Category = { id: string; name: string };
-type Props = { categories: Category[] };
+type Member = { userId: string; displayName: string };
+type Props = { categories: Category[]; members: Member[] };
 
-export function InstallmentForm({ categories }: Props) {
+export function InstallmentForm({ categories, members }: Props) {
   const today = new Date().toISOString().slice(0, 7) + "-01";
   const [form, setForm] = useState({
     description: "",
@@ -20,6 +21,7 @@ export function InstallmentForm({ categories }: Props) {
     installmentsTotal: "",
     installmentAmount: "",
     startMonth: today,
+    responsibleId: "" as string,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -41,6 +43,7 @@ export function InstallmentForm({ categories }: Props) {
     const parsed = createInstallmentSchema.safeParse({
       ...form,
       installmentsTotal: Number(form.installmentsTotal),
+      responsibleId: form.responsibleId || null,
     });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -135,6 +138,25 @@ export function InstallmentForm({ categories }: Props) {
       {preview && (
         <div className="rounded-xl bg-primary/8 border border-primary/20 px-4 py-3 text-sm font-medium text-primary text-center">
           {preview}
+        </div>
+      )}
+
+      {members.length > 0 && (
+        <div className="space-y-1.5">
+          <Label htmlFor="inst-responsible">Responsable de pago</Label>
+          <select
+            id="inst-responsible"
+            value={form.responsibleId}
+            onChange={(e) => set("responsibleId", e.target.value)}
+            disabled={loading}
+            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+          >
+            <option value="">Sin responsable definido</option>
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>{m.displayName}</option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">¿Quién pone la tarjeta para estas cuotas?</p>
         </div>
       )}
 

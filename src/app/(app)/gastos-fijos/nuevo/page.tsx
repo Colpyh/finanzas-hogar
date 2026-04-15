@@ -5,12 +5,14 @@ import { or, isNull, eq } from "drizzle-orm";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { FixedExpenseForm } from "@/gastos-fijos/components/fixed-expense-form";
+import { getHouseholdMembers } from "@/household/queries";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 export const metadata: Metadata = { title: "Nuevo Gasto Fijo" };
 
 type Category = { id: string; name: string };
+type Member = { userId: string; displayName: string };
 
 const MOCK_CATEGORIES: Category[] = [
   { id: "cat-1", name: "Vivienda" },
@@ -25,16 +27,25 @@ const MOCK_CATEGORIES: Category[] = [
 
 export default async function NuevoGastoFijoPage() {
   let categories: Category[] = MOCK_CATEGORIES;
+  let members: Member[] = [];
 
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      categories = await db
-        .select({ id: category.id, name: category.name })
-        .from(category)
-        .where(or(isNull(category.householdId), eq(category.householdId, household.id)))
-        .orderBy(category.name);
+      const [cats, rawMembers] = await Promise.all([
+        db
+          .select({ id: category.id, name: category.name })
+          .from(category)
+          .where(or(isNull(category.householdId), eq(category.householdId, household.id)))
+          .orderBy(category.name),
+        getHouseholdMembers(household.id),
+      ]);
+      categories = cats;
+      members = rawMembers.map((m) => ({
+        userId: m.userId,
+        displayName: m.displayName ?? m.userId,
+      }));
     }
   } catch {
     // Sin sesión — categorías de ejemplo
@@ -48,7 +59,7 @@ export default async function NuevoGastoFijoPage() {
         </Link>
         <h1 className="text-2xl font-bold tracking-tight">Nuevo gasto fijo</h1>
       </div>
-      <FixedExpenseForm categories={categories} />
+      <FixedExpenseForm categories={categories} members={members} />
     </div>
   );
 }
