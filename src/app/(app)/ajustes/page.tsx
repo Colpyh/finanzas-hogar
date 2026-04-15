@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { getHouseholdMembers, getActiveInvites } from "@/household/queries";
-import { generateInvite, revokeInvite } from "@/household/actions";
+import { getHouseholdMembers } from "@/household/queries";
 import { MemberList } from "@/household/components/member-list";
+import { AddMemberModal } from "@/household/components/add-member-modal";
 import { signOut } from "@/auth/actions";
 import { Button } from "@/components/ui/button";
-import { Users, Home, Link2, LogOut, Palette } from "lucide-react";
+import { Users, Home, LogOut, Palette } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 
 export const metadata: Metadata = { title: "Ajustes" };
@@ -19,10 +19,7 @@ const MOCK_MEMBERS = [
 export default async function AjustesPage() {
   let householdName = "Hogar Demo";
   let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
-  let invites: { id: string; token: string }[] = [];
   let isOwner = true;
-  let canInvite = false;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   try {
     const user = await getUser();
@@ -30,18 +27,13 @@ export default async function AjustesPage() {
     if (userHousehold) {
       householdName = userHousehold.name;
       isOwner = userHousehold.role === "owner";
-      const [dbMembers, dbInvites] = await Promise.all([
-        getHouseholdMembers(userHousehold.id),
-        getActiveInvites(userHousehold.id),
-      ]);
+      const dbMembers = await getHouseholdMembers(userHousehold.id);
       const currentUserName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null;
       members = dbMembers.map((m) =>
         m.userId === user.id && currentUserName
           ? { ...m, displayName: currentUserName }
           : m
       );
-      invites = dbInvites;
-      canInvite = isOwner;
     }
   } catch {
     // Sin sesión — datos de ejemplo
@@ -72,40 +64,8 @@ export default async function AjustesPage() {
           <span className="text-xs font-medium uppercase tracking-wide">Miembros</span>
         </div>
         <MemberList members={members} isOwner={isOwner} />
+        {isOwner && <AddMemberModal />}
       </div>
-
-      {/* Invitaciones */}
-      {isOwner && (
-        <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Link2 size={15} />
-            <span className="text-xs font-medium uppercase tracking-wide">Invitar miembro</span>
-          </div>
-
-          {invites.map((inv) => (
-            <div key={inv.id} className="space-y-2">
-              <p className="text-xs text-muted-foreground bg-muted rounded-lg p-3 break-all font-mono">
-                {siteUrl}/invite/{inv.token}
-              </p>
-              <form action={revokeInvite.bind(null, inv.id)}>
-                <Button variant="ghost" size="sm" className="text-destructive w-full">
-                  Revocar enlace
-                </Button>
-              </form>
-            </div>
-          ))}
-
-          {canInvite && (
-            <form action={generateInvite}>
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Link2 size={14} />
-                Generar enlace de invitación
-              </Button>
-            </form>
-          )}
-
-        </div>
-      )}
 
       {/* Apariencia */}
       <div className="rounded-2xl bg-card border border-border p-4 space-y-3">

@@ -3,11 +3,12 @@
 import crypto from "crypto";
 import { db } from "@/shared/lib/db";
 import { household, householdInvite, householdMember } from "@/shared/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { updateHouseholdSchema } from "./types";
 
 export async function updateHousehold(rawData: unknown) {
@@ -65,6 +66,51 @@ export async function revokeInvite(inviteId: string) {
     .where(eq(householdInvite.id, inviteId));
 
   revalidatePath("/ajustes");
+}
+
+export async function addMemberByEmail(
+  formData: FormData
+): Promise<{ error?: string }> {
+  const user = await getUser();
+  const userHousehold = await getUserHousehold(user.id);
+  if (!userHousehold) return { error: "No tienes un hogar" };
+  if (userHousehold.role !== "owner") return { error: "Solo el propietario puede agregar miembros" };
+
+  const query = (formData.get("query") as string | null)?.trim().toLowerCase() ?? "";
+  if (!query) return { error: "Ingresa un nombre o correo" };
+
+  const supabase = createAdminClient();
+  const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  if (listError) return { error: "Error al buscar usuarios. Verificá la configuración del servidor." };
+
+  const target = users.find((u) => {
+    const name = (u.user_metadata?.full_name ?? u.user_metadata?.name ?? "").toLowerCase();
+    return u.email?.toLowerCase() === query || name.includes(query);
+  });
+
+  if (!target) return { error: "No se encontró ningún usuario con ese nombre o correo" };
+  if (target.id === user.id) return { error: "No puedes agregarte a ti mismo" };
+
+  const [existing] = await db
+    .select({ id: householdMember.id })
+    .from(householdMember)
+    .where(and(eq(householdMember.householdId, userHousehold.id), eq(householdMember.userId, target.id)))
+    .limit(1);
+
+  if (existing) return { error: "Este usuario ya es miembro del hogar" };
+
+  const displayName =
+    target.user_metadata?.full_name ?? target.user_metadata?.name ?? target.email ?? null;
+
+  await db.insert(householdMember).values({
+    householdId: userHousehold.id,
+    userId: target.id,
+    role: "member",
+    displayName,
+  });
+
+  revalidatePath("/ajustes");
+  return {};
 }
 
 export async function removeMember(memberId: string) {
