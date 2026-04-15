@@ -105,10 +105,14 @@ export async function addMemberByEmail(
 
   if (existing) return { error: "Este usuario ya es miembro del hogar" };
 
+  const displayName =
+    target.user_metadata?.full_name ?? target.user_metadata?.name ?? target.email ?? null;
+
   await db.insert(householdMember).values({
     householdId: userHousehold.id,
     userId: target.id,
     role: "member",
+    displayName,
   });
 
   revalidatePath("/ajustes");

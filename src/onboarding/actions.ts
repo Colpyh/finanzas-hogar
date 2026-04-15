@@ -22,6 +22,7 @@ export async function createHousehold(rawData: unknown) {
       householdId: created!.id,
       userId: user.id,
       role: "owner",
+      displayName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null,
     });
 
     return [created];
@@ -79,6 +80,7 @@ export async function redeemInvite(rawData: unknown): Promise<{ error?: string }
       householdId: invite.householdId,
       userId: user.id,
       role: "member",
+      displayName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null,
     });
 
     await tx

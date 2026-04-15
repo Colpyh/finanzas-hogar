@@ -9,6 +9,7 @@ export async function getHouseholdMembers(householdId: string) {
       id: householdMember.id,
       userId: householdMember.userId,
       role: householdMember.role,
+      displayName: householdMember.displayName,
       joinedAt: householdMember.joinedAt,
     })
     .from(householdMember)
@@ -17,7 +18,7 @@ export async function getHouseholdMembers(householdId: string) {
   return Promise.all(
     rows.map(async (m) => ({
       ...m,
-      displayName: await getUserDisplayName(m.userId),
+      displayName: m.displayName ?? await getUserDisplayName(m.userId),
     }))
   );
 }
