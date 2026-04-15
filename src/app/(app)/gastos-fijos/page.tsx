@@ -19,15 +19,15 @@ type EnrichedExpense = {
   isActive: boolean | null;
   isShared: boolean;
   isPaidThisMonth: boolean;
-  currentUserConfirmed: boolean;
+  currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;
 };
 
 const MOCK_EXPENSES: EnrichedExpense[] = [
-  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, isPaidThisMonth: true, currentUserConfirmed: true, confirmedCount: 1 },
-  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, isPaidThisMonth: true, currentUserConfirmed: true, confirmedCount: 1 },
-  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, isPaidThisMonth: false, currentUserConfirmed: false, confirmedCount: 0 },
-  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, isPaidThisMonth: false, currentUserConfirmed: false, confirmedCount: 0 },
+  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, isPaidThisMonth: true, currentUserStatus: "paid", confirmedCount: 1 },
+  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, isPaidThisMonth: false, currentUserStatus: "reserved", confirmedCount: 1 },
+  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
+  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
 ];
 
 export default async function GastosFijosPage() {
@@ -51,11 +51,16 @@ export default async function GastosFijosPage() {
       expenses = dbExpenses.map((e, i) => {
         const payments = paymentsPerExpense[i] ?? [];
         const isShared = e.isShared ?? false;
-        const confirmedCount = payments.length;
+        // Solo cuentan como "pagado completo" los que tienen status='paid'
+        const paidCount = payments.filter((p) => p.status === "paid").length;
+        const confirmedCount = paidCount;
         const isPaidThisMonth = isShared
-          ? confirmedCount >= memberCount
-          : confirmedCount >= 1;
-        const currentUserConfirmed = payments.some((p) => p.paidBy === user.id);
+          ? paidCount >= memberCount
+          : paidCount >= 1;
+        const myPayment = payments.find((p) => p.paidBy === user.id);
+        const currentUserStatus = myPayment
+          ? (myPayment.status as "reserved" | "paid")
+          : "none";
         return {
           id: e.id,
           description: e.description,
@@ -64,7 +69,7 @@ export default async function GastosFijosPage() {
           isActive: e.isActive,
           isShared,
           isPaidThisMonth,
-          currentUserConfirmed,
+          currentUserStatus,
           confirmedCount,
         };
       });

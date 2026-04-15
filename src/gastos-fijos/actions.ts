@@ -2,7 +2,7 @@
 
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
@@ -53,15 +53,42 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
       paidBy: user.id,
       periodMonth,
       amount: data.amount,
+      status: data.status,
       notes: data.notes,
     });
   } catch (err: unknown) {
-    // UNIQUE constraint violation — already paid this month (Scenario 2.6)
     const msg = err instanceof Error ? err.message : "";
     if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
       return { error: "Ya confirmaste tu pago este mes" };
     }
     throw err;
+  }
+
+  revalidatePath("/gastos-fijos");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+export async function upgradeToPaid(expenseId: string): Promise<{ error?: string }> {
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
+
+  const periodMonth = currentPeriodMonth();
+
+  try {
+    await db
+      .update(fixedExpensePayment)
+      .set({ status: "paid", paidAt: new Date() })
+      .where(
+        and(
+          eq(fixedExpensePayment.expenseId, expenseId),
+          eq(fixedExpensePayment.periodMonth, periodMonth),
+          eq(fixedExpensePayment.paidBy, user.id)
+        )
+      );
+  } catch {
+    return { error: "No se pudo actualizar el pago" };
   }
 
   revalidatePath("/gastos-fijos");

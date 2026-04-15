@@ -32,6 +32,7 @@ export const updateFixedExpenseSchema = z.object({
 export const markPaidSchema = z.object({
   expenseId: z.string().uuid("ID de gasto inválido"),
   amount: amountField,
+  status: z.enum(["reserved", "paid"]).default("paid"),
   notes: z.string().max(500).optional(),
 });
 

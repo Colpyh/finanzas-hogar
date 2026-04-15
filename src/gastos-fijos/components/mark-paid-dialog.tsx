@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { markFixedExpensePaid } from "@/gastos-fijos/actions";
+import { PiggyBank, CheckCircle2 } from "lucide-react";
 
 type Props = {
   expenseId: string;
@@ -31,11 +32,11 @@ export function MarkPaidDialog({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleConfirm() {
+  async function handleSubmit(status: "reserved" | "paid") {
     setLoading(true);
     setError(null);
 
-    const result = await markFixedExpensePaid({ expenseId, amount, notes: notes || undefined });
+    const result = await markFixedExpensePaid({ expenseId, amount, status, notes: notes || undefined });
 
     if (result?.error) {
       setError(result.error);
@@ -54,7 +55,7 @@ export function MarkPaidDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-1">
-            <Label htmlFor="paid-amount">Monto pagado</Label>
+            <Label htmlFor="paid-amount">Monto</Label>
             <Input
               id="paid-amount"
               type="number"
@@ -83,11 +84,30 @@ export function MarkPaidDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+            className="sm:mr-auto"
+          >
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={() => handleSubmit("reserved")}
+            disabled={loading}
+            className="gap-2 border-violet-300 text-violet-700 hover:bg-violet-50"
+          >
+            <PiggyBank size={15} />
+            {loading ? "Guardando..." : "Guardar en chanchito"}
+          </Button>
+          <Button
+            onClick={() => handleSubmit("paid")}
+            disabled={loading}
+            className="gap-2"
+          >
+            <CheckCircle2 size={15} />
             {loading ? "Guardando..." : "Confirmar pago"}
           </Button>
         </DialogFooter>

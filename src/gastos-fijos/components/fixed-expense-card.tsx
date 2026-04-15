@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkPaidDialog } from "./mark-paid-dialog";
-import { toggleFixedExpenseActive } from "@/gastos-fijos/actions";
+import { toggleFixedExpenseActive, upgradeToPaid } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, PiggyBank } from "lucide-react";
 
 type Props = {
   expense: {
@@ -18,7 +18,7 @@ type Props = {
     isShared: boolean;
   };
   isPaidThisMonth: boolean;
-  currentUserConfirmed: boolean;
+  currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;
   memberCount: number;
 };
@@ -26,43 +26,91 @@ type Props = {
 export function FixedExpenseCard({
   expense,
   isPaidThisMonth,
-  currentUserConfirmed,
+  currentUserStatus,
   confirmedCount,
   memberCount,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [upgrading, startUpgrade] = useTransition();
 
-  // Determine icon and button for shared vs solo
+  function handleUpgrade() {
+    startUpgrade(async () => {
+      await upgradeToPaid(expense.id);
+    });
+  }
+
+  // ── Icon ──────────────────────────────────────────────
   let icon: React.ReactNode;
-  let buttonDisabled: boolean;
-  let buttonText: string;
-  let buttonVariantProp: "ghost" | "outline" = "outline";
+  if (currentUserStatus === "paid" && (!expense.isShared || isPaidThisMonth)) {
+    icon = <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />;
+  } else if (currentUserStatus === "reserved") {
+    icon = <PiggyBank size={18} className="text-violet-500 shrink-0" />;
+  } else {
+    icon = <Clock size={18} className="text-amber-500 shrink-0" />;
+  }
+
+  // ── Button logic ──────────────────────────────────────
+  let primaryButton: React.ReactNode;
 
   if (!expense.isShared) {
-    icon = isPaidThisMonth ? (
-      <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-    ) : (
-      <Clock size={18} className="text-amber-500 shrink-0" />
-    );
-    buttonDisabled = isPaidThisMonth;
-    buttonText = isPaidThisMonth ? "Pagado este mes" : "Marcar como pagado";
-    buttonVariantProp = isPaidThisMonth ? "ghost" : "outline";
+    if (currentUserStatus === "paid") {
+      primaryButton = (
+        <Button size="sm" variant="ghost" disabled className="flex-1">
+          Pagado este mes
+        </Button>
+      );
+    } else if (currentUserStatus === "reserved") {
+      primaryButton = (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleUpgrade}
+          disabled={upgrading}
+          className="flex-1 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
+        >
+          <PiggyBank size={13} />
+          {upgrading ? "Confirmando..." : "En chanchito · Confirmar pago"}
+        </Button>
+      );
+    } else {
+      primaryButton = (
+        <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)} className="flex-1">
+          Marcar como pagado
+        </Button>
+      );
+    }
   } else {
     if (isPaidThisMonth) {
-      icon = <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />;
-      buttonDisabled = true;
-      buttonText = "Todos confirmaron ✓";
-      buttonVariantProp = "ghost";
-    } else if (currentUserConfirmed) {
-      icon = <Clock size={18} className="text-amber-500 shrink-0" />;
-      buttonDisabled = true;
-      buttonText = `Tu parte confirmada · esperando ${memberCount - confirmedCount}`;
-      buttonVariantProp = "ghost";
+      primaryButton = (
+        <Button size="sm" variant="ghost" disabled className="flex-1">
+          Todos confirmaron ✓
+        </Button>
+      );
+    } else if (currentUserStatus === "paid") {
+      primaryButton = (
+        <Button size="sm" variant="ghost" disabled className="flex-1">
+          Tu parte confirmada · esperando {memberCount - confirmedCount}
+        </Button>
+      );
+    } else if (currentUserStatus === "reserved") {
+      primaryButton = (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleUpgrade}
+          disabled={upgrading}
+          className="flex-1 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
+        >
+          <PiggyBank size={13} />
+          {upgrading ? "Confirmando..." : "En chanchito · Confirmar pago"}
+        </Button>
+      );
     } else {
-      icon = <Clock size={18} className="text-amber-500 shrink-0" />;
-      buttonDisabled = false;
-      buttonText = "Confirmar mi parte";
-      buttonVariantProp = "outline";
+      primaryButton = (
+        <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)} className="flex-1">
+          Confirmar mi parte
+        </Button>
+      );
     }
   }
 
@@ -82,6 +130,11 @@ export function FixedExpenseCard({
                     Compartido
                   </span>
                 )}
+                {currentUserStatus === "reserved" && (
+                  <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 shrink-0">
+                    🐷 Chanchito
+                  </span>
+                )}
               </div>
               {expense.categoryName && (
                 <p className="text-xs text-muted-foreground">{expense.categoryName}</p>
@@ -99,15 +152,7 @@ export function FixedExpenseCard({
         </div>
 
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={buttonVariantProp}
-            disabled={buttonDisabled}
-            onClick={() => setDialogOpen(true)}
-            className="flex-1"
-          >
-            {buttonText}
-          </Button>
+          {primaryButton}
           <form action={toggleFixedExpenseActive.bind(null, expense.id)}>
             <Button size="sm" variant="ghost" type="submit" className="text-muted-foreground">
               {expense.isActive ? "Desactivar" : "Activar"}
