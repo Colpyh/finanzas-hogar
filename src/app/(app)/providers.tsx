@@ -13,7 +13,7 @@ export function AppProviders({ household, children }: Props) {
     <HouseholdContext.Provider value={household}>
       <div className="flex min-h-screen">
         <BottomNav />
-        <main className="flex-1 pl-16">{children}</main>
+        <main className="flex-1 pb-16 md:pb-0 md:pl-16">{children}</main>
       </div>
     </HouseholdContext.Provider>
   );
