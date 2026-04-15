@@ -47,7 +47,7 @@ export function BottomNav() {
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
             )}
-            <Icon size={20} strokeWidth={isActive ? 2.5 : 1.75} />
+            <Icon size={24} strokeWidth={isActive ? 2.5 : 1.75} />
             <span className={cn("text-[9px] leading-none", isActive ? "font-semibold" : "font-normal")}>
               {item.label}
             </span>
