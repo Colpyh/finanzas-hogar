@@ -88,10 +88,10 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
           );
 
           if (opt.href) {
-            return <Link key={opt.type} href={opt.href}>{inner}</Link>;
+            return <Link key={opt.type} href={opt.href} className="block">{inner}</Link>;
           }
           return (
-            <button key={opt.type} className="w-full text-left" onClick={() => setSelected(opt.type as ExpenseType)}>
+            <button key={opt.type} className="block w-full text-left" onClick={() => setSelected(opt.type as ExpenseType)}>
               {inner}
             </button>
           );
