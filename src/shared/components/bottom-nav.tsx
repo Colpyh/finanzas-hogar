@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
 import {
   LayoutDashboard,
   Receipt,
@@ -40,7 +41,11 @@ export function BottomNav() {
             )}
           >
             {isActive && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-primary" />
+              <motion.span
+                layoutId="nav-indicator"
+                className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-primary"
+                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+              />
             )}
             <Icon size={20} strokeWidth={isActive ? 2.5 : 1.75} />
             <span className={cn("text-[10px]", isActive ? "font-semibold" : "font-normal")}>

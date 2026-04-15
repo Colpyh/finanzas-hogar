@@ -13,6 +13,7 @@ import { FixedExpensesWidget } from "@/dashboard/components/fixed-expenses-widge
 import { InstallmentsWidget } from "@/dashboard/components/installments-widget";
 import { RecentPurchasesWidget } from "@/dashboard/components/recent-purchases-widget";
 import { QuickAddFab } from "@/dashboard/components/quick-add-fab";
+import { AnimatedWidgets } from "@/shared/components/animated-widgets";
 import type {
   DashboardSummary,
   FixedBillWithStatus,
@@ -96,10 +97,12 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground tracking-tight">{householdName}</h1>
       </div>
 
-      <MonthlySummaryCard summary={summary} />
-      <FixedExpensesWidget bills={bills} />
-      <InstallmentsWidget installments={installments} />
-      <RecentPurchasesWidget purchases={purchases} />
+      <AnimatedWidgets>
+        <MonthlySummaryCard summary={summary} />
+        <FixedExpensesWidget bills={bills} />
+        <InstallmentsWidget installments={installments} />
+        <RecentPurchasesWidget purchases={purchases} />
+      </AnimatedWidgets>
 
       <QuickAddFab />
     </div>
