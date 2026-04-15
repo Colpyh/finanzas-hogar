@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, numeric, date, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric, date, unique, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { expense } from "./expense";
 import { household } from "./household";
 
@@ -17,10 +18,13 @@ export const fixedExpensePayment = pgTable(
     periodMonth: date("period_month", { mode: "string" }).notNull(), // 'YYYY-MM-01'
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(), // actual paid amount
     paidAt: timestamp("paid_at", { withTimezone: true }).defaultNow().notNull(),
+    // 'reserved' = guardado chanchito (plata apartada, no entregada aún)
+    // 'paid'     = pagado / entregado
+    status: text("status").notNull().default("paid"),
     notes: text("notes"),
   },
   (table) => [
-    // Prevents double-payment for the same bill in the same month by the same user
     unique("uq_expense_period_user").on(table.expenseId, table.periodMonth, table.paidBy),
+    check("chk_payment_status", sql`status IN ('reserved', 'paid')`),
   ]
 );

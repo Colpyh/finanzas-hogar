@@ -3,3 +3,4 @@ export * from "@/db/schema/household";
 export * from "@/db/schema/category";
 export * from "@/db/schema/expense";
 export * from "@/db/schema/fixed-expense-payment";
+export * from "@/db/schema/income";

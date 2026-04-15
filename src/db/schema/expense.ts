@@ -17,6 +17,8 @@ export const expense = pgTable("expense", {
     .notNull()
     .references(() => household.id, { onDelete: "cascade" }),
   createdBy: uuid("created_by").notNull(), // references auth.users(id)
+  // Null = gasto del hogar completo. Uuid = gasto personal de ese miembro.
+  ownerId: uuid("owner_id"),
   categoryId: uuid("category_id")
     .notNull()
     .references(() => category.id),
