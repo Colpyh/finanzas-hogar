@@ -34,7 +34,12 @@ export default async function AjustesPage() {
         getHouseholdMembers(userHousehold.id),
         getActiveInvites(userHousehold.id),
       ]);
-      members = dbMembers;
+      const currentUserName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null;
+      members = dbMembers.map((m) =>
+        m.userId === user.id && currentUserName
+          ? { ...m, displayName: currentUserName }
+          : m
+      );
       invites = dbInvites;
       canInvite = isOwner;
     }

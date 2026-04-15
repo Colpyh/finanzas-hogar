@@ -5,6 +5,7 @@ import { db } from "@/shared/lib/db";
 import { household, householdInvite, householdMember } from "@/shared/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { updateHouseholdSchema } from "./types";
@@ -52,6 +53,7 @@ export async function createInvite() {
 
 export async function generateInvite(): Promise<void> {
   await createInvite();
+  redirect("/ajustes");
 }
 
 export async function revokeInvite(inviteId: string) {

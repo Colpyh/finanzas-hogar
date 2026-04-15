@@ -19,6 +19,7 @@ export const householdMember = pgTable(
       .references(() => household.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull(), // references auth.users(id)
     role: text("role", { enum: ["owner", "member"] }).notNull(),
+    displayName: text("display_name"),
     joinedAt: timestamp("joined_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

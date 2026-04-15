@@ -12,7 +12,7 @@ export async function getHouseholdMembers(householdId: string) {
   return Promise.all(
     rows.map(async (m) => ({
       ...m,
-      displayName: await getUserDisplayName(m.userId),
+      displayName: m.displayName ?? await getUserDisplayName(m.userId),
     }))
   );
 }
