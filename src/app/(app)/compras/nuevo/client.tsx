@@ -75,15 +75,15 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
         {OPTIONS.map((opt) => {
           const Icon = opt.icon;
           const inner = (
-            <div className="flex items-center gap-4 bg-card border border-border rounded-2xl p-4 hover:bg-muted/40 active:scale-[0.99] transition-all cursor-pointer">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Icon size={20} />
+            <div className="flex items-center gap-4 bg-card border border-border rounded-2xl px-5 py-4 hover:bg-muted/40 active:scale-[0.99] transition-all cursor-pointer">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Icon size={22} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-foreground">{opt.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                <p className="font-semibold text-[15px] text-foreground">{opt.label}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">{opt.desc}</p>
               </div>
-              <ChevronRight size={16} className="text-muted-foreground shrink-0" />
+              <ChevronRight size={16} className="text-muted-foreground/60 shrink-0" />
             </div>
           );
 
