@@ -71,7 +71,7 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
         <p className="text-sm text-muted-foreground mt-1">Elegí el tipo de gasto</p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {OPTIONS.map((opt) => {
           const Icon = opt.icon;
           const inner = (
