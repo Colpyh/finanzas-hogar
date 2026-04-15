@@ -105,23 +105,34 @@ export default async function ComprasPage({ searchParams }: Props) {
         </Link>
       </div>
 
-      <div className="flex gap-2">
-        {FILTERS.map((opt) => (
-          <Link
-            key={opt.value}
-            href={`/compras?type=${opt.value}`}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              typeFilter === opt.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {opt.label}
-          </Link>
-        ))}
-      </div>
+      <div className="flex gap-3 items-start">
+        <nav className="flex flex-col gap-1 shrink-0 w-[72px]">
+          {FILTERS.map((opt) => {
+            const isActive = typeFilter === opt.value;
+            return (
+              <Link
+                key={opt.value}
+                href={`/compras?type=${opt.value}`}
+                className={cn(
+                  "relative flex items-center justify-center py-2.5 px-2 text-xs font-medium rounded-xl transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {isActive && (
+                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary" />
+                )}
+                {opt.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-      <PurchaseList expenses={filtered} />
+        <div className="flex-1 min-w-0">
+          <PurchaseList expenses={filtered} />
+        </div>
+      </div>
     </div>
   );
 }
