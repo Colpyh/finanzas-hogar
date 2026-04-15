@@ -38,7 +38,7 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
 
   if (selected === "purchase") {
     return (
-      <div className="p-4 max-w-lg mx-auto space-y-5 pb-24">
+      <div className="p-4 max-w-lg mx-auto space-y-5 pb-8">
         <div className="flex items-center gap-2 pt-2">
           <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground transition-colors">
             <ChevronLeft size={20} />
@@ -52,7 +52,7 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
 
   if (selected === "installment") {
     return (
-      <div className="p-4 max-w-lg mx-auto space-y-5 pb-24">
+      <div className="p-4 max-w-lg mx-auto space-y-5 pb-8">
         <div className="flex items-center gap-2 pt-2">
           <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground transition-colors">
             <ChevronLeft size={20} />
@@ -65,7 +65,7 @@ export function NuevoCompraClient({ categories }: { categories: Category[] }) {
   }
 
   return (
-    <div className="p-4 max-w-lg mx-auto space-y-5 pb-24">
+    <div className="p-4 max-w-lg mx-auto space-y-5 pb-8">
       <div className="pt-2">
         <h1 className="text-2xl font-bold tracking-tight">¿Qué querés registrar?</h1>
         <p className="text-sm text-muted-foreground mt-1">Elegí el tipo de gasto</p>

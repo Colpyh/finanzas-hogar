@@ -11,9 +11,9 @@ type Props = {
 export function AppProviders({ household, children }: Props) {
   return (
     <HouseholdContext.Provider value={household}>
-      <div className="flex flex-col min-h-screen">
-        <main className="flex-1 pb-16">{children}</main>
+      <div className="flex min-h-screen">
         <BottomNav />
+        <main className="flex-1 pl-16">{children}</main>
       </div>
     </HouseholdContext.Provider>
   );

@@ -41,7 +41,7 @@ export default async function NuevoGastoFijoPage() {
   }
 
   return (
-    <div className="p-4 max-w-lg mx-auto space-y-5 pb-24">
+    <div className="p-4 max-w-lg mx-auto space-y-5 pb-8">
       <div className="flex items-center gap-2 pt-2">
         <Link href="/gastos-fijos" className="text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft size={20} />

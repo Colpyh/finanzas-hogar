@@ -74,7 +74,7 @@ export default async function GastosFijosPage() {
   }
 
   return (
-    <div className="p-4 space-y-4 max-w-lg mx-auto pb-24">
+    <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-2xl font-bold tracking-tight">Gastos Fijos</h1>
         <Link href="/gastos-fijos/nuevo" className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>

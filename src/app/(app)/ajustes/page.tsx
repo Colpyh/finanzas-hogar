@@ -40,7 +40,7 @@ export default async function AjustesPage() {
   }
 
   return (
-    <div className="p-4 space-y-4 max-w-lg mx-auto pb-24">
+    <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
       <div className="pt-2">
         <h1 className="text-2xl font-bold tracking-tight">Ajustes</h1>
       </div>
