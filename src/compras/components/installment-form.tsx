@@ -89,7 +89,9 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
         <Label>Categoría</Label>
         <Select value={categoryId} onValueChange={(v) => v && setCategoryId(v)}>
           <SelectTrigger className="w-full h-11 rounded-xl px-3 text-sm">
-            <SelectValue placeholder="Seleccionar categoría" />
+            <SelectValue>
+              {(v: string | null) => categories.find((c) => c.id === v)?.name ?? "Seleccionar categoría"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {categories.map((c) => (
