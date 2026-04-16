@@ -5,7 +5,9 @@ import { updateExpense } from "@/compras/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Loader2, User, X } from "lucide-react";
+import { ResponsiblePills } from "@/shared/components/responsible-pills";
+import { CardPills } from "@/shared/components/card-pills";
+import { Loader2 } from "lucide-react";
 
 type Member = { userId: string; displayName: string };
 type CardOption = { id: string; name: string; color: string; lastFour: string | null };
@@ -100,34 +102,12 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
       {members.length > 0 && (
         <div className="space-y-1.5">
           <Label>Responsable de pago</Label>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setResponsibleId(null)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
-                responsibleId === null
-                  ? "bg-primary/10 border-primary/30 text-primary"
-                  : "border-border text-muted-foreground hover:border-primary/30"
-              }`}
-            >
-              <User size={12} />
-              Sin asignar
-            </button>
-            {members.map((m) => (
-              <button
-                key={m.userId}
-                type="button"
-                onClick={() => setResponsibleId(m.userId)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
-                  responsibleId === m.userId
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/30"
-                }`}
-              >
-                {m.displayName.split(" ")[0]}
-              </button>
-            ))}
-          </div>
+          <ResponsiblePills
+            members={members}
+            value={responsibleId}
+            onChange={setResponsibleId}
+            disabled={isPending}
+          />
         </div>
       )}
 
@@ -137,37 +117,12 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
         {cards.length === 0 ? (
           <p className="text-xs text-muted-foreground">Sin tarjetas registradas.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setCardId(null)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
-                cardId === null
-                  ? "bg-primary/10 border-primary/30 text-primary"
-                  : "border-border text-muted-foreground hover:border-primary/30"
-              }`}
-            >
-              <X size={12} />
-              Sin tarjeta
-            </button>
-            {cards.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setCardId(c.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
-                  cardId === c.id
-                    ? "border-transparent text-white"
-                    : "border-border text-muted-foreground hover:border-primary/30"
-                }`}
-                style={cardId === c.id ? { backgroundColor: c.color } : undefined}
-              >
-                <CreditCard size={12} style={cardId !== c.id ? { color: c.color } : undefined} />
-                {c.name}
-                {c.lastFour && <span className="opacity-70">···{c.lastFour}</span>}
-              </button>
-            ))}
-          </div>
+          <CardPills
+            cards={cards}
+            value={cardId}
+            onChange={setCardId}
+            disabled={isPending}
+          />
         )}
       </div>
 

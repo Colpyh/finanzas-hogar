@@ -4,6 +4,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ResponsiblePills } from "@/shared/components/responsible-pills";
+import { CardPills } from "@/shared/components/card-pills";
 import { createInstallmentSchema } from "@/compras/types";
 import { createInstallment } from "@/compras/actions";
 import { calculateInstallmentPreview } from "@/compras/installment-utils";
@@ -15,26 +24,18 @@ type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
 export function InstallmentForm({ categories, members, cards = [] }: Props) {
   const today = new Date().toISOString().slice(0, 7) + "-01";
-  const [form, setForm] = useState({
-    description: "",
-    categoryId: categories[0]?.id ?? "",
-    currency: "CLP",
-    installmentsTotal: "",
-    installmentAmount: "",
-    startMonth: today,
-    responsibleId: "" as string,
-    cardId: "" as string,
-  });
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [installmentsTotal, setInstallmentsTotal] = useState("");
+  const [installmentAmount, setInstallmentAmount] = useState("");
+  const [startMonth, setStartMonth] = useState(today);
+  const [responsibleId, setResponsibleId] = useState<string | null>(null);
+  const [cardId, setCardId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  function set(field: string, value: string) {
-    setForm((p) => ({ ...p, [field]: value }));
-    setErrors((p) => ({ ...p, [field]: "" }));
-  }
-
-  const n = Number(form.installmentsTotal);
-  const amt = Number(form.installmentAmount);
+  const n = Number(installmentsTotal);
+  const amt = Number(installmentAmount);
   const preview =
     n >= 2 && amt > 0
       ? calculateInstallmentPreview({ installmentsTotal: n, installmentAmount: amt }).preview
@@ -43,10 +44,14 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsed = createInstallmentSchema.safeParse({
-      ...form,
-      installmentsTotal: Number(form.installmentsTotal),
-      responsibleId: form.responsibleId || null,
-      cardId: form.cardId || null,
+      description,
+      categoryId,
+      currency: "CLP",
+      installmentsTotal: Number(installmentsTotal),
+      installmentAmount,
+      startMonth,
+      responsibleId,
+      cardId,
     });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -71,8 +76,8 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
         <Label htmlFor="inst-desc">Descripción</Label>
         <Input
           id="inst-desc"
-          value={form.description}
-          onChange={(e) => set("description", e.target.value)}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Ej: Notebook Samsung"
           disabled={loading}
           className="h-11"
@@ -81,18 +86,17 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="inst-cat">Categoría</Label>
-        <select
-          id="inst-cat"
-          value={form.categoryId}
-          onChange={(e) => set("categoryId", e.target.value)}
-          disabled={loading}
-          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <Label>Categoría</Label>
+        <Select value={categoryId} onValueChange={(v) => v && setCategoryId(v)}>
+          <SelectTrigger className="w-full h-11 rounded-xl px-3 text-sm">
+            <SelectValue placeholder="Seleccionar categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -102,8 +106,8 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
             id="inst-n"
             type="number"
             min="2"
-            value={form.installmentsTotal}
-            onChange={(e) => set("installmentsTotal", e.target.value)}
+            value={installmentsTotal}
+            onChange={(e) => setInstallmentsTotal(e.target.value)}
             placeholder="12"
             disabled={loading}
             className="h-11"
@@ -116,8 +120,8 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
             id="inst-amt"
             type="number"
             min="0"
-            value={form.installmentAmount}
-            onChange={(e) => set("installmentAmount", e.target.value)}
+            value={installmentAmount}
+            onChange={(e) => setInstallmentAmount(e.target.value)}
             placeholder="89990"
             disabled={loading}
             className="h-11"
@@ -131,8 +135,8 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
         <Input
           id="inst-start"
           type="month"
-          value={form.startMonth.slice(0, 7)}
-          onChange={(e) => set("startMonth", e.target.value + "-01")}
+          value={startMonth.slice(0, 7)}
+          onChange={(e) => setStartMonth(e.target.value + "-01")}
           disabled={loading}
           className="h-11"
         />
@@ -146,47 +150,26 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
 
       {members.length > 0 && (
         <div className="space-y-1.5">
-          <Label htmlFor="inst-responsible">Responsable de pago</Label>
-          <select
-            id="inst-responsible"
-            value={form.responsibleId}
-            onChange={(e) => set("responsibleId", e.target.value)}
+          <Label>Responsable de pago</Label>
+          <ResponsiblePills
+            members={members}
+            value={responsibleId}
+            onChange={setResponsibleId}
             disabled={loading}
-            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
-          >
-            <option value="">Sin responsable definido</option>
-            {members.map((m) => (
-              <option key={m.userId} value={m.userId}>{m.displayName}</option>
-            ))}
-          </select>
+          />
           <p className="text-xs text-muted-foreground">¿Quién pone la tarjeta para estas cuotas?</p>
         </div>
       )}
 
       {cards.length > 0 && (
         <div className="space-y-1.5">
-          <Label htmlFor="inst-card">Tarjeta</Label>
-          <select
-            id="inst-card"
-            value={form.cardId}
-            onChange={(e) => set("cardId", e.target.value)}
+          <Label>Tarjeta</Label>
+          <CardPills
+            cards={cards}
+            value={cardId}
+            onChange={setCardId}
             disabled={loading}
-            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
-          >
-            <option value="">Sin tarjeta</option>
-            {cards.map((c) => {
-              const available = c.creditLimit ? c.creditLimit - c.used : null;
-              const suffix = c.lastFour ? ` ···· ${c.lastFour}` : "";
-              const limitNote = available !== null
-                ? ` — $${Math.round(available / 1000)}k disponible`
-                : "";
-              return (
-                <option key={c.id} value={c.id}>
-                  {c.name}{suffix}{limitNote}
-                </option>
-              );
-            })}
-          </select>
+          />
         </div>
       )}
 

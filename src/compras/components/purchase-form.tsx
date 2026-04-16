@@ -4,6 +4,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ResponsiblePills } from "@/shared/components/responsible-pills";
+import { CardPills } from "@/shared/components/card-pills";
 import { createPurchaseSchema } from "@/compras/types";
 import { createPurchase } from "@/compras/actions";
 
@@ -14,26 +23,26 @@ type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
 export function PurchaseForm({ categories, members, cards = [] }: Props) {
   const today = new Date().toISOString().split("T")[0] ?? "";
-  const [form, setForm] = useState({
-    description: "",
-    categoryId: categories[0]?.id ?? "",
-    amount: "",
-    currency: "CLP",
-    expenseDate: today,
-    responsibleId: "" as string,
-    cardId: "" as string,
-  });
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [amount, setAmount] = useState("");
+  const [expenseDate, setExpenseDate] = useState(today);
+  const [responsibleId, setResponsibleId] = useState<string | null>(null);
+  const [cardId, setCardId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  function set(field: string, value: string) {
-    setForm((p) => ({ ...p, [field]: value }));
-    setErrors((p) => ({ ...p, [field]: "" }));
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = createPurchaseSchema.safeParse({ ...form, responsibleId: form.responsibleId || null, cardId: form.cardId || null });
+    const parsed = createPurchaseSchema.safeParse({
+      description,
+      categoryId,
+      amount,
+      currency: "CLP",
+      expenseDate,
+      responsibleId,
+      cardId,
+    });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
       parsed.error.issues.forEach((i) => {
@@ -57,8 +66,8 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
         <Label htmlFor="desc">Descripción</Label>
         <Input
           id="desc"
-          value={form.description}
-          onChange={(e) => set("description", e.target.value)}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Ej: Supermercado"
           disabled={loading}
           className="h-11"
@@ -67,18 +76,17 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="cat">Categoría</Label>
-        <select
-          id="cat"
-          value={form.categoryId}
-          onChange={(e) => set("categoryId", e.target.value)}
-          disabled={loading}
-          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <Label>Categoría</Label>
+        <Select value={categoryId} onValueChange={(v) => v && setCategoryId(v)}>
+          <SelectTrigger className="w-full h-11 rounded-xl px-3 text-sm">
+            <SelectValue placeholder="Seleccionar categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1.5">
@@ -87,8 +95,8 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
           id="amount"
           type="number"
           min="0"
-          value={form.amount}
-          onChange={(e) => set("amount", e.target.value)}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
           placeholder="Ej: 45000"
           disabled={loading}
           className="h-11"
@@ -101,8 +109,8 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
         <Input
           id="date"
           type="date"
-          value={form.expenseDate}
-          onChange={(e) => set("expenseDate", e.target.value)}
+          value={expenseDate}
+          onChange={(e) => setExpenseDate(e.target.value)}
           disabled={loading}
           className="h-11"
         />
@@ -110,47 +118,26 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
 
       {members.length > 0 && (
         <div className="space-y-1.5">
-          <Label htmlFor="responsible">Responsable de pago</Label>
-          <select
-            id="responsible"
-            value={form.responsibleId}
-            onChange={(e) => set("responsibleId", e.target.value)}
+          <Label>Responsable de pago</Label>
+          <ResponsiblePills
+            members={members}
+            value={responsibleId}
+            onChange={setResponsibleId}
             disabled={loading}
-            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
-          >
-            <option value="">Sin responsable definido</option>
-            {members.map((m) => (
-              <option key={m.userId} value={m.userId}>{m.displayName}</option>
-            ))}
-          </select>
+          />
           <p className="text-xs text-muted-foreground">¿Quién paga físicamente este gasto?</p>
         </div>
       )}
 
       {cards.length > 0 && (
         <div className="space-y-1.5">
-          <Label htmlFor="card">Tarjeta</Label>
-          <select
-            id="card"
-            value={form.cardId}
-            onChange={(e) => set("cardId", e.target.value)}
+          <Label>Tarjeta</Label>
+          <CardPills
+            cards={cards}
+            value={cardId}
+            onChange={setCardId}
             disabled={loading}
-            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
-          >
-            <option value="">Sin tarjeta</option>
-            {cards.map((c) => {
-              const available = c.creditLimit ? c.creditLimit - c.used : null;
-              const suffix = c.lastFour ? ` ···· ${c.lastFour}` : "";
-              const limitNote = available !== null
-                ? ` — $${Math.round(available / 1000)}k disponible`
-                : "";
-              return (
-                <option key={c.id} value={c.id}>
-                  {c.name}{suffix}{limitNote}
-                </option>
-              );
-            })}
-          </select>
+          />
         </div>
       )}
 
