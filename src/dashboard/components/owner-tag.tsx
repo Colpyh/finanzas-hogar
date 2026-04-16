@@ -2,12 +2,14 @@ type Props = {
   responsibleId: string | null;
   currentUserId: string;
   memberNames: Record<string, string>;
+  isShared?: boolean;
 };
 
-export function OwnerTag({ responsibleId, currentUserId, memberNames }: Props) {
+export function OwnerTag({ responsibleId, currentUserId, memberNames, isShared }: Props) {
   if (!currentUserId) return null;
 
-  if (responsibleId === null) {
+  // Shared expense: cost is always split regardless of who physically pays
+  if (isShared || responsibleId === null) {
     return (
       <span className="inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[10px] font-medium text-violet-600 dark:text-violet-400 shrink-0">
         ÷2

@@ -45,10 +45,10 @@ const MOCK_SUMMARY: DashboardSummary = {
 };
 
 const MOCK_BILLS: FixedBillWithStatus[] = [
-  { id: "1", description: "Arriendo", amount: 650000, paid: true, responsibleId: null },
-  { id: "2", description: "Internet + TV", amount: 25990, paid: true, responsibleId: null },
-  { id: "3", description: "Gastos comunes", amount: 85000, paid: false, responsibleId: null },
-  { id: "4", description: "Seguro auto", amount: 48000, paid: false, responsibleId: null },
+  { id: "1", description: "Arriendo", amount: 650000, paid: true, responsibleId: null, isShared: true },
+  { id: "2", description: "Internet + TV", amount: 25990, paid: true, responsibleId: null, isShared: true },
+  { id: "3", description: "Gastos comunes", amount: 85000, paid: false, responsibleId: null, isShared: true },
+  { id: "4", description: "Seguro auto", amount: 48000, paid: false, responsibleId: null, isShared: false },
 ];
 
 const MOCK_INSTALLMENTS: ActiveInstallment[] = [

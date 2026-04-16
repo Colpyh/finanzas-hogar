@@ -164,6 +164,7 @@ describe("FixedBillWithStatus contract", () => {
       amount: 50000,
       paid: true,
       responsibleId: null,
+      isShared: true,
     };
     expect(bill.paid).toBe(true);
   });
@@ -175,6 +176,7 @@ describe("FixedBillWithStatus contract", () => {
       amount: 8000,
       paid: false,
       responsibleId: null,
+      isShared: false,
     };
     expect(bill.paid).toBe(false);
   });

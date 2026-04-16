@@ -28,7 +28,7 @@ export async function getDashboardSummary(
 ): Promise<DashboardSummary> {
   // fixedTotal: sum of amounts of active fixed expenses
   const fixedRows = await db
-    .select({ amount: expense.amount, responsibleId: expense.responsibleId })
+    .select({ amount: expense.amount, responsibleId: expense.responsibleId, isShared: expense.isShared })
     .from(expense)
     .where(
       and(
@@ -40,10 +40,12 @@ export async function getDashboardSummary(
     );
 
   const fixedTotal = fixedRows.reduce((acc, row) => acc + Number(row.amount ?? 0), 0);
-  const myShareFixed = fixedRows.reduce(
-    (acc, row) => acc + myShare(Number(row.amount ?? 0), row.responsibleId, userId),
-    0
-  );
+  const myShareFixed = fixedRows.reduce((acc, row) => {
+    const amount = Number(row.amount ?? 0);
+    // Shared expense: cost is always split 50/50 regardless of who physically pays
+    if (row.isShared) return acc + amount / 2;
+    return acc + myShare(amount, row.responsibleId, userId);
+  }, 0);
 
   // installmentsTotal: sum of active installment amounts for this month
   const allInstallments = await db
@@ -131,6 +133,7 @@ export async function getFixedExpenseStatusThisMonth(
         amount: Number(exp.amount ?? 0),
         paid: payments.length > 0,
         responsibleId: exp.responsibleId ?? null,
+        isShared: exp.isShared,
       };
     })
   );

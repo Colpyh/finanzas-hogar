@@ -41,6 +41,7 @@ export function FixedExpensesWidget({ bills, currentUserId = "", memberNames = {
                 responsibleId={bill.responsibleId}
                 currentUserId={currentUserId}
                 memberNames={memberNames}
+                isShared={bill.isShared}
               />
               <span
                 className={`text-sm font-medium shrink-0 ${

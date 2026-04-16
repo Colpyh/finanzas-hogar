@@ -18,6 +18,7 @@ export type FixedBillWithStatus = {
   amount: number;
   paid: boolean;
   responsibleId: string | null;
+  isShared: boolean;
 };
 
 export type ActiveInstallment = {
