@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   Receipt,
   ShoppingCart,
-  BarChart2,
+  TrendingUp,
   Settings,
 } from "lucide-react";
 
@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/gastos-fijos", label: "Fijos", icon: Receipt },
   { href: "/compras", label: "Compras", icon: ShoppingCart },
-  { href: "/resumen", label: "Resumen", icon: BarChart2 },
+  { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 

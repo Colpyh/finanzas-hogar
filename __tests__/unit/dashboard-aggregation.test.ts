@@ -34,6 +34,7 @@ describe("aggregateTotals", () => {
       fixedTotal: 10000,
       installmentsTotal: 5000,
       oneTimeTotal: 3000,
+      incomeTotal: 0,
     });
     expect(result.grandTotal).toBe(18000);
     expect(result.fixedTotal).toBe(10000);
@@ -42,12 +43,12 @@ describe("aggregateTotals", () => {
   });
 
   it("handles all zeros", () => {
-    const result = aggregateTotals({ fixedTotal: 0, installmentsTotal: 0, oneTimeTotal: 0 });
+    const result = aggregateTotals({ fixedTotal: 0, installmentsTotal: 0, oneTimeTotal: 0, incomeTotal: 0 });
     expect(result.grandTotal).toBe(0);
   });
 
   it("handles only one-time purchases (no fixed or installments)", () => {
-    const result = aggregateTotals({ fixedTotal: 0, installmentsTotal: 0, oneTimeTotal: 7500 });
+    const result = aggregateTotals({ fixedTotal: 0, installmentsTotal: 0, oneTimeTotal: 7500, incomeTotal: 0 });
     expect(result.grandTotal).toBe(7500);
   });
 });

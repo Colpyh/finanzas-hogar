@@ -17,7 +17,7 @@ import { calcPercentage, aggregateTotals } from "@/dashboard/aggregation";
 describe("MonthlySummary contract", () => {
   it("grandTotal includes all categories", () => {
     const summary: MonthlySummary = {
-      ...aggregateTotals({ fixedTotal: 20000, installmentsTotal: 8000, oneTimeTotal: 5000 }),
+      ...aggregateTotals({ fixedTotal: 20000, installmentsTotal: 8000, oneTimeTotal: 5000, incomeTotal: 0 }),
       byCategory: [
         { categoryId: "c1", categoryName: "Alimentación", total: 5000 },
         { categoryId: "c2", categoryName: "Servicios", total: 3000 },
@@ -29,7 +29,7 @@ describe("MonthlySummary contract", () => {
 
   it("byCategory can be empty when no variable expenses exist", () => {
     const summary: MonthlySummary = {
-      ...aggregateTotals({ fixedTotal: 10000, installmentsTotal: 0, oneTimeTotal: 0 }),
+      ...aggregateTotals({ fixedTotal: 10000, installmentsTotal: 0, oneTimeTotal: 0, incomeTotal: 0 }),
       byCategory: [],
     };
     expect(summary.byCategory).toHaveLength(0);

@@ -20,6 +20,7 @@ describe("DashboardSummary type contract", () => {
       fixedTotal: 15000,
       installmentsTotal: 5000,
       oneTimeTotal: 3000,
+      incomeTotal: 0,
     });
 
     expect(summary.fixedTotal).toBe(15000);
@@ -33,6 +34,7 @@ describe("DashboardSummary type contract", () => {
       fixedTotal: 0,
       installmentsTotal: 0,
       oneTimeTotal: 0,
+      incomeTotal: 0,
     });
     expect(summary.grandTotal).toBe(0);
   });

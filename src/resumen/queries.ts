@@ -128,7 +128,7 @@ export async function getMonthlySummary(
     .sort((a, b) => b.total - a.total);
 
   return {
-    ...aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal }),
+    ...aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal, incomeTotal: 0 }),
     byCategory,
   };
 }
