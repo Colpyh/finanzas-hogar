@@ -2,7 +2,7 @@
 
 import { db } from "@/shared/lib/db";
 import { income } from "@/shared/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
@@ -17,7 +17,8 @@ export async function addIncome(rawData: unknown): Promise<{ error?: string }> {
 
     const data = addIncomeSchema.parse(rawData);
 
-    // Salary: only one per member per month — upsert via delete+insert
+    // Salary is recurring: delete ALL existing salary rows for this member
+    // so there's always exactly one active salary per member (the new one).
     if (data.type === "salary") {
       await db
         .delete(income)
@@ -25,7 +26,6 @@ export async function addIncome(rawData: unknown): Promise<{ error?: string }> {
           and(
             eq(income.householdId, household.id),
             eq(income.memberId, user.id),
-            eq(income.periodMonth, data.periodMonth),
             eq(income.type, "salary")
           )
         );

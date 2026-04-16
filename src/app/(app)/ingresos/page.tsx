@@ -56,7 +56,9 @@ export default async function IngresosPage({ searchParams }: Props) {
 
       {/* Add form */}
       <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Agregar ingreso</h2>
+        <h2 className="text-sm font-semibold text-foreground">
+          {rows.some((r) => r.type === "salary") ? "Actualizar sueldo o agregar ingreso" : "Agregar ingreso"}
+        </h2>
         <AddIncomeForm month={month} />
       </div>
 

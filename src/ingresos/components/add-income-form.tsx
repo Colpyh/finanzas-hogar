@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addIncome } from "@/ingresos/actions";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw, CalendarDays } from "lucide-react";
 
 type Props = {
   month?: string;
@@ -99,9 +99,28 @@ export function AddIncomeForm({ month, onSuccess }: Props) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
+      {/* Context hint */}
+      <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs ${
+        type === "salary"
+          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+          : "bg-muted text-muted-foreground"
+      }`}>
+        {type === "salary" ? (
+          <>
+            <RefreshCw size={13} className="mt-0.5 shrink-0" />
+            <span>Se repetirá automáticamente cada mes. Si cambia tu sueldo, ingresalo de nuevo y reemplazará al anterior.</span>
+          </>
+        ) : (
+          <>
+            <CalendarDays size={13} className="mt-0.5 shrink-0" />
+            <span>Se registra solo para el mes seleccionado.</span>
+          </>
+        )}
+      </div>
+
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending && <Loader2 size={15} className="mr-2 animate-spin" />}
-        Agregar ingreso
+        {type === "salary" ? "Guardar sueldo" : "Agregar ingreso"}
       </Button>
     </form>
   );

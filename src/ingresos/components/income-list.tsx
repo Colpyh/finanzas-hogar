@@ -5,7 +5,7 @@ import { deleteIncome } from "@/ingresos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { useState } from "react";
-import { Trash2, Wallet, TrendingUp } from "lucide-react";
+import { Trash2, Wallet, TrendingUp, RefreshCw } from "lucide-react";
 
 type IncomeRow = {
   id: string;
@@ -39,9 +39,17 @@ function IncomeItem({ row }: { row: IncomeRow }) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{row.description}</p>
-          <p className="text-xs text-muted-foreground capitalize">
-            {row.type === "salary" ? "Sueldo" : "Otro ingreso"}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-medium text-foreground truncate">{row.description}</p>
+            {row.type === "salary" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
+                <RefreshCw size={9} />
+                Mensual
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {row.type === "salary" ? "Sueldo" : "Ingreso puntual"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -63,7 +71,11 @@ function IncomeItem({ row }: { row: IncomeRow }) {
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="¿Eliminar ingreso?"
-        description={`Se eliminará "${row.description}" (${formatCurrency(Number(row.amount))}) del mes.`}
+        description={
+          row.type === "salary"
+            ? `Se eliminará el sueldo "${row.description}" (${formatCurrency(Number(row.amount))}). Dejará de aparecer en todos los meses hasta que ingreses uno nuevo.`
+            : `Se eliminará "${row.description}" (${formatCurrency(Number(row.amount))}) del mes.`
+        }
         confirmText="Eliminar"
         variant="destructive"
         loading={isPending}
