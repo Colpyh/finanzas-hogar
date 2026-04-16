@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const { returnTo } = await searchParams;
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-violet-50 via-background to-fuchsia-50/40">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-background">
       <LoginForm returnTo={returnTo} />
     </div>
   );
