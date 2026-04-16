@@ -141,6 +141,29 @@ export async function updateInstallment(
   return {};
 }
 
+export async function updateExpenseCard(
+  expenseId: string,
+  cardId: string | null,
+): Promise<{ error?: string }> {
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) return { error: "No household" };
+
+  const [row] = await db
+    .select({ id: expense.id, householdId: expense.householdId })
+    .from(expense)
+    .where(eq(expense.id, expenseId))
+    .limit(1);
+
+  if (!row || row.householdId !== household.id) return { error: "Gasto no encontrado" };
+
+  await db.update(expense).set({ cardId }).where(eq(expense.id, expenseId));
+
+  revalidatePath("/compras");
+  revalidatePath(`/gastos/${expenseId}`);
+  return {};
+}
+
 export async function deleteExpense(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
 

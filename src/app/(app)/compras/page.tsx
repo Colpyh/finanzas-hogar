@@ -136,7 +136,7 @@ export default async function ComprasPage({ searchParams }: Props) {
       <div className="flex gap-3 items-start">
         <nav className="flex flex-col gap-1 shrink-0 w-[72px]">
           {FILTERS.map((opt) => {
-            const isActive = typeFilter === opt.value && !cardFilter;
+            const isActive = typeFilter === opt.value;
             const href = cardFilter
               ? `/compras?type=${opt.value}&month=${month}&card=${cardFilter}`
               : `/compras?type=${opt.value}&month=${month}`;
