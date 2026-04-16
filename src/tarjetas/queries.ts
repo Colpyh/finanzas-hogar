@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
-import { card } from "@/shared/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { card, expense } from "@/shared/lib/db/schema";
+import { eq, and, isNull, isNotNull, lte } from "drizzle-orm";
 
 export async function getHouseholdCards(householdId: string) {
   return db
@@ -8,4 +8,62 @@ export async function getHouseholdCards(householdId: string) {
     .from(card)
     .where(and(eq(card.householdId, householdId), eq(card.isActive, true)))
     .orderBy(card.createdAt);
+}
+
+/**
+ * Returns how much has been charged to each card in a given month.
+ * Counts: one_time (by expenseDate) + active installmentAmount + active fixed amount.
+ */
+export async function getCardUsageSummary(
+  householdId: string,
+  month: string
+): Promise<Map<string, number>> {
+  const monthPrefix = month.slice(0, 7);
+
+  const rows = await db
+    .select({
+      cardId: expense.cardId,
+      type: expense.type,
+      amount: expense.amount,
+      installmentAmount: expense.installmentAmount,
+      installmentsPaid: expense.installmentsPaid,
+      installmentsTotal: expense.installmentsTotal,
+      expenseDate: expense.expenseDate,
+      startMonth: expense.startMonth,
+      isActive: expense.isActive,
+    })
+    .from(expense)
+    .where(
+      and(
+        eq(expense.householdId, householdId),
+        isNull(expense.deletedAt),
+        isNotNull(expense.cardId)
+      )
+    );
+
+  const usage = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!row.cardId) continue;
+    let contribution = 0;
+
+    if (row.type === "one_time" && row.expenseDate?.startsWith(monthPrefix)) {
+      contribution = Number(row.amount ?? 0);
+    } else if (
+      row.type === "installment" &&
+      row.startMonth &&
+      row.startMonth <= month &&
+      (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+    ) {
+      contribution = Number(row.installmentAmount ?? 0);
+    } else if (row.type === "fixed" && row.isActive) {
+      contribution = Number(row.amount ?? 0);
+    }
+
+    if (contribution > 0) {
+      usage.set(row.cardId, (usage.get(row.cardId) ?? 0) + contribution);
+    }
+  }
+
+  return usage;
 }

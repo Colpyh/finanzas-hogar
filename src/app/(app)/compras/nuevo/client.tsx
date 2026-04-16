@@ -8,7 +8,7 @@ import { Receipt, ShoppingCart, CreditCard, ChevronLeft, ChevronRight } from "lu
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
-type Card = { id: string; name: string; lastFour: string | null; color: string };
+type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
 type ExpenseType = "purchase" | "installment" | null;
 
 const OPTIONS = [

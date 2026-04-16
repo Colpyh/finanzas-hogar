@@ -6,6 +6,7 @@ export type ExpenseFilters = {
   type?: "one_time" | "installment" | "all";
   dateFrom?: string;
   dateTo?: string;
+  cardId?: string | null;
 };
 
 export async function getExpenses(householdId: string, filters: ExpenseFilters = {}) {
@@ -35,6 +36,10 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
         lte(expense.startMonth, filters.dateTo)
       )
     );
+  }
+
+  if (filters.cardId) {
+    conditions.push(eq(expense.cardId, filters.cardId));
   }
 
   return db

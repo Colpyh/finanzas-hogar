@@ -87,7 +87,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         getDashboardSummary(household.id, month),
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
-        getRecentPurchases(household.id, 5),
+        getRecentPurchases(household.id, month, 5),
       ]);
     }
   } catch {

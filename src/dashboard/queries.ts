@@ -144,10 +144,13 @@ export async function getActiveInstallments(
 
 export async function getRecentPurchases(
   householdId: string,
+  month: string,
   limit = 5
 ): Promise<
   { id: string; description: string; amount: number; expenseDate: string | null }[]
 > {
+  const monthPrefix = month.slice(0, 7);
+
   const rows = await db
     .select({
       id: expense.id,
@@ -163,10 +166,14 @@ export async function getRecentPurchases(
         isNull(expense.deletedAt)
       )
     )
-    .orderBy(desc(expense.createdAt))
-    .limit(limit);
+    .orderBy(desc(expense.createdAt));
 
-  return rows.map((row) => ({
+  // Filter by month prefix in JS (consistent with rest of the app)
+  const filtered = rows.filter(
+    (r) => r.expenseDate != null && r.expenseDate.startsWith(monthPrefix)
+  );
+
+  return filtered.slice(0, limit).map((row) => ({
     ...row,
     amount: Number(row.amount ?? 0),
   }));

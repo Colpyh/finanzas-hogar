@@ -6,7 +6,8 @@ import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { toggleFixedExpenseActive, upgradeToPaid } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CheckCircle2, Clock, PiggyBank } from "lucide-react";
+import { CheckCircle2, Clock, PiggyBank, Pencil } from "lucide-react";
+import Link from "next/link";
 
 type Props = {
   expense: {
@@ -157,13 +158,20 @@ export function FixedExpenseCard({
               )}
             </div>
           </div>
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 flex flex-col items-end gap-1">
             <p className="text-sm font-semibold text-foreground">
               {formatCurrency(parseFloat(expense.amount))}
             </p>
             {expense.recurrenceDay && (
               <p className="text-xs text-muted-foreground">día {expense.recurrenceDay}</p>
             )}
+            <Link
+              href={`/gastos-fijos/${expense.id}`}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Editar gasto fijo"
+            >
+              <Pencil size={13} />
+            </Link>
           </div>
         </div>
 

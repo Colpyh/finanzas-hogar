@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { db } from "@/shared/lib/db";
 import { expense } from "@/shared/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { getFixedExpensePayments } from "@/gastos-fijos/queries";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { EditFixedExpenseForm } from "@/gastos-fijos/components/edit-fixed-expense-form";
+import { formatCurrency } from "@/shared/components/currency-display";
+import { ChevronLeft } from "lucide-react";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
 
-export const metadata: Metadata = { title: "Detalle de Gasto Fijo" };
+export const metadata: Metadata = { title: "Editar Gasto Fijo" };
 
 export default async function GastoFijoDetailPage({ params }: Props) {
   const { id } = await params;
@@ -30,35 +34,45 @@ export default async function GastoFijoDetailPage({ params }: Props) {
   const payments = await getFixedExpensePayments(id);
 
   return (
-    <div className="p-4 space-y-6 max-w-lg mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold">{exp.description}</h1>
-        <p className="text-muted-foreground text-sm">
-          Monto estimado: ${exp.amount} · Vence día {exp.recurrenceDay}
-        </p>
+    <div className="p-4 space-y-5 max-w-lg mx-auto pb-8">
+      <div className="flex items-center gap-2 pt-2">
+        <Link href="/gastos-fijos" className="text-muted-foreground hover:text-foreground transition-colors">
+          <ChevronLeft size={20} />
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight">Editar gasto fijo</h1>
       </div>
 
-      <div>
-        <h2 className="text-base font-medium mb-3">Historial de pagos</h2>
-        {payments.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Sin pagos registrados.</p>
-        ) : (
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <EditFixedExpenseForm
+          expense={{
+            id: exp.id,
+            description: exp.description,
+            amount: exp.amount ?? "0",
+            recurrenceDay: exp.recurrenceDay ?? null,
+          }}
+        />
+      </div>
+
+      {/* Payment history */}
+      {payments.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          <h2 className="text-sm font-semibold">Historial de pagos</h2>
           <div className="space-y-2">
             {payments.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between text-sm border rounded-md px-3 py-2"
+                className="flex items-center justify-between text-sm py-2 border-b border-border last:border-0"
               >
-                <span>{p.periodMonth}</span>
-                <span className="font-mono">${p.amount}</span>
+                <span className="text-muted-foreground">{p.periodMonth?.slice(0, 7)}</span>
+                <span className="font-medium">{formatCurrency(Number(p.amount))}</span>
                 {p.notes && (
-                  <span className="text-muted-foreground text-xs">{p.notes}</span>
+                  <span className="text-muted-foreground text-xs truncate max-w-[100px]">{p.notes}</span>
                 )}
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

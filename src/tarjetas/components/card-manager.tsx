@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { addCard, deleteCard } from "@/tarjetas/actions";
 import { CARD_COLORS } from "@/tarjetas/types";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
+import { formatCurrency } from "@/shared/components/currency-display";
 import { CreditCard, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +15,39 @@ type CardRow = {
   name: string;
   lastFour: string | null;
   color: string;
+  creditLimit: number | null;
+  used: number;
 };
 
 type Props = {
   cards: CardRow[];
 };
+
+function UsageBar({ used, limit, color }: { used: number; limit: number; color: string }) {
+  const pct = Math.min((used / limit) * 100, 100);
+  const overLimit = used > limit;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">
+          {formatCurrency(used)} / {formatCurrency(limit)}
+        </span>
+        <span className={overLimit ? "text-destructive font-semibold" : "text-muted-foreground"}>
+          {overLimit ? "Excedido" : `${formatCurrency(limit - used)} disponible`}
+        </span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${pct}%`,
+            backgroundColor: overLimit ? "var(--destructive)" : color,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 function CardItem({ card }: { card: CardRow }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -32,27 +61,36 @@ function CardItem({ card }: { card: CardRow }) {
 
   return (
     <>
-      <div className="flex items-center gap-3 py-3">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-          style={{ backgroundColor: card.color + "20" }}
-        >
-          <CreditCard size={14} style={{ color: card.color }} />
+      <div className="py-3 space-y-2">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ backgroundColor: card.color + "20" }}
+          >
+            <CreditCard size={14} style={{ color: card.color }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{card.name}</p>
+            {card.lastFour && (
+              <p className="text-xs text-muted-foreground">•••• {card.lastFour}</p>
+            )}
+          </div>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            disabled={isPending}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            aria-label="Eliminar tarjeta"
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{card.name}</p>
-          {card.lastFour && (
-            <p className="text-xs text-muted-foreground">•••• {card.lastFour}</p>
-          )}
-        </div>
-        <button
-          onClick={() => setConfirmOpen(true)}
-          disabled={isPending}
-          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-          aria-label="Eliminar tarjeta"
-        >
-          <Trash2 size={14} />
-        </button>
+        {card.creditLimit ? (
+          <UsageBar used={card.used} limit={card.creditLimit} color={card.color} />
+        ) : card.used > 0 ? (
+          <p className="text-xs text-muted-foreground pl-11">
+            Usado este mes: <span className="font-medium text-foreground">{formatCurrency(card.used)}</span>
+          </p>
+        ) : null}
       </div>
       <ConfirmDialog
         open={confirmOpen}
@@ -72,6 +110,7 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [lastFour, setLastFour] = useState("");
   const [color, setColor] = useState<string>(CARD_COLORS[0]?.value ?? "#6366f1");
+  const [creditLimit, setCreditLimit] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -83,6 +122,7 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
         name,
         lastFour: lastFour || undefined,
         color,
+        creditLimit: creditLimit || undefined,
       });
       if (result.error) {
         setError(result.error);
@@ -104,16 +144,30 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
           className="h-10"
         />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="card-last4">Últimos 4 dígitos (opcional)</Label>
-        <Input
-          id="card-last4"
-          value={lastFour}
-          onChange={(e) => setLastFour(e.target.value.replace(/\D/g, "").slice(0, 4))}
-          placeholder="1234"
-          inputMode="numeric"
-          className="h-10"
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="card-last4">Últimos 4 dígitos</Label>
+          <Input
+            id="card-last4"
+            value={lastFour}
+            onChange={(e) => setLastFour(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            placeholder="1234 (opcional)"
+            inputMode="numeric"
+            className="h-10"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="card-limit">Tope mensual</Label>
+          <Input
+            id="card-limit"
+            type="number"
+            min="0"
+            value={creditLimit}
+            onChange={(e) => setCreditLimit(e.target.value)}
+            placeholder="Opcional"
+            className="h-10"
+          />
+        </div>
       </div>
       <div className="space-y-1.5">
         <Label>Color</Label>

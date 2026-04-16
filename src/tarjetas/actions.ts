@@ -21,6 +21,7 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
       name: data.name,
       lastFour: data.lastFour || null,
       color: data.color,
+      creditLimit: data.creditLimit || null,
     });
 
     revalidatePath("/ajustes");

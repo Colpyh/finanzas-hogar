@@ -4,15 +4,16 @@ import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getExpenses } from "@/compras/queries";
 import { getHouseholdMembers } from "@/household/queries";
+import { getHouseholdCards } from "@/tarjetas/queries";
 import { PurchaseList } from "@/compras/components/purchase-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { buttonVariants } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  searchParams: Promise<{ type?: string; from?: string; to?: string; month?: string }>;
+  searchParams: Promise<{ type?: string; from?: string; to?: string; month?: string; card?: string }>;
 };
 
 export const metadata: Metadata = { title: "Compras" };
@@ -64,6 +65,7 @@ const MOCK_EXPENSES: ExpenseRow[] = [
 export default async function ComprasPage({ searchParams }: Props) {
   const params = await searchParams;
   const typeFilter = (params.type as "one_time" | "installment" | "all") ?? "all";
+  const cardFilter = params.card ?? null;
   const month = parseMonthParam(params.month);
 
   // Derive date range from month unless explicit from/to are set
@@ -75,15 +77,18 @@ export default async function ComprasPage({ searchParams }: Props) {
   const dateTo = params.to ?? lastDay;
 
   let expenses: ExpenseRow[] = MOCK_EXPENSES;
+  let cards: { id: string; name: string; color: string }[] = [];
 
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const [dbExpenses, members] = await Promise.all([
-        getExpenses(household.id, { type: typeFilter, dateFrom, dateTo }),
+      const [dbExpenses, members, dbCards] = await Promise.all([
+        getExpenses(household.id, { type: typeFilter, dateFrom, dateTo, cardId: cardFilter }),
         getHouseholdMembers(household.id),
+        getHouseholdCards(household.id),
       ]);
+      cards = dbCards.map((c) => ({ id: c.id, name: c.name, color: c.color }));
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
       expenses = dbExpenses.map((e) => ({
         id: e.id,
@@ -131,11 +136,14 @@ export default async function ComprasPage({ searchParams }: Props) {
       <div className="flex gap-3 items-start">
         <nav className="flex flex-col gap-1 shrink-0 w-[72px]">
           {FILTERS.map((opt) => {
-            const isActive = typeFilter === opt.value;
+            const isActive = typeFilter === opt.value && !cardFilter;
+            const href = cardFilter
+              ? `/compras?type=${opt.value}&month=${month}&card=${cardFilter}`
+              : `/compras?type=${opt.value}&month=${month}`;
             return (
               <Link
                 key={opt.value}
-                href={`/compras?type=${opt.value}&month=${month}`}
+                href={href}
                 className={cn(
                   "relative flex items-center justify-center py-2.5 px-2 text-xs font-medium rounded-xl transition-colors",
                   isActive
@@ -150,6 +158,39 @@ export default async function ComprasPage({ searchParams }: Props) {
               </Link>
             );
           })}
+
+          {/* Card filters */}
+          {cards.length > 0 && (
+            <>
+              <div className="my-1 border-t border-border" />
+              {cards.map((c) => {
+                const isActive = cardFilter === c.id;
+                const href = isActive
+                  ? `/compras?type=${typeFilter}&month=${month}`
+                  : `/compras?type=${typeFilter}&month=${month}&card=${c.id}`;
+                return (
+                  <Link
+                    key={c.id}
+                    href={href}
+                    title={c.name}
+                    className={cn(
+                      "relative flex items-center justify-center py-2.5 px-2 rounded-xl transition-colors",
+                      isActive ? "bg-primary/10" : "hover:bg-muted"
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary" />
+                    )}
+                    <CreditCard
+                      size={15}
+                      style={{ color: isActive ? c.color : undefined }}
+                      className={isActive ? "" : "text-muted-foreground"}
+                    />
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className="flex-1 min-w-0">

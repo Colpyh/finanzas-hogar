@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
-import { getHouseholdCards } from "@/tarjetas/queries";
+import { getHouseholdCards, getCardUsageSummary } from "@/tarjetas/queries";
+import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { MemberList } from "@/household/components/member-list";
 import { AddMemberModal } from "@/household/components/add-member-modal";
 import { CardManager } from "@/tarjetas/components/card-manager";
@@ -21,7 +22,7 @@ const MOCK_MEMBERS = [
 export default async function AjustesPage() {
   let householdName = "Hogar Demo";
   let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
-  let cards: { id: string; name: string; lastFour: string | null; color: string }[] = [];
+  let cards: { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number }[] = [];
   let isOwner = true;
 
   try {
@@ -30,15 +31,19 @@ export default async function AjustesPage() {
     if (userHousehold) {
       householdName = userHousehold.name;
       isOwner = userHousehold.role === "owner";
-      const [dbMembers, dbCards] = await Promise.all([
+      const month = currentPeriodMonth();
+      const [dbMembers, dbCards, usageMap] = await Promise.all([
         getHouseholdMembers(userHousehold.id),
         getHouseholdCards(userHousehold.id),
+        getCardUsageSummary(userHousehold.id, month),
       ]);
       cards = dbCards.map((c) => ({
         id: c.id,
         name: c.name,
         lastFour: c.lastFour,
         color: c.color,
+        creditLimit: c.creditLimit ? Number(c.creditLimit) : null,
+        used: usageMap.get(c.id) ?? 0,
       }));
       const currentUserName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null;
       members = dbMembers.map((m) =>

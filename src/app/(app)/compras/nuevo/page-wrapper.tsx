@@ -4,12 +4,13 @@ import { or, isNull, eq } from "drizzle-orm";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
-import { getHouseholdCards } from "@/tarjetas/queries";
+import { getHouseholdCards, getCardUsageSummary } from "@/tarjetas/queries";
+import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { NuevoCompraClient } from "./client";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
-type Card = { id: string; name: string; lastFour: string | null; color: string };
+type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
 
 const MOCK_CATEGORIES: Category[] = [
   { id: "cat-1", name: "Vivienda" },
@@ -31,7 +32,8 @@ export async function NuevoCompraPageWrapper() {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const [cats, rawMembers, rawCards] = await Promise.all([
+      const month = currentPeriodMonth();
+      const [cats, rawMembers, rawCards, usageMap] = await Promise.all([
         db
           .select({ id: category.id, name: category.name })
           .from(category)
@@ -39,6 +41,7 @@ export async function NuevoCompraPageWrapper() {
           .orderBy(category.name),
         getHouseholdMembers(household.id),
         getHouseholdCards(household.id),
+        getCardUsageSummary(household.id, month),
       ]);
       categories = cats;
       members = rawMembers.map((m) => ({
@@ -50,6 +53,8 @@ export async function NuevoCompraPageWrapper() {
         name: c.name,
         lastFour: c.lastFour,
         color: c.color,
+        creditLimit: c.creditLimit ? Number(c.creditLimit) : null,
+        used: usageMap.get(c.id) ?? 0,
       }));
     }
   } catch {

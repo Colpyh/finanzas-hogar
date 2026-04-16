@@ -9,7 +9,7 @@ import { createPurchase } from "@/compras/actions";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
-type Card = { id: string; name: string; lastFour: string | null; color: string };
+type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
 type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
 export function PurchaseForm({ categories, members, cards = [] }: Props) {
@@ -138,11 +138,18 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
             className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
           >
             <option value="">Sin tarjeta</option>
-            {cards.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}{c.lastFour ? ` ···· ${c.lastFour}` : ""}
-              </option>
-            ))}
+            {cards.map((c) => {
+              const available = c.creditLimit ? c.creditLimit - c.used : null;
+              const suffix = c.lastFour ? ` ···· ${c.lastFour}` : "";
+              const limitNote = available !== null
+                ? ` — $${Math.round(available / 1000)}k disponible`
+                : "";
+              return (
+                <option key={c.id} value={c.id}>
+                  {c.name}{suffix}{limitNote}
+                </option>
+              );
+            })}
           </select>
         </div>
       )}
