@@ -26,14 +26,14 @@ export function MonthlySummaryCard({ summary }: Props) {
         </div>
 
         {/* Grand total */}
-        <p className="text-4xl font-bold tracking-tight">
-          {formatCurrency(summary.grandTotal)}
-        </p>
-
-        {/* My share */}
-        <p className="text-sm opacity-70 mt-1">
-          Tu parte · {formatCurrency(summary.myShareTotal)}
-        </p>
+        <div className="flex items-end gap-3">
+          <p className="text-4xl font-bold tracking-tight">
+            {formatCurrency(summary.grandTotal)}
+          </p>
+          <p className="text-sm opacity-60 mb-1">
+            Tu parte · {formatCurrency(summary.myShareTotal)}
+          </p>
+        </div>
 
         {/* Progress bar + % */}
         {summary.incomeTotal > 0 && (
@@ -51,19 +51,28 @@ export function MonthlySummaryCard({ summary }: Props) {
           </div>
         )}
 
-        {/* Breakdown */}
-        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/15 pt-4">
-          <div>
-            <p className="text-xs opacity-60 mb-0.5">Fijos</p>
-            <p className="text-sm font-semibold">{formatCurrency(summary.fixedTotal)}</p>
+        {/* Breakdown: household + my share per category */}
+        <div className="mt-4 border-t border-white/15 pt-4 space-y-2.5">
+          {/* Headers */}
+          <div className="grid grid-cols-4 gap-1">
+            <div />
+            <p className="text-[10px] opacity-50 text-center">Fijos</p>
+            <p className="text-[10px] opacity-50 text-center">Cuotas</p>
+            <p className="text-[10px] opacity-50 text-center">Compras</p>
           </div>
-          <div>
-            <p className="text-xs opacity-60 mb-0.5">Cuotas</p>
-            <p className="text-sm font-semibold">{formatCurrency(summary.installmentsTotal)}</p>
+          {/* Household row */}
+          <div className="grid grid-cols-4 gap-1 items-center">
+            <p className="text-[10px] opacity-50">Casa</p>
+            <p className="text-xs font-semibold text-center">{formatCurrency(summary.fixedTotal)}</p>
+            <p className="text-xs font-semibold text-center">{formatCurrency(summary.installmentsTotal)}</p>
+            <p className="text-xs font-semibold text-center">{formatCurrency(summary.oneTimeTotal)}</p>
           </div>
-          <div>
-            <p className="text-xs opacity-60 mb-0.5">Compras</p>
-            <p className="text-sm font-semibold">{formatCurrency(summary.oneTimeTotal)}</p>
+          {/* My share row */}
+          <div className="grid grid-cols-4 gap-1 items-center">
+            <p className="text-[10px] opacity-50">Yo</p>
+            <p className="text-xs font-medium text-center opacity-80">{formatCurrency(summary.myShareFixed)}</p>
+            <p className="text-xs font-medium text-center opacity-80">{formatCurrency(summary.myShareInstallments)}</p>
+            <p className="text-xs font-medium text-center opacity-80">{formatCurrency(summary.myShareOneTime)}</p>
           </div>
         </div>
 

@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { ChevronRight } from "lucide-react";
-
-type Purchase = {
-  id: string;
-  description: string;
-  amount: number;
-  expenseDate: string | null;
-};
+import { OwnerTag } from "./owner-tag";
+import type { RecentPurchase } from "@/dashboard/types";
 
 type Props = {
-  purchases: Purchase[];
+  purchases: RecentPurchase[];
+  currentUserId?: string;
+  memberNames?: Record<string, string>;
 };
 
 function formatDate(dateStr: string): string {
@@ -18,7 +15,7 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
-export function RecentPurchasesWidget({ purchases }: Props) {
+export function RecentPurchasesWidget({ purchases, currentUserId = "", memberNames = {} }: Props) {
   return (
     <div className="rounded-2xl bg-card border border-border shadow-sm p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -49,6 +46,11 @@ export function RecentPurchasesWidget({ purchases }: Props) {
                     </p>
                   )}
                 </div>
+                <OwnerTag
+                  responsibleId={purchase.responsibleId}
+                  currentUserId={currentUserId}
+                  memberNames={memberNames}
+                />
                 <span className="text-sm font-medium text-foreground shrink-0">
                   {formatCurrency(purchase.amount)}
                 </span>

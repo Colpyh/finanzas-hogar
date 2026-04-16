@@ -6,7 +6,10 @@ export type DashboardSummary = {
   incomeTotal: number;
   saldo: number;
   porcentajeUsado: number; // 0–100
-  myShareTotal: number; // estimated share for the current user (50/50 for unassigned)
+  myShareTotal: number;
+  myShareFixed: number;
+  myShareInstallments: number;
+  myShareOneTime: number;
 };
 
 export type FixedBillWithStatus = {
@@ -14,6 +17,7 @@ export type FixedBillWithStatus = {
   description: string;
   amount: number;
   paid: boolean;
+  responsibleId: string | null;
 };
 
 export type ActiveInstallment = {
@@ -22,4 +26,13 @@ export type ActiveInstallment = {
   amount: number;
   installmentsPaid: number;
   installmentsTotal: number;
+  responsibleId: string | null;
+};
+
+export type RecentPurchase = {
+  id: string;
+  description: string;
+  amount: number;
+  expenseDate: string | null;
+  responsibleId: string | null;
 };

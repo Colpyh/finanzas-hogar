@@ -1,11 +1,14 @@
 import { formatCurrency } from "@/shared/components/currency-display";
+import { OwnerTag } from "./owner-tag";
 import type { ActiveInstallment } from "@/dashboard/types";
 
 type Props = {
   installments: ActiveInstallment[];
+  currentUserId?: string;
+  memberNames?: Record<string, string>;
 };
 
-export function InstallmentsWidget({ installments }: Props) {
+export function InstallmentsWidget({ installments, currentUserId = "", memberNames = {} }: Props) {
   return (
     <div className="rounded-2xl bg-card border border-border shadow-sm p-4 space-y-3">
       <h2 className="text-sm font-semibold text-foreground">Cuotas activas</h2>
@@ -18,10 +21,15 @@ export function InstallmentsWidget({ installments }: Props) {
             const progress = Math.round((item.installmentsPaid / item.installmentsTotal) * 100);
             return (
               <li key={item.id} className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground truncate flex-1 mr-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-foreground truncate flex-1">
                     {item.description}
                   </span>
+                  <OwnerTag
+                    responsibleId={item.responsibleId}
+                    currentUserId={currentUserId}
+                    memberNames={memberNames}
+                  />
                   <span className="text-xs text-muted-foreground shrink-0">
                     {item.installmentsPaid}/{item.installmentsTotal} · {formatCurrency(item.amount)}
                   </span>

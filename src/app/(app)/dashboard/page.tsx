@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { getHouseholdMembers } from "@/household/queries";
 import {
   getDashboardSummary,
   getFixedExpenseStatusThisMonth,
@@ -19,6 +20,7 @@ import type {
   DashboardSummary,
   FixedBillWithStatus,
   ActiveInstallment,
+  RecentPurchase,
 } from "@/dashboard/types";
 
 export const metadata: Metadata = { title: "Inicio" };
@@ -37,36 +39,27 @@ const MOCK_SUMMARY: DashboardSummary = {
   saldo: 561520,
   porcentajeUsado: 68.8,
   myShareTotal: 619240,
+  myShareFixed: 404495,
+  myShareInstallments: 67495,
+  myShareOneTime: 147250,
 };
 
 const MOCK_BILLS: FixedBillWithStatus[] = [
-  { id: "1", description: "Arriendo", amount: 650000, paid: true },
-  { id: "2", description: "Internet + TV", amount: 25990, paid: true },
-  { id: "3", description: "Gastos comunes", amount: 85000, paid: false },
-  { id: "4", description: "Seguro auto", amount: 48000, paid: false },
+  { id: "1", description: "Arriendo", amount: 650000, paid: true, responsibleId: null },
+  { id: "2", description: "Internet + TV", amount: 25990, paid: true, responsibleId: null },
+  { id: "3", description: "Gastos comunes", amount: 85000, paid: false, responsibleId: null },
+  { id: "4", description: "Seguro auto", amount: 48000, paid: false, responsibleId: null },
 ];
 
 const MOCK_INSTALLMENTS: ActiveInstallment[] = [
-  {
-    id: "1",
-    description: "Notebook Samsung",
-    amount: 89990,
-    installmentsPaid: 3,
-    installmentsTotal: 12,
-  },
-  {
-    id: "2",
-    description: "Smart TV 55\"",
-    amount: 45000,
-    installmentsPaid: 8,
-    installmentsTotal: 12,
-  },
+  { id: "1", description: "Notebook Samsung", amount: 89990, installmentsPaid: 3, installmentsTotal: 12, responsibleId: null },
+  { id: "2", description: "Smart TV 55\"", amount: 45000, installmentsPaid: 8, installmentsTotal: 12, responsibleId: null },
 ];
 
-const MOCK_PURCHASES: { id: string; description: string; amount: number; expenseDate: string | null }[] = [
-  { id: "1", description: "Supermercado Lider", amount: 187500, expenseDate: "2026-04-05" },
-  { id: "2", description: "Farmacia Cruz Verde", amount: 42000, expenseDate: "2026-04-04" },
-  { id: "3", description: "Bencina Shell", amount: 65000, expenseDate: "2026-04-03" },
+const MOCK_PURCHASES: RecentPurchase[] = [
+  { id: "1", description: "Supermercado Lider", amount: 187500, expenseDate: "2026-04-05", responsibleId: null },
+  { id: "2", description: "Farmacia Cruz Verde", amount: 42000, expenseDate: "2026-04-04", responsibleId: null },
+  { id: "3", description: "Bencina Shell", amount: 65000, expenseDate: "2026-04-03", responsibleId: null },
 ];
 
 export default async function DashboardPage({ searchParams }: Props) {
@@ -78,18 +71,31 @@ export default async function DashboardPage({ searchParams }: Props) {
   let installments = MOCK_INSTALLMENTS;
   let purchases = MOCK_PURCHASES;
   let householdName = "Hogar Demo";
+  let currentUserId = "";
+  let memberNames: Record<string, string> = {};
 
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
       householdName = household.name;
-      [summary, bills, installments, purchases] = await Promise.all([
+      currentUserId = user.id;
+      const [sumData, billsData, installData, purchaseData, members] = await Promise.all([
         getDashboardSummary(household.id, user.id, month),
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
         getRecentPurchases(household.id, month, 5),
+        getHouseholdMembers(household.id),
       ]);
+      summary = sumData;
+      bills = billsData;
+      installments = installData;
+      purchases = purchaseData;
+      memberNames = Object.fromEntries(
+        members
+          .filter((m) => m.userId !== user.id)
+          .map((m) => [m.userId, m.displayName ?? "Otro"])
+      );
     }
   } catch {
     // Sin sesión — se muestran datos de ejemplo
@@ -105,9 +111,9 @@ export default async function DashboardPage({ searchParams }: Props) {
 
       <AnimatedWidgets>
         <MonthlySummaryCard summary={summary} />
-        <FixedExpensesWidget bills={bills} />
-        <InstallmentsWidget installments={installments} />
-        <RecentPurchasesWidget purchases={purchases} />
+        <FixedExpensesWidget bills={bills} currentUserId={currentUserId} memberNames={memberNames} />
+        <InstallmentsWidget installments={installments} currentUserId={currentUserId} memberNames={memberNames} />
+        <RecentPurchasesWidget purchases={purchases} currentUserId={currentUserId} memberNames={memberNames} />
       </AnimatedWidgets>
 
       <QuickAddFab />

@@ -15,12 +15,21 @@ import { aggregateTotals } from "@/dashboard/aggregation";
 // DashboardSummary shape — Scenario 4.1
 // ============================================================
 describe("DashboardSummary type contract", () => {
-  it("aggregateTotals produces a valid DashboardSummary", () => {
-    const summary: DashboardSummary = {
-      ...aggregateTotals({ fixedTotal: 15000, installmentsTotal: 5000, oneTimeTotal: 3000, incomeTotal: 0 }),
+  function makeSummary(overrides: Partial<DashboardSummary> = {}): DashboardSummary {
+    return {
+      ...aggregateTotals({ fixedTotal: 0, installmentsTotal: 0, oneTimeTotal: 0, incomeTotal: 0 }),
       myShareTotal: 0,
+      myShareFixed: 0,
+      myShareInstallments: 0,
+      myShareOneTime: 0,
+      ...overrides,
     };
+  }
 
+  it("aggregateTotals produces a valid DashboardSummary", () => {
+    const summary = makeSummary(
+      aggregateTotals({ fixedTotal: 15000, installmentsTotal: 5000, oneTimeTotal: 3000, incomeTotal: 0 })
+    );
     expect(summary.fixedTotal).toBe(15000);
     expect(summary.installmentsTotal).toBe(5000);
     expect(summary.oneTimeTotal).toBe(3000);
@@ -28,10 +37,7 @@ describe("DashboardSummary type contract", () => {
   });
 
   it("grand total is 0 when all categories are 0", () => {
-    const summary: DashboardSummary = {
-      ...aggregateTotals({ fixedTotal: 0, installmentsTotal: 0, oneTimeTotal: 0, incomeTotal: 0 }),
-      myShareTotal: 0,
-    };
+    const summary = makeSummary();
     expect(summary.grandTotal).toBe(0);
   });
 });
@@ -157,6 +163,7 @@ describe("FixedBillWithStatus contract", () => {
       description: "Alquiler",
       amount: 50000,
       paid: true,
+      responsibleId: null,
     };
     expect(bill.paid).toBe(true);
   });
@@ -167,6 +174,7 @@ describe("FixedBillWithStatus contract", () => {
       description: "Luz",
       amount: 8000,
       paid: false,
+      responsibleId: null,
     };
     expect(bill.paid).toBe(false);
   });
@@ -183,6 +191,7 @@ describe("ActiveInstallment contract", () => {
       amount: 12000,
       installmentsPaid: 3,
       installmentsTotal: 12,
+      responsibleId: null,
     };
     expect(item.installmentsPaid).toBeLessThan(item.installmentsTotal);
   });

@@ -1,12 +1,15 @@
 import { CheckCircle2, Clock } from "lucide-react";
 import { formatCurrency } from "@/shared/components/currency-display";
+import { OwnerTag } from "./owner-tag";
 import type { FixedBillWithStatus } from "@/dashboard/types";
 
 type Props = {
   bills: FixedBillWithStatus[];
+  currentUserId?: string;
+  memberNames?: Record<string, string>;
 };
 
-export function FixedExpensesWidget({ bills }: Props) {
+export function FixedExpensesWidget({ bills, currentUserId = "", memberNames = {} }: Props) {
   const paid = bills.filter((b) => b.paid).length;
 
   return (
@@ -25,7 +28,7 @@ export function FixedExpensesWidget({ bills }: Props) {
       ) : (
         <ul className="space-y-2.5">
           {bills.map((bill) => (
-            <li key={bill.id} className="flex items-center gap-3">
+            <li key={bill.id} className="flex items-center gap-2">
               {bill.paid ? (
                 <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
               ) : (
@@ -34,6 +37,11 @@ export function FixedExpensesWidget({ bills }: Props) {
               <span className="flex-1 text-sm text-foreground truncate">
                 {bill.description}
               </span>
+              <OwnerTag
+                responsibleId={bill.responsibleId}
+                currentUserId={currentUserId}
+                memberNames={memberNames}
+              />
               <span
                 className={`text-sm font-medium shrink-0 ${
                   bill.paid ? "text-muted-foreground line-through" : "text-foreground"

@@ -12,6 +12,7 @@ import type {
   DashboardSummary,
   FixedBillWithStatus,
   ActiveInstallment,
+  RecentPurchase,
 } from "@/dashboard/types";
 
 function myShare(amount: number, responsibleId: string | null, userId: string): number {
@@ -106,7 +107,13 @@ export async function getDashboardSummary(
   const incomeTotal = await getMonthlyIncomeTotal(householdId, month);
   const myShareTotal = myShareFixed + myShareInstallments + myShareOneTime;
 
-  return { ...aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal, incomeTotal }), myShareTotal };
+  return {
+    ...aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal, incomeTotal }),
+    myShareTotal,
+    myShareFixed,
+    myShareInstallments,
+    myShareOneTime,
+  };
 }
 
 export async function getFixedExpenseStatusThisMonth(
@@ -123,6 +130,7 @@ export async function getFixedExpenseStatusThisMonth(
         description: exp.description,
         amount: Number(exp.amount ?? 0),
         paid: payments.length > 0,
+        responsibleId: exp.responsibleId ?? null,
       };
     })
   );
@@ -141,6 +149,7 @@ export async function getActiveInstallments(
       installmentAmount: expense.installmentAmount,
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
+      responsibleId: expense.responsibleId,
     })
     .from(expense)
     .where(
@@ -162,6 +171,7 @@ export async function getActiveInstallments(
       amount: Number(row.installmentAmount ?? 0),
       installmentsPaid: row.installmentsPaid ?? 0,
       installmentsTotal: row.installmentsTotal ?? 0,
+      responsibleId: row.responsibleId ?? null,
     }));
 }
 
@@ -169,9 +179,7 @@ export async function getRecentPurchases(
   householdId: string,
   month: string,
   limit = 5
-): Promise<
-  { id: string; description: string; amount: number; expenseDate: string | null }[]
-> {
+): Promise<RecentPurchase[]> {
   const monthPrefix = month.slice(0, 7);
 
   const rows = await db
@@ -180,6 +188,7 @@ export async function getRecentPurchases(
       description: expense.description,
       amount: expense.amount,
       expenseDate: expense.expenseDate,
+      responsibleId: expense.responsibleId,
     })
     .from(expense)
     .where(
@@ -191,13 +200,15 @@ export async function getRecentPurchases(
     )
     .orderBy(desc(expense.createdAt));
 
-  // Filter by month prefix in JS (consistent with rest of the app)
   const filtered = rows.filter(
     (r) => r.expenseDate != null && r.expenseDate.startsWith(monthPrefix)
   );
 
   return filtered.slice(0, limit).map((row) => ({
-    ...row,
+    id: row.id,
+    description: row.description,
     amount: Number(row.amount ?? 0),
+    expenseDate: row.expenseDate ?? null,
+    responsibleId: row.responsibleId ?? null,
   }));
 }
