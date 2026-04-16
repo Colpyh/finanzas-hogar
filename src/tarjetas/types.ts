@@ -17,3 +17,6 @@ export const addCardSchema = z.object({
 });
 
 export type AddCardInput = z.infer<typeof addCardSchema>;
+
+export const updateCardSchema = addCardSchema;
+export type UpdateCardInput = z.infer<typeof updateCardSchema>;

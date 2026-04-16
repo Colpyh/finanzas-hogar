@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { card, expense } from "@/shared/lib/db/schema";
-import { eq, and, isNull, isNotNull, lte } from "drizzle-orm";
+import { eq, and, isNull, isNotNull } from "drizzle-orm";
 
 export async function getHouseholdCards(householdId: string) {
   return db
@@ -66,4 +66,28 @@ export async function getCardUsageSummary(
   }
 
   return usage;
+}
+
+/**
+ * Returns how many non-deleted expenses are linked to each card in the household.
+ * Used to warn the user before deleting a card that has linked expenses.
+ */
+export async function getCardExpenseCounts(householdId: string): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ cardId: expense.cardId })
+    .from(expense)
+    .where(
+      and(
+        eq(expense.householdId, householdId),
+        isNull(expense.deletedAt),
+        isNotNull(expense.cardId)
+      )
+    );
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.cardId) continue;
+    counts.set(row.cardId, (counts.get(row.cardId) ?? 0) + 1);
+  }
+  return counts;
 }

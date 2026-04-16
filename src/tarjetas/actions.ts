@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { addCardSchema } from "./types";
+import { addCardSchema, updateCardSchema } from "./types";
 
 export async function addCard(rawData: unknown): Promise<{ error?: string }> {
   try {
@@ -25,6 +25,33 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
     });
 
     revalidatePath("/ajustes");
+    revalidatePath("/compras/nuevo");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Error al guardar" };
+  }
+}
+
+export async function updateCard(id: string, rawData: unknown): Promise<{ error?: string }> {
+  try {
+    const user = await getUser();
+    const household = await getUserHousehold(user.id);
+    if (!household) return { error: "Sin hogar activo" };
+
+    const data = updateCardSchema.parse(rawData);
+
+    await db
+      .update(card)
+      .set({
+        name: data.name,
+        lastFour: data.lastFour || null,
+        color: data.color,
+        creditLimit: data.creditLimit || null,
+      })
+      .where(and(eq(card.id, id), eq(card.householdId, household.id)));
+
+    revalidatePath("/ajustes");
+    revalidatePath("/compras");
     revalidatePath("/compras/nuevo");
     return {};
   } catch (err) {
