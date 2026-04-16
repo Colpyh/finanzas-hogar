@@ -10,9 +10,10 @@ import { calculateInstallmentPreview } from "@/compras/installment-utils";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
-type Props = { categories: Category[]; members: Member[] };
+type Card = { id: string; name: string; lastFour: string | null; color: string };
+type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
-export function InstallmentForm({ categories, members }: Props) {
+export function InstallmentForm({ categories, members, cards = [] }: Props) {
   const today = new Date().toISOString().slice(0, 7) + "-01";
   const [form, setForm] = useState({
     description: "",
@@ -22,6 +23,7 @@ export function InstallmentForm({ categories, members }: Props) {
     installmentAmount: "",
     startMonth: today,
     responsibleId: "" as string,
+    cardId: "" as string,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -44,6 +46,7 @@ export function InstallmentForm({ categories, members }: Props) {
       ...form,
       installmentsTotal: Number(form.installmentsTotal),
       responsibleId: form.responsibleId || null,
+      cardId: form.cardId || null,
     });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -157,6 +160,26 @@ export function InstallmentForm({ categories, members }: Props) {
             ))}
           </select>
           <p className="text-xs text-muted-foreground">¿Quién pone la tarjeta para estas cuotas?</p>
+        </div>
+      )}
+
+      {cards.length > 0 && (
+        <div className="space-y-1.5">
+          <Label htmlFor="inst-card">Tarjeta</Label>
+          <select
+            id="inst-card"
+            value={form.cardId}
+            onChange={(e) => set("cardId", e.target.value)}
+            disabled={loading}
+            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+          >
+            <option value="">Sin tarjeta</option>
+            {cards.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}{c.lastFour ? ` ···· ${c.lastFour}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

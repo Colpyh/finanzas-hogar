@@ -7,11 +7,14 @@ import {
   getFixedVsVariableBreakdown,
   getInstallmentBurden,
 } from "@/resumen/queries";
+import { getAnnualSummary } from "@/resumen/annual-queries";
 import { MonthPickerNav } from "@/resumen/components/month-picker-nav";
 import { CategoryChart } from "@/resumen/components/category-chart";
 import { FixedVariableBreakdown } from "@/resumen/components/fixed-variable-breakdown";
+import { AnnualChart } from "@/resumen/components/annual-chart";
 import { formatCurrency } from "@/shared/components/currency-display";
 import type { MonthlySummary, FixedVsVariableBreakdown as FVB, InstallmentBurden } from "@/resumen/types";
+import type { MonthlyDataPoint } from "@/resumen/annual-queries";
 
 type Props = { searchParams: Promise<{ month?: string }> };
 
@@ -56,15 +59,17 @@ export default async function ResumenPage({ searchParams }: Props) {
   let summary = MOCK_SUMMARY;
   let breakdown = MOCK_BREAKDOWN;
   let burden = MOCK_BURDEN;
+  let annualData: MonthlyDataPoint[] = [];
 
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      [summary, breakdown, burden] = await Promise.all([
+      [summary, breakdown, burden, annualData] = await Promise.all([
         getMonthlySummary(household.id, monthDb),
         getFixedVsVariableBreakdown(household.id, monthDb),
         getInstallmentBurden(household.id, monthDb),
+        getAnnualSummary(household.id),
       ]);
     }
   } catch {
@@ -109,6 +114,14 @@ export default async function ResumenPage({ searchParams }: Props) {
             <h2 className="text-sm font-semibold">Distribución</h2>
             <FixedVariableBreakdown breakdown={breakdown} />
           </div>
+
+          {/* Vista anual */}
+          {annualData.length > 0 && (
+            <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+              <h2 className="text-sm font-semibold">Últimos 12 meses</h2>
+              <AnnualChart data={annualData} />
+            </div>
+          )}
 
           {/* Cuotas activas */}
           {burden.installments.length > 0 && (

@@ -18,6 +18,9 @@ type Props = {
     installmentsTotal: number | null;
     categoryName?: string;
     responsibleName?: string | null;
+    cardName?: string | null;
+    cardColor?: string | null;
+    cardLastFour?: string | null;
   };
 };
 
@@ -53,6 +56,17 @@ export function InstallmentCard({ expense }: Props) {
               <>
                 {expense.categoryName && <span className="text-xs text-muted-foreground/50">·</span>}
                 <span className="text-xs font-medium text-primary/80">Paga: {expense.responsibleName}</span>
+              </>
+            )}
+            {expense.cardName && (
+              <>
+                <span className="text-xs text-muted-foreground/50">·</span>
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: expense.cardColor ?? undefined }}
+                >
+                  {expense.cardName}{expense.cardLastFour ? ` ···· ${expense.cardLastFour}` : ""}
+                </span>
               </>
             )}
           </div>

@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
+import { getHouseholdCards } from "@/tarjetas/queries";
 import { MemberList } from "@/household/components/member-list";
 import { AddMemberModal } from "@/household/components/add-member-modal";
+import { CardManager } from "@/tarjetas/components/card-manager";
 import { signOut } from "@/auth/actions";
 import { Button } from "@/components/ui/button";
-import { Users, Home, LogOut, Palette } from "lucide-react";
+import { Users, Home, LogOut, Palette, CreditCard } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 
 export const metadata: Metadata = { title: "Ajustes" };
@@ -19,6 +21,7 @@ const MOCK_MEMBERS = [
 export default async function AjustesPage() {
   let householdName = "Hogar Demo";
   let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
+  let cards: { id: string; name: string; lastFour: string | null; color: string }[] = [];
   let isOwner = true;
 
   try {
@@ -27,7 +30,16 @@ export default async function AjustesPage() {
     if (userHousehold) {
       householdName = userHousehold.name;
       isOwner = userHousehold.role === "owner";
-      const dbMembers = await getHouseholdMembers(userHousehold.id);
+      const [dbMembers, dbCards] = await Promise.all([
+        getHouseholdMembers(userHousehold.id),
+        getHouseholdCards(userHousehold.id),
+      ]);
+      cards = dbCards.map((c) => ({
+        id: c.id,
+        name: c.name,
+        lastFour: c.lastFour,
+        color: c.color,
+      }));
       const currentUserName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null;
       members = dbMembers.map((m) =>
         m.userId === user.id && currentUserName
@@ -65,6 +77,15 @@ export default async function AjustesPage() {
         </div>
         <MemberList members={members} isOwner={isOwner} />
         {isOwner && <AddMemberModal />}
+      </div>
+
+      {/* Tarjetas */}
+      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <CreditCard size={15} />
+          <span className="text-xs font-medium uppercase tracking-wide">Tarjetas de pago</span>
+        </div>
+        <CardManager cards={cards} />
       </div>
 
       {/* Apariencia */}

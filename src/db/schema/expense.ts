@@ -45,6 +45,9 @@ export const expense = pgTable("expense", {
   // One-time fields
   expenseDate: date("expense_date", { mode: "string" }), // date of purchase
 
+  // Card reference (optional — which card was used for this expense)
+  cardId: uuid("card_id"),
+
   // Soft delete
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 

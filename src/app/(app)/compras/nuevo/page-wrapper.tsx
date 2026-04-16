@@ -4,10 +4,12 @@ import { or, isNull, eq } from "drizzle-orm";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
+import { getHouseholdCards } from "@/tarjetas/queries";
 import { NuevoCompraClient } from "./client";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
+type Card = { id: string; name: string; lastFour: string | null; color: string };
 
 const MOCK_CATEGORIES: Category[] = [
   { id: "cat-1", name: "Vivienda" },
@@ -23,28 +25,36 @@ const MOCK_CATEGORIES: Category[] = [
 export async function NuevoCompraPageWrapper() {
   let categories: Category[] = MOCK_CATEGORIES;
   let members: Member[] = [];
+  let cards: Card[] = [];
 
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const [cats, rawMembers] = await Promise.all([
+      const [cats, rawMembers, rawCards] = await Promise.all([
         db
           .select({ id: category.id, name: category.name })
           .from(category)
           .where(or(isNull(category.householdId), eq(category.householdId, household.id)))
           .orderBy(category.name),
         getHouseholdMembers(household.id),
+        getHouseholdCards(household.id),
       ]);
       categories = cats;
       members = rawMembers.map((m) => ({
         userId: m.userId,
         displayName: m.displayName ?? m.userId,
       }));
+      cards = rawCards.map((c) => ({
+        id: c.id,
+        name: c.name,
+        lastFour: c.lastFour,
+        color: c.color,
+      }));
     }
   } catch {
     // Sin sesión — categorías de ejemplo
   }
 
-  return <NuevoCompraClient categories={categories} members={members} />;
+  return <NuevoCompraClient categories={categories} members={members} cards={cards} />;
 }

@@ -28,6 +28,9 @@ type ExpenseRow = {
   installmentsTotal: number | null;
   categoryName?: string;
   responsibleName?: string | null;
+  cardName?: string | null;
+  cardColor?: string | null;
+  cardLastFour?: string | null;
 };
 
 const MOCK_EXPENSES: ExpenseRow[] = [
@@ -93,6 +96,9 @@ export default async function ComprasPage({ searchParams }: Props) {
         installmentsTotal: e.installmentsTotal ?? null,
         categoryName: undefined,
         responsibleName: e.responsibleId ? (memberMap.get(e.responsibleId) ?? null) : null,
+        cardName: e.cardName ?? null,
+        cardColor: e.cardColor ?? null,
+        cardLastFour: e.cardLastFour ?? null,
       }));
     }
   } catch {

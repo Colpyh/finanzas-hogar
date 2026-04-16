@@ -9,9 +9,10 @@ import { createPurchase } from "@/compras/actions";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
-type Props = { categories: Category[]; members: Member[] };
+type Card = { id: string; name: string; lastFour: string | null; color: string };
+type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
-export function PurchaseForm({ categories, members }: Props) {
+export function PurchaseForm({ categories, members, cards = [] }: Props) {
   const today = new Date().toISOString().split("T")[0] ?? "";
   const [form, setForm] = useState({
     description: "",
@@ -20,6 +21,7 @@ export function PurchaseForm({ categories, members }: Props) {
     currency: "CLP",
     expenseDate: today,
     responsibleId: "" as string,
+    cardId: "" as string,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ export function PurchaseForm({ categories, members }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = createPurchaseSchema.safeParse({ ...form, responsibleId: form.responsibleId || null });
+    const parsed = createPurchaseSchema.safeParse({ ...form, responsibleId: form.responsibleId || null, cardId: form.cardId || null });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
       parsed.error.issues.forEach((i) => {
@@ -122,6 +124,26 @@ export function PurchaseForm({ categories, members }: Props) {
             ))}
           </select>
           <p className="text-xs text-muted-foreground">¿Quién paga físicamente este gasto?</p>
+        </div>
+      )}
+
+      {cards.length > 0 && (
+        <div className="space-y-1.5">
+          <Label htmlFor="card">Tarjeta</Label>
+          <select
+            id="card"
+            value={form.cardId}
+            onChange={(e) => set("cardId", e.target.value)}
+            disabled={loading}
+            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+          >
+            <option value="">Sin tarjeta</option>
+            {cards.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}{c.lastFour ? ` ···· ${c.lastFour}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

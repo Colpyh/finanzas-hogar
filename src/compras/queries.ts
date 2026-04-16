@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
-import { expense } from "@/shared/lib/db/schema";
-import { eq, and, isNull, inArray, gte, lte, or, desc } from "drizzle-orm";
+import { expense, card } from "@/shared/lib/db/schema";
+import { eq, and, isNull, gte, lte, or, desc } from "drizzle-orm";
 
 export type ExpenseFilters = {
   type?: "one_time" | "installment" | "all";
@@ -38,8 +38,24 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
   }
 
   return db
-    .select()
+    .select({
+      id: expense.id,
+      type: expense.type,
+      description: expense.description,
+      amount: expense.amount,
+      expenseDate: expense.expenseDate,
+      installmentAmount: expense.installmentAmount,
+      installmentsPaid: expense.installmentsPaid,
+      installmentsTotal: expense.installmentsTotal,
+      responsibleId: expense.responsibleId,
+      cardId: expense.cardId,
+      cardName: card.name,
+      cardColor: card.color,
+      cardLastFour: card.lastFour,
+      createdAt: expense.createdAt,
+    })
     .from(expense)
+    .leftJoin(card, eq(expense.cardId, card.id))
     .where(and(...conditions))
     .orderBy(desc(expense.createdAt));
 }

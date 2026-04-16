@@ -8,6 +8,7 @@ import { Receipt, ShoppingCart, CreditCard, ChevronLeft, ChevronRight } from "lu
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
+type Card = { id: string; name: string; lastFour: string | null; color: string };
 type ExpenseType = "purchase" | "installment" | null;
 
 const OPTIONS = [
@@ -34,7 +35,7 @@ const OPTIONS = [
   },
 ];
 
-export function NuevoCompraClient({ categories, members }: { categories: Category[]; members: Member[] }) {
+export function NuevoCompraClient({ categories, members, cards }: { categories: Category[]; members: Member[]; cards: Card[] }) {
   const [selected, setSelected] = useState<ExpenseType>(null);
 
   if (selected === "purchase") {
@@ -46,7 +47,7 @@ export function NuevoCompraClient({ categories, members }: { categories: Categor
           </button>
           <h1 className="text-2xl font-bold tracking-tight">Nueva compra</h1>
         </div>
-        <PurchaseForm categories={categories} members={members} />
+        <PurchaseForm categories={categories} members={members} cards={cards} />
       </div>
     );
   }
@@ -60,7 +61,7 @@ export function NuevoCompraClient({ categories, members }: { categories: Categor
           </button>
           <h1 className="text-2xl font-bold tracking-tight">Compra en cuotas</h1>
         </div>
-        <InstallmentForm categories={categories} members={members} />
+        <InstallmentForm categories={categories} members={members} cards={cards} />
       </div>
     );
   }
