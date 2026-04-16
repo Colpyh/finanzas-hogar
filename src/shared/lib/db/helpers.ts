@@ -21,6 +21,15 @@ export function currentPeriodMonth(): string {
 }
 
 /**
+ * Parses and validates a ?month= URL search param.
+ * Accepts 'YYYY-MM-01' format. Falls back to currentPeriodMonth() if invalid.
+ */
+export function parseMonthParam(param: string | undefined): string {
+  if (param && /^\d{4}-\d{2}-01$/.test(param)) return param;
+  return currentPeriodMonth();
+}
+
+/**
  * Returns { limit, offset } for SQL pagination.
  * page is 1-indexed.
  */

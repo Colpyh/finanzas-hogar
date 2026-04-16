@@ -6,10 +6,13 @@ export interface TotalsInput {
   fixedTotal: number;
   installmentsTotal: number;
   oneTimeTotal: number;
+  incomeTotal: number;
 }
 
 export interface TotalsResult extends TotalsInput {
   grandTotal: number;
+  saldo: number;
+  porcentajeUsado: number;
 }
 
 export function calcPercentage(value: number, total: number): number {
@@ -18,8 +21,11 @@ export function calcPercentage(value: number, total: number): number {
 }
 
 export function aggregateTotals(input: TotalsInput): TotalsResult {
+  const grandTotal = input.fixedTotal + input.installmentsTotal + input.oneTimeTotal;
   return {
     ...input,
-    grandTotal: input.fixedTotal + input.installmentsTotal + input.oneTimeTotal,
+    grandTotal,
+    saldo: input.incomeTotal - grandTotal,
+    porcentajeUsado: calcPercentage(grandTotal, input.incomeTotal),
   };
 }

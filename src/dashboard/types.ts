@@ -3,6 +3,9 @@ export type DashboardSummary = {
   installmentsTotal: number;
   oneTimeTotal: number;
   grandTotal: number;
+  incomeTotal: number;
+  saldo: number;
+  porcentajeUsado: number; // 0–100
 };
 
 export type FixedBillWithStatus = {

@@ -1,11 +1,12 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte, desc } from "drizzle-orm";
+import { getMonthlyIncomeTotal } from "@/ingresos/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
 import {
   getActiveFixedExpenses,
-  getPaymentsForCurrentMonth,
+  getPaymentsForMonth,
 } from "@/gastos-fijos/queries";
 import type {
   DashboardSummary,
@@ -80,17 +81,20 @@ export async function getDashboardSummary(
     )
     .reduce((acc, row) => acc + Number(row.amount ?? 0), 0);
 
-  return aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal });
+  const incomeTotal = await getMonthlyIncomeTotal(householdId, month);
+
+  return aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal, incomeTotal });
 }
 
 export async function getFixedExpenseStatusThisMonth(
-  householdId: string
+  householdId: string,
+  month: string
 ): Promise<FixedBillWithStatus[]> {
   const expenses = await getActiveFixedExpenses(householdId);
 
   const results = await Promise.all(
     expenses.map(async (exp) => {
-      const payments = await getPaymentsForCurrentMonth(exp.id);
+      const payments = await getPaymentsForMonth(exp.id, month);
       return {
         id: exp.id,
         description: exp.description,

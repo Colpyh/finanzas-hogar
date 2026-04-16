@@ -9,10 +9,11 @@ import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { Loader2 } from "lucide-react";
 
 type Props = {
+  month?: string;
   onSuccess?: () => void;
 };
 
-export function AddIncomeForm({ onSuccess }: Props) {
+export function AddIncomeForm({ month, onSuccess }: Props) {
   const [type, setType] = useState<"salary" | "other">("salary");
   const [description, setDescription] = useState("Sueldo");
   const [amount, setAmount] = useState("");
@@ -33,7 +34,7 @@ export function AddIncomeForm({ onSuccess }: Props) {
         type,
         description,
         amount,
-        periodMonth: currentPeriodMonth(),
+        periodMonth: month ?? currentPeriodMonth(),
       });
       if (result.error) {
         setError(result.error);

@@ -5,12 +5,14 @@ import { getUserHousehold } from "@/onboarding/queries";
 import { getExpenses } from "@/compras/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { PurchaseList } from "@/compras/components/purchase-list";
+import { MonthSelector } from "@/shared/components/month-selector";
+import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  searchParams: Promise<{ type?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ type?: string; from?: string; to?: string; month?: string }>;
 };
 
 export const metadata: Metadata = { title: "Compras" };
@@ -59,6 +61,15 @@ const MOCK_EXPENSES: ExpenseRow[] = [
 export default async function ComprasPage({ searchParams }: Props) {
   const params = await searchParams;
   const typeFilter = (params.type as "one_time" | "installment" | "all") ?? "all";
+  const month = parseMonthParam(params.month);
+
+  // Derive date range from month unless explicit from/to are set
+  const mParts = month.split("-").map(Number);
+  const mYear = mParts[0] ?? new Date().getFullYear();
+  const mMonth = mParts[1] ?? new Date().getMonth() + 1;
+  const lastDay = new Date(mYear, mMonth, 0).toISOString().slice(0, 10);
+  const dateFrom = params.from ?? month;
+  const dateTo = params.to ?? lastDay;
 
   let expenses: ExpenseRow[] = MOCK_EXPENSES;
 
@@ -67,7 +78,7 @@ export default async function ComprasPage({ searchParams }: Props) {
     const household = await getUserHousehold(user.id);
     if (household) {
       const [dbExpenses, members] = await Promise.all([
-        getExpenses(household.id, { type: typeFilter, dateFrom: params.from, dateTo: params.to }),
+        getExpenses(household.id, { type: typeFilter, dateFrom, dateTo }),
         getHouseholdMembers(household.id),
       ]);
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
@@ -102,10 +113,13 @@ export default async function ComprasPage({ searchParams }: Props) {
     <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-2xl font-bold tracking-tight">Compras</h1>
-        <Link href="/compras/nuevo" className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
-          <Plus size={15} />
-          Nueva
-        </Link>
+        <div className="flex items-center gap-2">
+          <MonthSelector month={month} />
+          <Link href="/compras/nuevo" className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
+            <Plus size={15} />
+            Nueva
+          </Link>
+        </div>
       </div>
 
       <div className="flex gap-3 items-start">
@@ -115,7 +129,7 @@ export default async function ComprasPage({ searchParams }: Props) {
             return (
               <Link
                 key={opt.value}
-                href={`/compras?type=${opt.value}`}
+                href={`/compras?type=${opt.value}&month=${month}`}
                 className={cn(
                   "relative flex items-center justify-center py-2.5 px-2 text-xs font-medium rounded-xl transition-colors",
                   isActive

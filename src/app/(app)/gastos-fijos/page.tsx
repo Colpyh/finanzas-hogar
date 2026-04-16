@@ -2,14 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { getActiveFixedExpenses, getPaymentsForCurrentMonth } from "@/gastos-fijos/queries";
+import { getActiveFixedExpenses, getPaymentsForMonth } from "@/gastos-fijos/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { FixedExpenseList } from "@/gastos-fijos/components/fixed-expense-list";
+import { MonthSelector } from "@/shared/components/month-selector";
+import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Gastos Fijos" };
+
+type Props = {
+  searchParams: Promise<{ month?: string }>;
+};
 
 type EnrichedExpense = {
   id: string;
@@ -31,7 +37,10 @@ const MOCK_EXPENSES: EnrichedExpense[] = [
   { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
 ];
 
-export default async function GastosFijosPage() {
+export default async function GastosFijosPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const month = parseMonthParam(params.month);
+
   let expenses: EnrichedExpense[] = MOCK_EXPENSES;
   let memberCount = 1;
 
@@ -47,7 +56,7 @@ export default async function GastosFijosPage() {
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
 
       const paymentsPerExpense = await Promise.all(
-        dbExpenses.map((exp) => getPaymentsForCurrentMonth(exp.id))
+        dbExpenses.map((exp) => getPaymentsForMonth(exp.id, month))
       );
 
       expenses = dbExpenses.map((e, i) => {
@@ -85,10 +94,13 @@ export default async function GastosFijosPage() {
     <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-2xl font-bold tracking-tight">Gastos Fijos</h1>
-        <Link href="/gastos-fijos/nuevo" className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
-          <Plus size={15} />
-          Nuevo
-        </Link>
+        <div className="flex items-center gap-2">
+          <MonthSelector month={month} />
+          <Link href="/gastos-fijos/nuevo" className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
+            <Plus size={15} />
+            Nuevo
+          </Link>
+        </div>
       </div>
       <FixedExpenseList expenses={expenses} memberCount={memberCount} />
     </div>
