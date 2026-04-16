@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getExpenseById } from "@/compras/queries";
-import { deleteExpense } from "@/compras/actions";
-import { Button } from "@/components/ui/button";
+import { DeleteExpenseButton } from "@/compras/components/delete-expense-button";
 import { InstallmentProgress } from "@/compras/components/installment-progress";
 
 type Props = { params: Promise<{ id: string }> };
@@ -53,16 +52,7 @@ export default async function GastoDetailPage({ params }: Props) {
       </div>
 
       {isCreator && (
-        <form
-          action={async () => {
-            "use server";
-            await deleteExpense(exp.id);
-          }}
-        >
-          <Button variant="destructive" size="sm" type="submit" className="w-full">
-            Eliminar gasto
-          </Button>
-        </form>
+        <DeleteExpenseButton expenseId={exp.id} description={exp.description} />
       )}
     </div>
   );

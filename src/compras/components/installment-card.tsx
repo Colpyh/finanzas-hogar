@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { markInstallmentPaid } from "@/compras/actions";
 import { canMarkInstallmentPaid } from "@/compras/installment-utils";
 import { formatCurrency } from "@/shared/components/currency-display";
@@ -23,6 +24,7 @@ type Props = {
 export function InstallmentCard({ expense }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const paid = expense.installmentsPaid ?? 0;
   const total = expense.installmentsTotal ?? 0;
@@ -35,6 +37,7 @@ export function InstallmentCard({ expense }: Props) {
     const result = await markInstallmentPaid(expense.id);
     if (result?.error) setError(result.error);
     setLoading(false);
+    setConfirmOpen(false);
   }
 
   return (
@@ -91,8 +94,8 @@ export function InstallmentCard({ expense }: Props) {
         <Button
           size="sm"
           variant={canPay ? "outline" : "ghost"}
-          disabled={!canPay || loading}
-          onClick={handlePay}
+          disabled={!canPay}
+          onClick={() => canPay && setConfirmOpen(true)}
           className={canPay ? "" : "text-muted-foreground ml-auto"}
         >
           {canPay ? "Marcar cuota pagada" : "Completado"}
@@ -100,6 +103,16 @@ export function InstallmentCard({ expense }: Props) {
       </div>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="¿Marcar cuota como pagada?"
+        description={`Cuota ${paid + 1} de ${total} de "${expense.description}".`}
+        confirmText="Sí, marcar pagada"
+        loading={loading}
+        onConfirm={handlePay}
+      />
     </div>
   );
 }

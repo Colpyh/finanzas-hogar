@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkPaidDialog } from "./mark-paid-dialog";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { toggleFixedExpenseActive, upgradeToPaid } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { CheckCircle2, Clock, PiggyBank } from "lucide-react";
@@ -32,11 +33,22 @@ export function FixedExpenseCard({
   memberCount,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmToggleOpen, setConfirmToggleOpen] = useState(false);
+  const [confirmUpgradeOpen, setConfirmUpgradeOpen] = useState(false);
+  const [toggling, startToggle] = useTransition();
   const [upgrading, startUpgrade] = useTransition();
 
   function handleUpgrade() {
     startUpgrade(async () => {
       await upgradeToPaid(expense.id);
+      setConfirmUpgradeOpen(false);
+    });
+  }
+
+  function handleToggle() {
+    startToggle(async () => {
+      await toggleFixedExpenseActive(expense.id);
+      setConfirmToggleOpen(false);
     });
   }
 
@@ -65,12 +77,11 @@ export function FixedExpenseCard({
         <Button
           size="sm"
           variant="outline"
-          onClick={handleUpgrade}
-          disabled={upgrading}
+          onClick={() => setConfirmUpgradeOpen(true)}
           className="flex-1 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
         >
           <PiggyBank size={13} />
-          {upgrading ? "Confirmando..." : "En chanchito · Confirmar pago"}
+          En chanchito · Confirmar pago
         </Button>
       );
     } else {
@@ -98,12 +109,11 @@ export function FixedExpenseCard({
         <Button
           size="sm"
           variant="outline"
-          onClick={handleUpgrade}
-          disabled={upgrading}
+          onClick={() => setConfirmUpgradeOpen(true)}
           className="flex-1 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
         >
           <PiggyBank size={13} />
-          {upgrading ? "Confirmando..." : "En chanchito · Confirmar pago"}
+          En chanchito · Confirmar pago
         </Button>
       );
     } else {
@@ -159,11 +169,14 @@ export function FixedExpenseCard({
 
         <div className="flex gap-2">
           {primaryButton}
-          <form action={toggleFixedExpenseActive.bind(null, expense.id)}>
-            <Button size="sm" variant="ghost" type="submit" className="text-muted-foreground">
-              {expense.isActive ? "Desactivar" : "Activar"}
-            </Button>
-          </form>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground"
+            onClick={() => setConfirmToggleOpen(true)}
+          >
+            {expense.isActive ? "Desactivar" : "Activar"}
+          </Button>
         </div>
       </div>
 
@@ -172,6 +185,31 @@ export function FixedExpenseCard({
         estimatedAmount={expense.amount}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+      />
+
+      <ConfirmDialog
+        open={confirmToggleOpen}
+        onOpenChange={setConfirmToggleOpen}
+        title={expense.isActive ? "¿Desactivar gasto?" : "¿Activar gasto?"}
+        description={
+          expense.isActive
+            ? `"${expense.description}" dejará de aparecer en el resumen mensual.`
+            : `"${expense.description}" volverá a incluirse en el resumen mensual.`
+        }
+        confirmText={expense.isActive ? "Desactivar" : "Activar"}
+        variant={expense.isActive ? "destructive" : "default"}
+        loading={toggling}
+        onConfirm={handleToggle}
+      />
+
+      <ConfirmDialog
+        open={confirmUpgradeOpen}
+        onOpenChange={setConfirmUpgradeOpen}
+        title="¿Confirmar pago definitivo?"
+        description={`Vas a marcar "${expense.description}" como pagado. Esto reemplaza el estado de chanchito.`}
+        confirmText="Sí, confirmar pago"
+        loading={upgrading}
+        onConfirm={handleUpgrade}
       />
     </>
   );
