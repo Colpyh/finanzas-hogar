@@ -36,6 +36,7 @@ const MOCK_SUMMARY: DashboardSummary = {
   incomeTotal: 1800000,
   saldo: 561520,
   porcentajeUsado: 68.8,
+  myShareTotal: 619240,
 };
 
 const MOCK_BILLS: FixedBillWithStatus[] = [
@@ -84,7 +85,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     if (household) {
       householdName = household.name;
       [summary, bills, installments, purchases] = await Promise.all([
-        getDashboardSummary(household.id, month),
+        getDashboardSummary(household.id, user.id, month),
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
         getRecentPurchases(household.id, month, 5),

@@ -14,13 +14,20 @@ import type {
   ActiveInstallment,
 } from "@/dashboard/types";
 
+function myShare(amount: number, responsibleId: string | null, userId: string): number {
+  if (responsibleId === userId) return amount;
+  if (responsibleId === null) return amount / 2;
+  return 0;
+}
+
 export async function getDashboardSummary(
   householdId: string,
+  userId: string,
   month: string
 ): Promise<DashboardSummary> {
   // fixedTotal: sum of amounts of active fixed expenses
   const fixedRows = await db
-    .select({ amount: expense.amount })
+    .select({ amount: expense.amount, responsibleId: expense.responsibleId })
     .from(expense)
     .where(
       and(
@@ -31,18 +38,19 @@ export async function getDashboardSummary(
       )
     );
 
-  const fixedTotal = fixedRows.reduce(
-    (acc, row) => acc + Number(row.amount ?? 0),
+  const fixedTotal = fixedRows.reduce((acc, row) => acc + Number(row.amount ?? 0), 0);
+  const myShareFixed = fixedRows.reduce(
+    (acc, row) => acc + myShare(Number(row.amount ?? 0), row.responsibleId, userId),
     0
   );
 
   // installmentsTotal: sum of active installment amounts for this month
-  // Filter in JS: installments_paid < installments_total
   const allInstallments = await db
     .select({
       installmentAmount: expense.installmentAmount,
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
+      responsibleId: expense.responsibleId,
     })
     .from(expense)
     .where(
@@ -54,18 +62,26 @@ export async function getDashboardSummary(
       )
     );
 
-  const installmentsTotal = allInstallments
-    .filter(
-      (row) =>
-        (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
-    )
-    .reduce((acc, row) => acc + Number(row.installmentAmount ?? 0), 0);
+  const activeInstallments = allInstallments.filter(
+    (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+  );
+  const installmentsTotal = activeInstallments.reduce(
+    (acc, row) => acc + Number(row.installmentAmount ?? 0),
+    0
+  );
+  const myShareInstallments = activeInstallments.reduce(
+    (acc, row) => acc + myShare(Number(row.installmentAmount ?? 0), row.responsibleId, userId),
+    0
+  );
 
   // oneTimeTotal: sum of one_time expenses for this period_month
-  // expenseDate is YYYY-MM-DD — filter by month prefix YYYY-MM
-  const monthPrefix = month.slice(0, 7); // 'YYYY-MM'
+  const monthPrefix = month.slice(0, 7);
   const allOneTime = await db
-    .select({ amount: expense.amount, expenseDate: expense.expenseDate })
+    .select({
+      amount: expense.amount,
+      expenseDate: expense.expenseDate,
+      responsibleId: expense.responsibleId,
+    })
     .from(expense)
     .where(
       and(
@@ -75,15 +91,22 @@ export async function getDashboardSummary(
       )
     );
 
-  const oneTimeTotal = allOneTime
-    .filter(
-      (row) => row.expenseDate != null && row.expenseDate.startsWith(monthPrefix)
-    )
-    .reduce((acc, row) => acc + Number(row.amount ?? 0), 0);
+  const thisMonthOneTime = allOneTime.filter(
+    (row) => row.expenseDate != null && row.expenseDate.startsWith(monthPrefix)
+  );
+  const oneTimeTotal = thisMonthOneTime.reduce(
+    (acc, row) => acc + Number(row.amount ?? 0),
+    0
+  );
+  const myShareOneTime = thisMonthOneTime.reduce(
+    (acc, row) => acc + myShare(Number(row.amount ?? 0), row.responsibleId, userId),
+    0
+  );
 
   const incomeTotal = await getMonthlyIncomeTotal(householdId, month);
+  const myShareTotal = myShareFixed + myShareInstallments + myShareOneTime;
 
-  return aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal, incomeTotal });
+  return { ...aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal, incomeTotal }), myShareTotal };
 }
 
 export async function getFixedExpenseStatusThisMonth(

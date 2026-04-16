@@ -30,6 +30,11 @@ export function MonthlySummaryCard({ summary }: Props) {
           {formatCurrency(summary.grandTotal)}
         </p>
 
+        {/* My share */}
+        <p className="text-sm opacity-70 mt-1">
+          Tu parte · {formatCurrency(summary.myShareTotal)}
+        </p>
+
         {/* Progress bar + % */}
         {summary.incomeTotal > 0 && (
           <div className="mt-3">

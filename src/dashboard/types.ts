@@ -6,6 +6,7 @@ export type DashboardSummary = {
   incomeTotal: number;
   saldo: number;
   porcentajeUsado: number; // 0–100
+  myShareTotal: number; // estimated share for the current user (50/50 for unassigned)
 };
 
 export type FixedBillWithStatus = {

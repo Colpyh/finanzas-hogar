@@ -16,12 +16,10 @@ import { aggregateTotals } from "@/dashboard/aggregation";
 // ============================================================
 describe("DashboardSummary type contract", () => {
   it("aggregateTotals produces a valid DashboardSummary", () => {
-    const summary: DashboardSummary = aggregateTotals({
-      fixedTotal: 15000,
-      installmentsTotal: 5000,
-      oneTimeTotal: 3000,
-      incomeTotal: 0,
-    });
+    const summary: DashboardSummary = {
+      ...aggregateTotals({ fixedTotal: 15000, installmentsTotal: 5000, oneTimeTotal: 3000, incomeTotal: 0 }),
+      myShareTotal: 0,
+    };
 
     expect(summary.fixedTotal).toBe(15000);
     expect(summary.installmentsTotal).toBe(5000);
@@ -30,12 +28,10 @@ describe("DashboardSummary type contract", () => {
   });
 
   it("grand total is 0 when all categories are 0", () => {
-    const summary: DashboardSummary = aggregateTotals({
-      fixedTotal: 0,
-      installmentsTotal: 0,
-      oneTimeTotal: 0,
-      incomeTotal: 0,
-    });
+    const summary: DashboardSummary = {
+      ...aggregateTotals({ fixedTotal: 0, installmentsTotal: 0, oneTimeTotal: 0, incomeTotal: 0 }),
+      myShareTotal: 0,
+    };
     expect(summary.grandTotal).toBe(0);
   });
 });
