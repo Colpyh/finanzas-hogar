@@ -108,6 +108,8 @@ export async function updateExpense(expenseId: string, rawData: unknown) {
     .returning();
 
   revalidatePath("/compras");
+  revalidatePath(`/gastos/${expenseId}`);
+  revalidatePath("/dashboard");
   return updated;
 }
 

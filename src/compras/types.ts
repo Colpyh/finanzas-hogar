@@ -38,6 +38,9 @@ export const updateExpenseSchema = z.object({
   description: z.string().min(1).max(200).optional(),
   categoryId: z.string().uuid().optional(),
   amount: amountField.optional(),
+  expenseDate: z.string().date().optional().nullable(),
+  responsibleId: z.string().uuid().optional().nullable(),
+  cardId: z.string().uuid().optional().nullable(),
 });
 
 export const updateInstallmentSchema = z.object({
