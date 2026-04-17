@@ -51,3 +51,17 @@ export async function getMonthlyIncomeTotal(
   const rows = await getMonthlyIncome(householdId, periodMonth);
   return rows.reduce((acc, r) => acc + Number(r.amount), 0);
 }
+
+/**
+ * Returns income total for a specific member (salary recurring + one-time for the month).
+ */
+export async function getMyMonthlyIncomeTotal(
+  householdId: string,
+  memberId: string,
+  periodMonth: string
+): Promise<number> {
+  const allRows = await getMonthlyIncome(householdId, periodMonth);
+  return allRows
+    .filter((r) => r.memberId === memberId)
+    .reduce((acc, r) => acc + Number(r.amount), 0);
+}

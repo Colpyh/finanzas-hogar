@@ -22,6 +22,8 @@ describe("DashboardSummary type contract", () => {
       myShareFixed: 0,
       myShareInstallments: 0,
       myShareOneTime: 0,
+      myIncomeTotal: 0,
+      mySaldo: 0,
       ...overrides,
     };
   }

@@ -1,7 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte, desc } from "drizzle-orm";
-import { getMonthlyIncomeTotal } from "@/ingresos/queries";
+import { getMonthlyIncomeTotal, getMyMonthlyIncomeTotal } from "@/ingresos/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
 import {
@@ -106,8 +106,12 @@ export async function getDashboardSummary(
     0
   );
 
-  const incomeTotal = await getMonthlyIncomeTotal(householdId, month);
+  const [incomeTotal, myIncomeTotal] = await Promise.all([
+    getMonthlyIncomeTotal(householdId, month),
+    getMyMonthlyIncomeTotal(householdId, userId, month),
+  ]);
   const myShareTotal = myShareFixed + myShareInstallments + myShareOneTime;
+  const mySaldo = myIncomeTotal - myShareTotal;
 
   return {
     ...aggregateTotals({ fixedTotal, installmentsTotal, oneTimeTotal, incomeTotal }),
@@ -115,6 +119,8 @@ export async function getDashboardSummary(
     myShareFixed,
     myShareInstallments,
     myShareOneTime,
+    myIncomeTotal,
+    mySaldo,
   };
 }
 

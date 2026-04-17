@@ -10,6 +10,8 @@ export type DashboardSummary = {
   myShareFixed: number;
   myShareInstallments: number;
   myShareOneTime: number;
+  myIncomeTotal: number;
+  mySaldo: number;
 };
 
 export type FixedBillWithStatus = {

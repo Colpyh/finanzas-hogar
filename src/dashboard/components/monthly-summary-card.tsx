@@ -78,11 +78,21 @@ export function MonthlySummaryCard({ summary }: Props) {
 
         {/* Saldo */}
         {summary.incomeTotal > 0 && (
-          <div className="mt-3 pt-3 border-t border-white/15 flex items-center justify-between">
-            <p className="text-xs opacity-60">Saldo disponible</p>
-            <p className={`text-sm font-bold ${saldoPositive ? "text-emerald-300" : "text-red-300"}`}>
-              {saldoPositive ? "+" : ""}{formatCurrency(summary.saldo)}
-            </p>
+          <div className="mt-3 pt-3 border-t border-white/15 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs opacity-60">Saldo familia</p>
+              <p className={`text-sm font-bold ${saldoPositive ? "text-emerald-300" : "text-red-300"}`}>
+                {saldoPositive ? "+" : ""}{formatCurrency(summary.saldo)}
+              </p>
+            </div>
+            {summary.myIncomeTotal > 0 && (
+              <div className="flex items-center justify-between">
+                <p className="text-xs opacity-60">Tu saldo</p>
+                <p className={`text-sm font-semibold ${summary.mySaldo >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+                  {summary.mySaldo >= 0 ? "+" : ""}{formatCurrency(summary.mySaldo)}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

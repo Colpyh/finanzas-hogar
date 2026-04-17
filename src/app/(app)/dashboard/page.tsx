@@ -42,6 +42,8 @@ const MOCK_SUMMARY: DashboardSummary = {
   myShareFixed: 404495,
   myShareInstallments: 67495,
   myShareOneTime: 147250,
+  myIncomeTotal: 900000,
+  mySaldo: 280760,
 };
 
 const MOCK_BILLS: FixedBillWithStatus[] = [
