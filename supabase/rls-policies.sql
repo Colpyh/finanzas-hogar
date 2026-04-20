@@ -167,3 +167,22 @@ $$;
 CREATE TRIGGER expense_updated_at
   BEFORE UPDATE ON public.expense
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ============================================================
+-- pending_expense RLS
+-- ============================================================
+ALTER TABLE public.pending_expense ENABLE ROW LEVEL SECURITY;
+
+-- Members of the household can SELECT their pending rows
+CREATE POLICY "pending_expense_select" ON public.pending_expense
+  FOR SELECT
+  USING (is_household_member(household_id));
+
+-- Members can UPDATE status / expense_id on their pending rows
+CREATE POLICY "pending_expense_update" ON public.pending_expense
+  FOR UPDATE
+  USING (is_household_member(household_id))
+  WITH CHECK (is_household_member(household_id));
+
+-- NO INSERT policy: webhook uses service-role client, which bypasses RLS.
+-- NO DELETE policy: discard is soft (status='discarded') — preserves audit trail.
