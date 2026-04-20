@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   BarChart2,
   Settings,
+  Inbox,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -17,10 +18,15 @@ const NAV_ITEMS = [
   { href: "/gastos-fijos", label: "Fijos", icon: Receipt },
   { href: "/compras", label: "Compras", icon: ShoppingCart },
   { href: "/resumen", label: "Resumen", icon: BarChart2 },
+  { href: "/gastos-pendientes", label: "Pendientes", icon: Inbox },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 
-export function BottomNav() {
+type Props = {
+  pendingCount?: number;
+};
+
+export function BottomNav({ pendingCount = 0 }: Props) {
   const pathname = usePathname();
 
   return (
@@ -34,6 +40,7 @@ export function BottomNav() {
       {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const isActive = pathname.startsWith(item.href);
+        const showBadge = item.href === "/gastos-pendientes" && pendingCount > 0;
 
         return (
           <Link
@@ -62,7 +69,14 @@ export function BottomNav() {
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
             )}
-            <Icon size={22} strokeWidth={isActive ? 2.5 : 1.75} />
+            <span className="relative inline-flex">
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.75} />
+              {showBadge && (
+                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-[10px] font-semibold text-white flex items-center justify-center leading-none">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
+            </span>
             <span className={cn(
               "leading-none",
               "text-[10px] md:text-[9px]",
