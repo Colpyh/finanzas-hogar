@@ -68,7 +68,7 @@ function MemberRow({ member: m, isOwner }: { member: Member; isOwner: boolean })
               <DialogHeader>
                 <DialogTitle>¿Eliminar miembro?</DialogTitle>
                 <DialogDescription>
-                  Vas a eliminar a <strong>{m.displayName}</strong> del hogar. Esta acción no se puede deshacer.
+                  Esto eliminará a <strong>{m.displayName}</strong> del hogar. Esta acción no se puede deshacer.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>

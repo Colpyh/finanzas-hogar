@@ -10,8 +10,8 @@ import { Eye, EyeOff } from "lucide-react";
 function HomeIcon() {
   return (
     <svg
-      width="28"
-      height="28"
+      width="36"
+      height="36"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -50,7 +50,7 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
       {/* Logo + branding */}
       <div className="text-center space-y-3">
         <div className="flex justify-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md shadow-primary/30">
+          <div className="w-[72px] h-[72px] rounded-[22px] bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/40">
             <HomeIcon />
           </div>
         </div>
@@ -59,7 +59,7 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
             Finanzas Hogar
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Control de gastos para vos y tu familia
+            Control de gastos para tu familia
           </p>
         </div>
       </div>
@@ -69,7 +69,7 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-foreground">Iniciar sesión</h2>
           <p className="text-sm text-muted-foreground">
-            Ingresá tus credenciales para continuar
+            Ingresa tus credenciales para continuar
           </p>
         </div>
 

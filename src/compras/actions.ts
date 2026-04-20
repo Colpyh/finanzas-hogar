@@ -177,7 +177,7 @@ export async function deleteExpense(expenseId: string): Promise<{ error?: string
     .limit(1);
 
   if (!row) return { error: "Gasto no encontrado" };
-  if (row.createdBy !== user.id) return { error: "No tenés permiso para eliminar este gasto" };
+  if (row.createdBy !== user.id) return { error: "No tienes permiso para eliminar este gasto" };
 
   await db
     .update(expense)

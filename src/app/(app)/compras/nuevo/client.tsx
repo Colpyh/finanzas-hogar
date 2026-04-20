@@ -69,8 +69,8 @@ export function NuevoCompraClient({ categories, members, cards }: { categories: 
   return (
     <div className="p-4 max-w-lg mx-auto space-y-5 pb-8">
       <div className="pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">¿Qué querés registrar?</h1>
-        <p className="text-sm text-muted-foreground mt-1">Elegí el tipo de gasto</p>
+        <h1 className="text-2xl font-bold tracking-tight">¿Qué quieres registrar?</h1>
+        <p className="text-sm text-muted-foreground mt-1">Elige el tipo de gasto</p>
       </div>
 
       <div className="space-y-5">

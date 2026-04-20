@@ -12,7 +12,7 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
-    if (!household) return { error: "No tenés un hogar activo" };
+    if (!household) return { error: "No tienes un hogar activo" };
 
     const data = addCardSchema.parse(rawData);
 

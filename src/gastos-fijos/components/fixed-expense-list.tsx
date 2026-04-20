@@ -24,8 +24,8 @@ export function FixedExpenseList({ expenses, memberCount }: Props) {
   if (expenses.length === 0) {
     return (
       <EmptyState
-        message="No tenés gastos fijos registrados."
-        description="Agregá uno con el botón de arriba."
+        message="No tienes gastos fijos registrados."
+        description="Agrega uno con el botón de arriba."
       />
     );
   }
