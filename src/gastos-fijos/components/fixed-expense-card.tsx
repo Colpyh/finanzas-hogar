@@ -214,7 +214,7 @@ export function FixedExpenseCard({
         open={confirmUpgradeOpen}
         onOpenChange={setConfirmUpgradeOpen}
         title="¿Confirmar pago definitivo?"
-        description={`Vas a marcar "${expense.description}" como pagado. Esto reemplaza el estado de chanchito.`}
+        description={`Esto marcará "${expense.description}" como pagado y reemplazará el estado de chanchito.`}
         confirmText="Sí, confirmar pago"
         loading={upgrading}
         onConfirm={handleUpgrade}

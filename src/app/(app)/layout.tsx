@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { getPendingCount } from "@/email-inbound/queries";
 import { AppProviders } from "./providers";
 import type { HouseholdContextValue } from "@/shared/hooks/use-household";
 
@@ -21,7 +22,11 @@ export default async function AppLayout({
 
   // Dev bypass: solo cuando hay cookie de sesión local
   if (hasDevSession) {
-    return <AppProviders household={MOCK_HOUSEHOLD}>{children}</AppProviders>;
+    return (
+      <AppProviders household={MOCK_HOUSEHOLD} pendingCount={0}>
+        {children}
+      </AppProviders>
+    );
   }
 
   // Sin dev bypass: verificar sesión real de Supabase
@@ -33,5 +38,11 @@ export default async function AppLayout({
 
   if (!result.household) redirect("/onboarding");
 
-  return <AppProviders household={result.household}>{children}</AppProviders>;
+  const pendingCount = await getPendingCount(result.household.id).catch(() => 0);
+
+  return (
+    <AppProviders household={result.household} pendingCount={pendingCount}>
+      {children}
+    </AppProviders>
+  );
 }
