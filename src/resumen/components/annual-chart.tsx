@@ -58,7 +58,7 @@ export function AnnualChart({ data }: Props) {
         {data.slice(-3).reverse().map((d) => (
           <div key={d.month} className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground capitalize">
-              {new Date(`${d.month}T12:00:00`).toLocaleDateString("es-AR", { month: "long", year: "numeric" })}
+              {new Date(`${d.month}T12:00:00`).toLocaleDateString("es-419", { month: "long", year: "numeric" })}
             </span>
             <div className="flex gap-3 text-xs">
               <span className="text-violet-600 dark:text-violet-400 font-medium">

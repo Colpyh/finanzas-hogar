@@ -193,7 +193,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
       >
         <div className="text-left">
           <p className="text-sm font-medium text-foreground">Gasto privado</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Solo lo verás vos</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Solo tú lo verás</p>
         </div>
         <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${isPrivate ? "bg-primary" : "bg-muted"}`}>
           <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isPrivate ? "translate-x-4" : "translate-x-0"}`} />

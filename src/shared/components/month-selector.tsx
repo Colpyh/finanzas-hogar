@@ -21,7 +21,7 @@ export function MonthSelector({ month }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const label = new Date(`${month}T12:00:00`).toLocaleDateString("es-AR", {
+  const label = new Date(`${month}T12:00:00`).toLocaleDateString("es-419", {
     month: "long",
     year: "numeric",
   });

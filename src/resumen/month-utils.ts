@@ -18,7 +18,7 @@ export function getNextMonth(month: string): string {
 export function formatMonthLabel(month: string): string {
   const [year, m] = month.split("-").map(Number) as [number, number];
   const date = new Date(year, m - 1, 1);
-  return date.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  return date.toLocaleDateString("es-419", { month: "long", year: "numeric" });
 }
 
 /** Converts 'YYYY-MM' → 'YYYY-MM-01' for DB date comparisons */
