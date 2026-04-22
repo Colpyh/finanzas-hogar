@@ -13,6 +13,7 @@ type Props = {
     cardName?: string | null;
     cardColor?: string | null;
     cardLastFour?: string | null;
+    isPrivate?: boolean;
   };
 };
 
@@ -26,7 +27,12 @@ export function PurchaseCard({ expense }: Props) {
     <Link href={`/gastos/${expense.id}`}>
       <div className="flex items-center gap-3 bg-card border border-border shadow-sm rounded-2xl px-4 py-3.5 hover:bg-muted/40 active:scale-[0.99] transition-all cursor-pointer">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
+            {expense.isPrivate && (
+              <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">Privado</span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             {expense.categoryName && (
               <span className="text-xs text-muted-foreground">{expense.categoryName}</span>

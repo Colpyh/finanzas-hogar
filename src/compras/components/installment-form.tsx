@@ -31,6 +31,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
   const [startMonth, setStartMonth] = useState(today);
   const [responsibleId, setResponsibleId] = useState<string | null>(null);
   const [cardId, setCardId] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -52,6 +53,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
       startMonth,
       responsibleId,
       cardId,
+      isPrivate,
     });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -180,6 +182,23 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
           {errors.general}
         </p>
       )}
+
+      <button
+        type="button"
+        onClick={() => setIsPrivate((v) => !v)}
+        className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
+          isPrivate ? "border-primary/40 bg-primary/5" : "border-border bg-card"
+        }`}
+        disabled={loading}
+      >
+        <div className="text-left">
+          <p className="text-sm font-medium text-foreground">Gasto privado</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Solo lo verás vos</p>
+        </div>
+        <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${isPrivate ? "bg-primary" : "bg-muted"}`}>
+          <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isPrivate ? "translate-x-4" : "translate-x-0"}`} />
+        </div>
+      </button>
 
       <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
         {loading ? "Guardando..." : "Registrar cuotas"}

@@ -112,7 +112,10 @@ CREATE POLICY "category_delete" ON public.category
 -- expense
 -- ============================================================
 CREATE POLICY "expense_select" ON public.expense
-  FOR SELECT USING (is_household_member(household_id));
+  FOR SELECT USING (
+    is_household_member(household_id)
+    AND (NOT is_private OR created_by = auth.uid())
+  );
 
 CREATE POLICY "expense_insert" ON public.expense
   FOR INSERT WITH CHECK (

@@ -26,6 +26,7 @@ export async function createPurchase(rawData: unknown) {
       createdBy: user.id,
       responsibleId: data.responsibleId ?? null,
       cardId: data.cardId ?? null,
+      isPrivate: data.isPrivate ?? false,
     })
     .returning();
 
@@ -57,6 +58,7 @@ export async function createInstallment(rawData: unknown) {
       createdBy: user.id,
       responsibleId: data.responsibleId ?? null,
       cardId: data.cardId ?? null,
+      isPrivate: data.isPrivate ?? false,
     })
     .returning();
 

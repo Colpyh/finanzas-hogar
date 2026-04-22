@@ -13,6 +13,7 @@ export const createPurchaseSchema = z.object({
   expenseDate: z.string().date("Fecha inválida"),
   responsibleId: z.string().uuid().nullable().optional(),
   cardId: z.string().uuid().nullable().optional(),
+  isPrivate: z.boolean().default(false),
 });
 
 export const createInstallmentSchema = z
@@ -28,6 +29,7 @@ export const createInstallmentSchema = z
     startMonth: z.string().date("Mes de inicio inválido"),
     responsibleId: z.string().uuid().nullable().optional(),
     cardId: z.string().uuid().nullable().optional(),
+    isPrivate: z.boolean().default(false),
   })
   .transform((data) => ({
     ...data,

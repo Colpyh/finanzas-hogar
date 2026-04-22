@@ -35,6 +35,7 @@ export const expense = pgTable("expense", {
   recurrenceDay: smallint("recurrence_day"), // 1-31, day of month bill is due
   isActive: boolean("is_active").default(true), // toggle without deleting
   isShared: boolean("is_shared").default(false).notNull(),
+  isPrivate: boolean("is_private").default(false).notNull(),
 
   // Installment fields
   installmentsTotal: smallint("installments_total"),
