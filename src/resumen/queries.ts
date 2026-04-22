@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment, category } from "@/shared/lib/db/schema";
-import { eq, and, isNull, lte, desc } from "drizzle-orm";
+import { eq, and, isNull, lte, sql } from "drizzle-orm";
 import { aggregateTotals, calcPercentage } from "@/dashboard/aggregation";
 import type {
   MonthlySummary,
@@ -14,19 +14,17 @@ export async function getMonthlySummary(
 ): Promise<MonthlySummary> {
   const monthPrefix = month.slice(0, 7); // 'YYYY-MM'
 
-  // fixedTotal: sum of fixed expense amounts (active)
-  const fixedRows = await db
-    .select({ amount: expense.amount })
-    .from(expense)
+  // fixedTotal: sum of actual payments made for this specific month
+  const fixedPaymentRows = await db
+    .select({ amount: fixedExpensePayment.amount })
+    .from(fixedExpensePayment)
     .where(
       and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "fixed"),
-        eq(expense.isActive, true),
-        isNull(expense.deletedAt)
+        eq(fixedExpensePayment.householdId, householdId),
+        eq(fixedExpensePayment.periodMonth, month)
       )
     );
-  const fixedTotal = fixedRows.reduce(
+  const fixedTotal = fixedPaymentRows.reduce(
     (acc, row) => acc + Number(row.amount ?? 0),
     0
   );
