@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ type Member = { userId: string; displayName: string };
 type Props = { categories: Category[]; members: Member[] };
 
 export function FixedExpenseForm({ categories, members }: Props) {
+  const router = useRouter();
   const [form, setForm] = useState({
     description: "",
     categoryId: categories[0]?.id ?? "",
@@ -19,6 +21,7 @@ export function FixedExpenseForm({ categories, members }: Props) {
     currency: "CLP",
     recurrenceDay: "",
     isShared: false,
+    isPrivate: false,
     responsibleId: "" as string,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -48,6 +51,7 @@ export function FixedExpenseForm({ categories, members }: Props) {
     setLoading(true);
     try {
       await createFixedExpense(parsed.data);
+      router.push("/gastos-fijos");
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
       setLoading(false);
@@ -117,20 +121,35 @@ export function FixedExpenseForm({ categories, members }: Props) {
         {errors.recurrenceDay && <p className="text-xs text-destructive">{errors.recurrenceDay}</p>}
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-input bg-background px-4 h-11">
-        <Label htmlFor="isShared" className="cursor-pointer">Gasto compartido</Label>
-        <input
-          id="isShared"
-          type="checkbox"
-          checked={form.isShared}
-          onChange={(e) => setForm((prev) => ({ ...prev, isShared: e.target.checked }))}
-          disabled={loading}
-          className="h-4 w-4"
-        />
-      </div>
-      <p className="text-xs text-muted-foreground -mt-2">
-        Cada miembro del hogar debe confirmar su parte
-      </p>
+      <button
+        type="button"
+        onClick={() => setForm((prev) => ({ ...prev, isShared: !prev.isShared }))}
+        className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${form.isShared ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
+        disabled={loading}
+      >
+        <div className="text-left">
+          <p className="text-sm font-medium text-foreground">Gasto compartido</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Se divide entre los dos, uno lo paga</p>
+        </div>
+        <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${form.isShared ? "bg-primary" : "bg-muted"}`}>
+          <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.isShared ? "translate-x-4" : "translate-x-0"}`} />
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setForm((prev) => ({ ...prev, isPrivate: !prev.isPrivate }))}
+        className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${form.isPrivate ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
+        disabled={loading}
+      >
+        <div className="text-left">
+          <p className="text-sm font-medium text-foreground">Gasto privado</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Solo tú lo verás</p>
+        </div>
+        <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${form.isPrivate ? "bg-primary" : "bg-muted"}`}>
+          <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.isPrivate ? "translate-x-4" : "translate-x-0"}`} />
+        </div>
+      </button>
 
       {members.length > 0 && (
         <div className="space-y-1.5">
