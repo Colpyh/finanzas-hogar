@@ -30,6 +30,7 @@ export const createInstallmentSchema = z
     responsibleId: z.string().uuid().nullable().optional(),
     cardId: z.string().uuid().nullable().optional(),
     isPrivate: z.boolean().default(false),
+    isShared: z.boolean().default(false),
   })
   .transform((data) => ({
     ...data,

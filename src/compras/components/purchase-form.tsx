@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ type Card = { id: string; name: string; lastFour: string | null; color: string; 
 type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
 export function PurchaseForm({ categories, members, cards = [] }: Props) {
+  const router = useRouter();
   const today = new Date().toISOString().split("T")[0] ?? "";
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
@@ -56,6 +58,7 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
     setLoading(true);
     try {
       await createPurchase(parsed.data);
+      router.push("/compras");
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
       setLoading(false);

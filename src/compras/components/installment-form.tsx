@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ type Card = { id: string; name: string; lastFour: string | null; color: string; 
 type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
 export function InstallmentForm({ categories, members, cards = [] }: Props) {
+  const router = useRouter();
   const today = new Date().toISOString().slice(0, 7) + "-01";
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
@@ -32,6 +34,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
   const [responsibleId, setResponsibleId] = useState<string | null>(null);
   const [cardId, setCardId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isShared, setIsShared] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +57,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
       responsibleId,
       cardId,
       isPrivate,
+      isShared,
     });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -66,6 +70,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
     setLoading(true);
     try {
       await createInstallment(parsed.data);
+      router.push("/compras");
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
       setLoading(false);
@@ -182,6 +187,23 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
           {errors.general}
         </p>
       )}
+
+      <button
+        type="button"
+        onClick={() => setIsShared((v) => !v)}
+        className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
+          isShared ? "border-primary/40 bg-primary/5" : "border-border bg-card"
+        }`}
+        disabled={loading}
+      >
+        <div className="text-left">
+          <p className="text-sm font-medium text-foreground">Gasto compartido</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Se divide entre los dos, uno lo paga</p>
+        </div>
+        <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${isShared ? "bg-primary" : "bg-muted"}`}>
+          <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isShared ? "translate-x-4" : "translate-x-0"}`} />
+        </div>
+      </button>
 
       <button
         type="button"
