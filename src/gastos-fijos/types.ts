@@ -20,6 +20,7 @@ export const createFixedExpenseSchema = z.object({
   isShared: z.boolean().default(false),
   isPrivate: z.boolean().default(false),
   responsibleId: z.string().uuid().nullable().optional(),
+  cardId: z.string().uuid().nullable().optional(),
 });
 
 export const updateFixedExpenseSchema = z.object({

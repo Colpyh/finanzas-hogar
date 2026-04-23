@@ -31,6 +31,7 @@ export async function createFixedExpense(rawData: unknown) {
       isShared: data.isShared,
       isPrivate: data.isPrivate ?? false,
       responsibleId: data.responsibleId ?? null,
+      cardId: data.cardId ?? null,
     })
     .returning();
 

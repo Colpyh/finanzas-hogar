@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createFixedExpenseSchema } from "@/gastos-fijos/types";
 import { createFixedExpense } from "@/gastos-fijos/actions";
+import { CardPills } from "@/shared/components/card-pills";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
-type Props = { categories: Category[]; members: Member[] };
+type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
+type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
-export function FixedExpenseForm({ categories, members }: Props) {
+export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
   const router = useRouter();
   const [form, setForm] = useState({
     description: "",
@@ -24,6 +26,7 @@ export function FixedExpenseForm({ categories, members }: Props) {
     isPrivate: false,
     responsibleId: "" as string,
   });
+  const [cardId, setCardId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +42,7 @@ export function FixedExpenseForm({ categories, members }: Props) {
       recurrenceDay: Number(form.recurrenceDay),
       isShared: form.isShared,
       responsibleId: form.responsibleId || null,
+      cardId: cardId || null,
     });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
@@ -167,6 +171,14 @@ export function FixedExpenseForm({ categories, members }: Props) {
             ))}
           </select>
           <p className="text-xs text-muted-foreground">¿Quién paga físicamente este gasto?</p>
+        </div>
+      )}
+
+      {cards.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Tarjeta vinculada</Label>
+          <CardPills cards={cards} value={cardId} onChange={setCardId} disabled={loading} />
+          <p className="text-xs text-muted-foreground">Opcional — tarjeta con la que se paga este gasto</p>
         </div>
       )}
 
