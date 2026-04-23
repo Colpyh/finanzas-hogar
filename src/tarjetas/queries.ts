@@ -55,7 +55,8 @@ export async function getCardUsageSummary(
       row.startMonth <= month &&
       (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
     ) {
-      contribution = Number(row.installmentAmount ?? 0);
+      const remaining = (row.installmentsTotal ?? 0) - (row.installmentsPaid ?? 0);
+      contribution = remaining * Number(row.installmentAmount ?? 0);
     } else if (row.type === "fixed" && row.isActive) {
       contribution = Number(row.amount ?? 0);
     }
