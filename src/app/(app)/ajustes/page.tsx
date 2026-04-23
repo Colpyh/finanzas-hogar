@@ -9,8 +9,11 @@ import { AddMemberModal } from "@/household/components/add-member-modal";
 import { CardManager } from "@/tarjetas/components/card-manager";
 import { signOut } from "@/auth/actions";
 import { Button } from "@/components/ui/button";
-import { Users, Home, LogOut, Palette, CreditCard } from "lucide-react";
+import { Users, Home, LogOut, Palette, CreditCard, Bug, ShieldAlert } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
+import { BugReportForm } from "@/bug-report/components/bug-report-form";
+import { BugReportPanel } from "@/bug-report/components/bug-report-panel";
+import { getAllBugReports } from "@/bug-report/queries";
 
 export const metadata: Metadata = { title: "Ajustes" };
 
@@ -24,6 +27,8 @@ export default async function AjustesPage() {
   let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
   let cards: { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number; expenseCount: number }[] = [];
   let isOwner = true;
+  let isAdmin = false;
+  let bugReports: Awaited<ReturnType<typeof getAllBugReports>> = [];
 
   try {
     const user = await getUser();
@@ -53,6 +58,11 @@ export default async function AjustesPage() {
           ? { ...m, displayName: currentUserName }
           : m
       );
+    }
+    const adminEmail = process.env.ADMIN_EMAIL;
+    isAdmin = !!adminEmail && user.email === adminEmail;
+    if (isAdmin) {
+      bugReports = await getAllBugReports();
     }
   } catch {
     // Sin sesión — datos de ejemplo
@@ -103,6 +113,26 @@ export default async function AjustesPage() {
         </div>
         <ThemeToggle />
       </div>
+
+      {/* Reportar problema */}
+      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Bug size={15} />
+          <span className="text-xs font-medium uppercase tracking-wide">Soporte</span>
+        </div>
+        <BugReportForm />
+      </div>
+
+      {/* Panel admin — solo visible para el administrador */}
+      {isAdmin && (
+        <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <ShieldAlert size={15} />
+            <span className="text-xs font-medium uppercase tracking-wide">Reportes de usuarios</span>
+          </div>
+          <BugReportPanel reports={bugReports} />
+        </div>
+      )}
 
       {/* Cerrar sesión */}
       <form action={signOut}>
