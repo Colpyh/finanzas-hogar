@@ -20,20 +20,24 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
     conditions.push(eq(expense.type, filters.type));
   }
 
-  if (filters.dateFrom) {
-    conditions.push(
-      or(
-        gte(expense.expenseDate, filters.dateFrom),
-        gte(expense.startMonth, filters.dateFrom)
-      )
-    );
-  }
+  if (filters.dateFrom || filters.dateTo) {
+    const dateCond = filters.dateFrom && filters.dateTo
+      ? and(gte(expense.expenseDate, filters.dateFrom), lte(expense.expenseDate, filters.dateTo))
+      : filters.dateFrom
+        ? gte(expense.expenseDate, filters.dateFrom)
+        : lte(expense.expenseDate, filters.dateTo!);
 
-  if (filters.dateTo) {
+    // Cuotas: mostrar si empezaron antes o durante el mes seleccionado
+    const installmentCond = filters.dateTo
+      ? lte(expense.startMonth, filters.dateTo)
+      : undefined;
+
     conditions.push(
       or(
-        lte(expense.expenseDate, filters.dateTo),
-        lte(expense.startMonth, filters.dateTo)
+        and(eq(expense.type, "one_time"), dateCond),
+        installmentCond
+          ? and(eq(expense.type, "installment"), installmentCond)
+          : eq(expense.type, "installment")
       )
     );
   }
