@@ -23,7 +23,7 @@ export default async function AppLayout({
   // Dev bypass: solo cuando hay cookie de sesión local
   if (hasDevSession) {
     return (
-      <AppProviders household={MOCK_HOUSEHOLD} pendingCount={0}>
+      <AppProviders household={MOCK_HOUSEHOLD} userId="dev" pendingCount={0}>
         {children}
       </AppProviders>
     );
@@ -41,7 +41,7 @@ export default async function AppLayout({
   const pendingCount = await getPendingCount(result.household.id).catch(() => 0);
 
   return (
-    <AppProviders household={result.household} pendingCount={pendingCount}>
+    <AppProviders household={result.household} userId={result.user.id} pendingCount={pendingCount}>
       {children}
     </AppProviders>
   );
