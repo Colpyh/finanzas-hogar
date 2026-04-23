@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const next = searchParams.get("next");
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/login?error=missing_code`);
@@ -17,6 +18,11 @@ export async function GET(request: NextRequest) {
 
   if (error || !data.user) {
     return NextResponse.redirect(`${origin}/auth/login?error=invalid_code`);
+  }
+
+  // Password reset flow — redirect to set new password
+  if (next && next.startsWith("/")) {
+    return NextResponse.redirect(`${origin}${next}`);
   }
 
   // Check if user already belongs to a household

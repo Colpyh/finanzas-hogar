@@ -4,63 +4,70 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-// Acceso temporal de desarrollo — reemplazar con Supabase auth cuando esté listo
-const DEV_USER = process.env.DEV_USERNAME ?? "admin";
-const DEV_PASS = process.env.DEV_PASSWORD ?? "admin";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export async function signInWithCredentials(
-  username: string,
+  email: string,
   password: string,
   returnTo?: string
 ): Promise<{ error?: string }> {
   const destination = returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard";
 
-  // Acceso de desarrollo
-  if (username === DEV_USER && password === DEV_PASS) {
-    const cookieStore = await cookies();
-    cookieStore.set("dev-session", "1", {
-      httpOnly: true,
-      path: "/",
-      maxAge: 60 * 60 * 24, // 24 horas
-      sameSite: "lax",
-    });
-    redirect(destination);
-  }
-
-  // Intentar con Supabase (usuario real)
-  let signInError: string | null = null;
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email: username,
-      password,
-    });
-    if (error) signInError = error.message;
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: "Correo o contraseña incorrectos." };
   } catch (e) {
     return { error: `Error de conexión: ${e instanceof Error ? e.message : String(e)}` };
-  }
-
-  if (signInError) {
-    return { error: "Usuario o contraseña incorrectos." };
   }
 
   redirect(destination);
 }
 
-export async function signInWithMagicLink(email: string): Promise<{ error?: string }> {
+export async function signUp(
+  email: string,
+  password: string
+): Promise<{ error?: string }> {
   const supabase = await createClient();
-
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabase.auth.signUp({
     email,
+    password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
+      emailRedirectTo: `${SITE_URL}/auth/callback`,
     },
   });
 
-  if (error) {
-    return { error: error.message };
-  }
+  if (error) return { error: error.message };
+  return {};
+}
 
+export async function signInWithGoogle(): Promise<{ url?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${SITE_URL}/auth/callback`,
+    },
+  });
+
+  if (error) return { error: error.message };
+  return { url: data.url };
+}
+
+export async function sendPasswordReset(email: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${SITE_URL}/auth/callback?next=/auth/update-password`,
+  });
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updatePassword(newPassword: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { error: error.message };
   return {};
 }
 
