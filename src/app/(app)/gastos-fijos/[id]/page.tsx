@@ -7,6 +7,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { getFixedExpensePayments } from "@/gastos-fijos/queries";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { getHouseholdCards, getCardUsageSummary } from "@/tarjetas/queries";
+import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { EditFixedExpenseForm } from "@/gastos-fijos/components/edit-fixed-expense-form";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { ChevronLeft } from "lucide-react";
@@ -31,7 +33,20 @@ export default async function GastoFijoDetailPage({ params }: Props) {
 
   if (!exp || exp.householdId !== household.id) notFound();
 
-  const payments = await getFixedExpensePayments(id);
+  const [payments, rawCards, usageMap] = await Promise.all([
+    getFixedExpensePayments(id),
+    getHouseholdCards(household.id),
+    getCardUsageSummary(household.id, currentPeriodMonth()),
+  ]);
+
+  const cards = rawCards.map((c) => ({
+    id: c.id,
+    name: c.name,
+    lastFour: c.lastFour,
+    color: c.color,
+    creditLimit: c.creditLimit ? Number(c.creditLimit) : null,
+    used: usageMap.get(c.id) ?? 0,
+  }));
 
   return (
     <div className="p-4 space-y-5 max-w-lg mx-auto pb-8">
@@ -49,7 +64,9 @@ export default async function GastoFijoDetailPage({ params }: Props) {
             description: exp.description,
             amount: exp.amount ?? "0",
             recurrenceDay: exp.recurrenceDay ?? null,
+            cardId: exp.cardId ?? null,
           }}
+          cards={cards}
         />
       </div>
 

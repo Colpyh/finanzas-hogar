@@ -4,10 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateFixedExpense, deleteFixedExpense } from "@/gastos-fijos/actions";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
+import { CardPills } from "@/shared/components/card-pills";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Trash2 } from "lucide-react";
+
+type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
 
 type Props = {
   expense: {
@@ -15,14 +18,17 @@ type Props = {
     description: string;
     amount: string;
     recurrenceDay: number | null;
+    cardId: string | null;
   };
+  cards?: Card[];
 };
 
-export function EditFixedExpenseForm({ expense }: Props) {
+export function EditFixedExpenseForm({ expense, cards = [] }: Props) {
   const router = useRouter();
   const [description, setDescription] = useState(expense.description);
   const [amount, setAmount] = useState(expense.amount);
   const [recurrenceDay, setRecurrenceDay] = useState(String(expense.recurrenceDay ?? ""));
+  const [cardId, setCardId] = useState<string | null>(expense.cardId);
   const [error, setError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -37,6 +43,7 @@ export function EditFixedExpenseForm({ expense }: Props) {
           description,
           amount,
           recurrenceDay: recurrenceDay ? Number(recurrenceDay) : undefined,
+          cardId,
         });
         router.push("/gastos-fijos");
       } catch (err) {
@@ -89,6 +96,15 @@ export function EditFixedExpenseForm({ expense }: Props) {
             />
           </div>
         </div>
+
+        {cards.length > 0 && (
+          <div className="space-y-1.5">
+            <Label>Tarjeta vinculada</Label>
+            <CardPills cards={cards} value={cardId} onChange={setCardId} />
+            <p className="text-xs text-muted-foreground">Opcional — tarjeta con la que se paga este gasto</p>
+          </div>
+        )}
+
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex gap-3">
           <Button

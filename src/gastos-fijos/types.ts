@@ -30,6 +30,7 @@ export const updateFixedExpenseSchema = z.object({
   currency: z.string().optional(),
   recurrenceDay: recurrenceDayField.optional(),
   isShared: z.boolean().optional(),
+  cardId: z.string().uuid().nullable().optional(),
 });
 
 export const markPaidSchema = z.object({
