@@ -8,7 +8,7 @@ import { FixedExpenseList } from "@/gastos-fijos/components/fixed-expense-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { buttonVariants } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Gastos Fijos" };
@@ -46,6 +46,7 @@ export default async function GastosFijosPage({ searchParams }: Props) {
 
   let expenses: EnrichedExpense[] = MOCK_EXPENSES;
   let memberCount = 1;
+  let hasPendingBalances = false;
 
   try {
     const user = await getUser();
@@ -107,6 +108,10 @@ export default async function GastosFijosPage({ searchParams }: Props) {
           myShareAmount,
         };
       });
+
+      hasPendingBalances = expenses.some(
+        (e) => e.isShared && e.isPaidThisMonth && !e.isSettled
+      );
     }
   } catch {
     // Sin sesión — datos de ejemplo
@@ -124,6 +129,16 @@ export default async function GastosFijosPage({ searchParams }: Props) {
           </Link>
         </div>
       </div>
+      {hasPendingBalances && (
+        <Link
+          href={`/balances?month=${month}`}
+          className="flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-700 hover:bg-amber-500/15 transition-colors"
+        >
+          <Scale size={16} className="shrink-0" />
+          <span className="flex-1 font-medium">Hay deudas pendientes este mes</span>
+          <span className="text-xs text-amber-600">Ver balances →</span>
+        </Link>
+      )}
       <FixedExpenseList expenses={expenses} memberCount={memberCount} />
     </div>
   );
