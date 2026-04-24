@@ -1,8 +1,10 @@
+import { cache } from "react";
 import { db } from "@/shared/lib/db";
 import { householdMember, householdInvite, household } from "@/shared/lib/db/schema";
 import { eq, and, isNull, gt } from "drizzle-orm";
 
-export async function getUserHousehold(userId: string) {
+// cache() deduplicates within a single render tree (layout + page share the result)
+export const getUserHousehold = cache(async function getUserHousehold(userId: string) {
   const result = await db
     .select({
       id: household.id,
@@ -15,7 +17,7 @@ export async function getUserHousehold(userId: string) {
     .limit(1);
 
   return result[0] ?? null;
-}
+});
 
 export async function getInviteByToken(token: string) {
   const now = new Date();

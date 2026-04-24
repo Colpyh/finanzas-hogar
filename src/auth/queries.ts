@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/shared/lib/supabase/server";
 import { UnauthorizedError } from "./types";
 
@@ -7,11 +8,8 @@ export async function getSession() {
   return session;
 }
 
-/**
- * Returns the authenticated user or throws UnauthorizedError.
- * Use this in all Server Actions that require authentication.
- */
-export async function getUser() {
+// cache() deduplicates within a single render tree (layout + page share the result)
+export const getUser = cache(async function getUser() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -20,4 +18,4 @@ export async function getUser() {
   }
 
   return user;
-}
+});

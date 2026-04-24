@@ -2,6 +2,9 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
+import type { InferSelectModel } from "drizzle-orm";
+
+export type FixedExpensePayment = InferSelectModel<typeof fixedExpensePayment>;
 
 export async function getActiveFixedExpenses(householdId: string) {
   return db
@@ -40,4 +43,21 @@ export async function getPaymentsForMonth(expenseId: string, periodMonth: string
 /** @deprecated use getPaymentsForMonth(id, month) */
 export async function getPaymentsForCurrentMonth(expenseId: string) {
   return getPaymentsForMonth(expenseId, currentPeriodMonth());
+}
+
+/** Trae todos los pagos del mes para todos los gastos fijos activos del hogar en una sola query. */
+export async function getAllFixedPaymentsForPeriod(householdId: string, periodMonth: string) {
+  return db
+    .select({ payment: fixedExpensePayment })
+    .from(fixedExpensePayment)
+    .innerJoin(expense, eq(fixedExpensePayment.expenseId, expense.id))
+    .where(
+      and(
+        eq(expense.householdId, householdId),
+        eq(expense.type, "fixed"),
+        eq(expense.isActive, true),
+        isNull(expense.deletedAt),
+        eq(fixedExpensePayment.periodMonth, periodMonth)
+      )
+    );
 }

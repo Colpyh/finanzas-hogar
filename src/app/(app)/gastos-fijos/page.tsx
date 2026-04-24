@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { getActiveFixedExpenses, getPaymentsForMonth } from "@/gastos-fijos/queries";
+import { getActiveFixedExpenses, getAllFixedPaymentsForPeriod } from "@/gastos-fijos/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { FixedExpenseList } from "@/gastos-fijos/components/fixed-expense-list";
 import { MonthSelector } from "@/shared/components/month-selector";
@@ -51,19 +51,23 @@ export default async function GastosFijosPage({ searchParams }: Props) {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const [dbExpenses, members] = await Promise.all([
+      const [dbExpenses, members, allPayments] = await Promise.all([
         getActiveFixedExpenses(household.id),
         getHouseholdMembers(household.id),
+        getAllFixedPaymentsForPeriod(household.id, month),
       ]);
       memberCount = members.length || 1;
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
 
-      const paymentsPerExpense = await Promise.all(
-        dbExpenses.map((exp) => getPaymentsForMonth(exp.id, month))
-      );
+      const paymentsByExpense = new Map<string, typeof allPayments[number]["payment"][]>();
+      for (const { payment } of allPayments) {
+        const list = paymentsByExpense.get(payment.expenseId) ?? [];
+        list.push(payment);
+        paymentsByExpense.set(payment.expenseId, list);
+      }
 
-      expenses = dbExpenses.map((e, i) => {
-        const payments = paymentsPerExpense[i] ?? [];
+      expenses = dbExpenses.map((e) => {
+        const payments = paymentsByExpense.get(e.id) ?? [];
         const isShared = e.isShared ?? false;
         // Solo cuentan como "pagado completo" los que tienen status='paid'
         const paidPayments = payments.filter((p) => p.status === "paid");
