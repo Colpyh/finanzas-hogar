@@ -11,8 +11,11 @@ type EnrichedExpense = {
   isShared: boolean;
   responsibleName?: string | null;
   isPaidThisMonth: boolean;
+  isSettled: boolean;
   currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;
+  paidByName?: string | null;
+  myShareAmount?: string;
 };
 
 type Props = {
@@ -37,9 +40,10 @@ export function FixedExpenseList({ expenses, memberCount }: Props) {
           key={exp.id}
           expense={exp}
           isPaidThisMonth={exp.isPaidThisMonth}
+          isSettled={exp.isSettled}
           currentUserStatus={exp.currentUserStatus}
-          confirmedCount={exp.confirmedCount}
-          memberCount={memberCount}
+          paidByName={exp.paidByName}
+          myShareAmount={exp.myShareAmount}
         />
       ))}
     </div>

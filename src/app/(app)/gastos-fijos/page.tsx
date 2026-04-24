@@ -26,15 +26,18 @@ type EnrichedExpense = {
   isShared: boolean;
   responsibleName?: string | null;
   isPaidThisMonth: boolean;
+  isSettled: boolean;
   currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;
+  paidByName?: string | null;
+  myShareAmount?: string;
 };
 
 const MOCK_EXPENSES: EnrichedExpense[] = [
-  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: true, currentUserStatus: "paid", confirmedCount: 1 },
-  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, currentUserStatus: "reserved", confirmedCount: 1 },
-  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
-  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, currentUserStatus: "none", confirmedCount: 0 },
+  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: true, isSettled: true, currentUserStatus: "paid", confirmedCount: 1, paidByName: null },
+  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "reserved", confirmedCount: 1, paidByName: null },
+  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "none", confirmedCount: 0, paidByName: null },
+  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "none", confirmedCount: 0, paidByName: null },
 ];
 
 export default async function GastosFijosPage({ searchParams }: Props) {
@@ -63,15 +66,27 @@ export default async function GastosFijosPage({ searchParams }: Props) {
         const payments = paymentsPerExpense[i] ?? [];
         const isShared = e.isShared ?? false;
         // Solo cuentan como "pagado completo" los que tienen status='paid'
-        const paidCount = payments.filter((p) => p.status === "paid").length;
+        const paidPayments = payments.filter((p) => p.status === "paid");
+        const paidCount = paidPayments.length;
         const confirmedCount = paidCount;
-        const isPaidThisMonth = isShared
-          ? paidCount >= memberCount
-          : paidCount >= 1;
+        // isPaidThisMonth = al menos uno pagó (el gasto está cubierto ante quien cobra)
+        const isPaidThisMonth = paidCount >= 1;
+        // isSettled = todos los miembros registraron su parte (deuda interna saldada)
+        const isSettled = paidCount >= memberCount;
         const myPayment = payments.find((p) => p.paidBy === user.id);
         const currentUserStatus = myPayment
           ? (myPayment.status as "reserved" | "paid")
           : "none";
+        const otherPaidPayment = isShared
+          ? paidPayments.find((p) => p.paidBy !== user.id)
+          : null;
+        const paidByName = otherPaidPayment
+          ? (memberMap.get(otherPaidPayment.paidBy) ?? null)
+          : null;
+        const totalAmount = parseFloat(e.amount ?? "0");
+        const myShareAmount = isShared && memberCount > 1
+          ? (totalAmount / memberCount).toFixed(2)
+          : (e.amount ?? "0");
         return {
           id: e.id,
           description: e.description,
@@ -81,8 +96,11 @@ export default async function GastosFijosPage({ searchParams }: Props) {
           isShared,
           responsibleName: e.responsibleId ? (memberMap.get(e.responsibleId) ?? null) : null,
           isPaidThisMonth,
+          isSettled,
           currentUserStatus,
           confirmedCount,
+          paidByName,
+          myShareAmount,
         };
       });
     }

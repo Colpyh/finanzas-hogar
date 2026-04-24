@@ -21,17 +21,19 @@ type Props = {
     responsibleName?: string | null;
   };
   isPaidThisMonth: boolean;
+  isSettled: boolean;
   currentUserStatus: "none" | "reserved" | "paid";
-  confirmedCount: number;
-  memberCount: number;
+  paidByName?: string | null;
+  myShareAmount?: string;
 };
 
 export function FixedExpenseCard({
   expense,
   isPaidThisMonth,
+  isSettled,
   currentUserStatus,
-  confirmedCount,
-  memberCount,
+  paidByName,
+  myShareAmount,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmToggleOpen, setConfirmToggleOpen] = useState(false);
@@ -55,8 +57,11 @@ export function FixedExpenseCard({
 
   // ── Icon ──────────────────────────────────────────────
   let icon: React.ReactNode;
-  if (currentUserStatus === "paid" && (!expense.isShared || isPaidThisMonth)) {
+  if (isSettled || (!expense.isShared && isPaidThisMonth)) {
     icon = <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />;
+  } else if (isPaidThisMonth) {
+    // Pagado pero no saldado internamente
+    icon = <CheckCircle2 size={18} className="text-amber-500 shrink-0" />;
   } else if (currentUserStatus === "reserved") {
     icon = <PiggyBank size={18} className="text-violet-500 shrink-0" />;
   } else {
@@ -93,16 +98,30 @@ export function FixedExpenseCard({
       );
     }
   } else {
-    if (isPaidThisMonth) {
+    if (isSettled) {
+      // Ambos registraron su parte
       primaryButton = (
         <Button size="sm" variant="ghost" disabled className="flex-1">
-          Todos confirmaron ✓
+          Saldado ✓
         </Button>
       );
-    } else if (currentUserStatus === "paid") {
+    } else if (isPaidThisMonth && currentUserStatus === "paid") {
+      // Yo pagué, el otro aún no saldó su parte
       primaryButton = (
-        <Button size="sm" variant="ghost" disabled className="flex-1">
-          Tu parte confirmada · esperando {memberCount - confirmedCount}
+        <Button size="sm" variant="ghost" disabled className="flex-1 text-amber-600">
+          Pagado · falta que {paidByName ?? "el otro"} salde su parte
+        </Button>
+      );
+    } else if (isPaidThisMonth && currentUserStatus === "none") {
+      // El otro pagó, yo debo saldar mi parte
+      primaryButton = (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setDialogOpen(true)}
+          className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+        >
+          Pagado por {paidByName ?? "otro"} · Saldar mi parte
         </Button>
       );
     } else if (currentUserStatus === "reserved") {
@@ -118,9 +137,10 @@ export function FixedExpenseCard({
         </Button>
       );
     } else {
+      // Nadie ha pagado aún
       primaryButton = (
         <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)} className="flex-1">
-          Confirmar mi parte
+          Registrar pago
         </Button>
       );
     }
@@ -190,7 +210,7 @@ export function FixedExpenseCard({
 
       <MarkPaidDialog
         expenseId={expense.id}
-        estimatedAmount={expense.amount}
+        estimatedAmount={myShareAmount ?? expense.amount}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
       />
