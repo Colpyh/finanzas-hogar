@@ -7,9 +7,9 @@ import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { MemberList } from "@/household/components/member-list";
 import { AddMemberModal } from "@/household/components/add-member-modal";
 import { CardManager } from "@/tarjetas/components/card-manager";
-import { signOut } from "@/auth/actions";
+import { SignOutButton } from "@/auth/components/sign-out-button";
 import { Button } from "@/components/ui/button";
-import { Users, Home, LogOut, Palette, CreditCard, Bug, ShieldAlert } from "lucide-react";
+import { Users, Home, Palette, CreditCard, Bug, ShieldAlert } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { BugReportForm } from "@/bug-report/components/bug-report-form";
 import { BugReportPanel } from "@/bug-report/components/bug-report-panel";
@@ -135,15 +135,7 @@ export default async function AjustesPage() {
       )}
 
       {/* Cerrar sesión */}
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10 transition-colors py-3.5 text-sm font-medium"
-        >
-          <LogOut size={16} />
-          Cerrar sesión
-        </button>
-      </form>
+      <SignOutButton />
     </div>
   );
 }
