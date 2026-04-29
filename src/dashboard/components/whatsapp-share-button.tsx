@@ -29,11 +29,19 @@ function buildText(
 
   const lines: string[] = [];
 
+  const CHECK = "✅";
+  const CLOCK = "⏳";
+  const CHART = "\u{1F4CA}";
+  const HOUSE = "\u{1F3E0}";
+  const CARD  = "\u{1F4B3}";
+  const CART  = "\u{1F6D2}";
+  const SCALE = "⚖️";
+
   lines.push(`*${householdName} — ${monthLabel}*`);
   lines.push("");
 
   // Resumen
-  lines.push("*📊 Resumen del mes*");
+  lines.push(`*${CHART} Resumen del mes*`);
   lines.push(`Total gastos: ${fmt(summary.grandTotal)}`);
   lines.push(`Mi parte: ${fmt(summary.myShareTotal)}`);
   if (summary.incomeTotal > 0) {
@@ -44,9 +52,9 @@ function buildText(
 
   // Gastos fijos
   if (bills.length > 0) {
-    lines.push("*🏠 Gastos fijos*");
+    lines.push(`*${HOUSE} Gastos fijos*`);
     for (const b of bills) {
-      const estado = b.paid ? "✅" : "⏳";
+      const estado = b.paid ? CHECK : CLOCK;
       lines.push(`${estado} ${b.description}: ${fmt(b.amount)}`);
     }
     lines.push("");
@@ -54,7 +62,7 @@ function buildText(
 
   // Cuotas
   if (installments.length > 0) {
-    lines.push("*💳 Cuotas activas*");
+    lines.push(`*${CARD} Cuotas activas*`);
     for (const ins of installments) {
       const progress = `${ins.installmentsPaid}/${ins.installmentsTotal}`;
       lines.push(`• ${ins.description}: ${fmt(ins.amount)} (${progress})`);
@@ -64,7 +72,7 @@ function buildText(
 
   // Compras recientes
   if (purchases.length > 0) {
-    lines.push("*🛒 Compras recientes*");
+    lines.push(`*${CART} Compras recientes*`);
     for (const p of purchases) {
       const date = new Date(p.expenseDate + "T00:00:00").toLocaleDateString("es-CL", { day: "numeric", month: "short" });
       const who = p.responsibleId && memberNames[p.responsibleId] ? ` (${memberNames[p.responsibleId]})` : "";
@@ -75,7 +83,7 @@ function buildText(
 
   // Balance pendiente
   if (balances.length > 0) {
-    lines.push("*⚖️ Balance pendiente*");
+    lines.push(`*${SCALE} Balance pendiente*`);
     for (const bal of balances) {
       if (bal.net > 0) {
         lines.push(`${bal.memberName} te debe ${fmt(bal.net)}`);
@@ -84,8 +92,8 @@ function buildText(
       }
     }
   } else {
-    lines.push("*⚖️ Balance*");
-    lines.push("Todo saldado ✅");
+    lines.push(`*${SCALE} Balance*`);
+    lines.push(`Todo saldado ${CHECK}`);
   }
 
   return lines.join("\n");
