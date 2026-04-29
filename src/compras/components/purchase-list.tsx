@@ -19,6 +19,12 @@ type Expense = {
   cardName?: string | null;
   cardColor?: string | null;
   cardLastFour?: string | null;
+  isShared?: boolean;
+  currentUserStatus?: "none" | "reserved" | "paid";
+  isPaidThisMonth?: boolean;
+  isSettled?: boolean;
+  paidByName?: string | null;
+  myShareAmount?: string;
 };
 
 type Props = { expenses: Expense[] };

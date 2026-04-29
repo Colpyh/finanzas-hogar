@@ -1,5 +1,5 @@
 import { db } from "@/shared/lib/db";
-import { expense, card } from "@/shared/lib/db/schema";
+import { expense, card, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, gte, lte, or, desc } from "drizzle-orm";
 
 export type ExpenseFilters = {
@@ -56,6 +56,7 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
       installmentAmount: expense.installmentAmount,
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
+      isShared: expense.isShared,
       responsibleId: expense.responsibleId,
       cardId: expense.cardId,
       cardName: card.name,
@@ -67,6 +68,22 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
     .leftJoin(card, eq(expense.cardId, card.id))
     .where(and(...conditions))
     .orderBy(desc(expense.createdAt));
+}
+
+export async function getSharedInstallmentPaymentsForPeriod(householdId: string, periodMonth: string) {
+  return db
+    .select({ payment: fixedExpensePayment })
+    .from(fixedExpensePayment)
+    .innerJoin(expense, eq(fixedExpensePayment.expenseId, expense.id))
+    .where(
+      and(
+        eq(expense.householdId, householdId),
+        eq(expense.type, "installment"),
+        eq(expense.isShared, true),
+        isNull(expense.deletedAt),
+        eq(fixedExpensePayment.periodMonth, periodMonth)
+      )
+    );
 }
 
 export async function getExpenseById(id: string, householdId: string) {

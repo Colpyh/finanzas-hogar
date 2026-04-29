@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { getExpenses } from "@/compras/queries";
+import { getExpenses, getSharedInstallmentPaymentsForPeriod } from "@/compras/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { getHouseholdCards } from "@/tarjetas/queries";
 import { PurchaseList } from "@/compras/components/purchase-list";
@@ -32,6 +32,12 @@ type ExpenseRow = {
   cardName?: string | null;
   cardColor?: string | null;
   cardLastFour?: string | null;
+  isShared?: boolean;
+  currentUserStatus?: "none" | "reserved" | "paid";
+  isPaidThisMonth?: boolean;
+  isSettled?: boolean;
+  paidByName?: string | null;
+  myShareAmount?: string;
 };
 
 const MOCK_EXPENSES: ExpenseRow[] = [
@@ -83,28 +89,59 @@ export default async function ComprasPage({ searchParams }: Props) {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const [dbExpenses, members, dbCards] = await Promise.all([
+      const [dbExpenses, members, dbCards, sharedPayments] = await Promise.all([
         getExpenses(household.id, { type: typeFilter, dateFrom, dateTo, cardId: cardFilter }),
         getHouseholdMembers(household.id),
         getHouseholdCards(household.id),
+        getSharedInstallmentPaymentsForPeriod(household.id, month),
       ]);
       cards = dbCards.map((c) => ({ id: c.id, name: c.name, color: c.color }));
+      const memberCount = members.length || 1;
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
-      expenses = dbExpenses.map((e) => ({
-        id: e.id,
-        type: e.type,
-        description: e.description,
-        amount: e.amount ?? null,
-        expenseDate: e.expenseDate ?? null,
-        installmentAmount: e.installmentAmount ?? null,
-        installmentsPaid: e.installmentsPaid ?? null,
-        installmentsTotal: e.installmentsTotal ?? null,
-        categoryName: undefined,
-        responsibleName: e.responsibleId ? (memberMap.get(e.responsibleId) ?? null) : null,
-        cardName: e.cardName ?? null,
-        cardColor: e.cardColor ?? null,
-        cardLastFour: e.cardLastFour ?? null,
-      }));
+
+      // Agrupar pagos del mes por expenseId
+      const paymentsByExpense = new Map<string, typeof sharedPayments[number]["payment"][]>();
+      for (const { payment } of sharedPayments) {
+        const list = paymentsByExpense.get(payment.expenseId) ?? [];
+        list.push(payment);
+        paymentsByExpense.set(payment.expenseId, list);
+      }
+
+      expenses = dbExpenses.map((e) => {
+        const isShared = e.isShared ?? false;
+        let sharedFields: Partial<ExpenseRow> = {};
+
+        if (isShared && e.type === "installment") {
+          const payments = paymentsByExpense.get(e.id) ?? [];
+          const paidPayments = payments.filter((p) => p.status === "paid");
+          const isPaidThisMonth = paidPayments.length >= 1;
+          const isSettled = paidPayments.length >= memberCount;
+          const myPayment = payments.find((p) => p.paidBy === user.id);
+          const currentUserStatus = myPayment ? (myPayment.status as "reserved" | "paid") : "none";
+          const otherPaid = paidPayments.find((p) => p.paidBy !== user.id);
+          const paidByName = otherPaid ? (memberMap.get(otherPaid.paidBy) ?? null) : null;
+          const myShareAmount = (parseFloat(e.installmentAmount ?? "0") / memberCount).toFixed(2);
+          sharedFields = { isPaidThisMonth, isSettled, currentUserStatus, paidByName, myShareAmount };
+        }
+
+        return {
+          id: e.id,
+          type: e.type,
+          description: e.description,
+          amount: e.amount ?? null,
+          expenseDate: e.expenseDate ?? null,
+          installmentAmount: e.installmentAmount ?? null,
+          installmentsPaid: e.installmentsPaid ?? null,
+          installmentsTotal: e.installmentsTotal ?? null,
+          categoryName: undefined,
+          responsibleName: e.responsibleId ? (memberMap.get(e.responsibleId) ?? null) : null,
+          cardName: e.cardName ?? null,
+          cardColor: e.cardColor ?? null,
+          cardLastFour: e.cardLastFour ?? null,
+          isShared,
+          ...sharedFields,
+        };
+      });
     }
   } catch {
     // Sin sesión — datos de ejemplo

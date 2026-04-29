@@ -1,10 +1,11 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, or, sql } from "drizzle-orm";
 
 export type BalanceItem = {
   expenseId: string;
   description: string;
+  type: "fixed" | "installment";
   totalAmount: number;
   shareAmount: number;
   payerId: string;
@@ -30,16 +31,23 @@ export async function getPendingBalances(
   memberMap: Map<string, string>,
   currentUserId: string
 ): Promise<MemberBalance[]> {
+  const activeSharedCondition = or(
+    and(eq(expense.type, "fixed"), eq(expense.isActive, true)),
+    and(
+      eq(expense.type, "installment"),
+      sql`${expense.installmentsPaid} < ${expense.installmentsTotal}`
+    )
+  );
+
   const expenses = await db
     .select()
     .from(expense)
     .where(
       and(
         eq(expense.householdId, householdId),
-        eq(expense.type, "fixed"),
         eq(expense.isShared, true),
-        eq(expense.isActive, true),
-        isNull(expense.deletedAt)
+        isNull(expense.deletedAt),
+        activeSharedCondition
       )
     );
 
@@ -52,10 +60,9 @@ export async function getPendingBalances(
     .where(
       and(
         eq(expense.householdId, householdId),
-        eq(expense.type, "fixed"),
         eq(expense.isShared, true),
-        eq(expense.isActive, true),
         isNull(expense.deletedAt),
+        activeSharedCondition,
         eq(fixedExpensePayment.periodMonth, periodMonth)
       )
     );
@@ -82,7 +89,10 @@ export async function getPendingBalances(
     const payer = paidPayments[0];
     if (!payer) continue;
 
-    const totalAmount = parseFloat(exp.amount ?? "0");
+    // Para cuotas usar el monto mensual, no el total de la compra
+    const totalAmount = exp.type === "installment"
+      ? parseFloat(exp.installmentAmount ?? "0")
+      : parseFloat(exp.amount ?? "0");
     const shareAmount = totalAmount / memberCount;
 
     // Find members who haven't paid
@@ -112,6 +122,7 @@ export async function getPendingBalances(
       balance.items.push({
         expenseId: exp.id,
         description: exp.description,
+        type: exp.type as "fixed" | "installment",
         totalAmount,
         shareAmount,
         payerId,

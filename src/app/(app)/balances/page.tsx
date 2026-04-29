@@ -102,9 +102,16 @@ export default async function BalancesPage({ searchParams }: Props) {
                   {balance.items.map((item) => (
                     <div key={item.expenseId} className="flex items-center justify-between px-5 py-3">
                       <div>
-                        <p className="text-sm font-medium text-foreground">{item.description}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-foreground">{item.description}</p>
+                          {item.type === "installment" && (
+                            <span className="inline-flex items-center rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
+                              cuota
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                          Total {formatCurrency(item.totalAmount)} · tu parte {formatCurrency(item.shareAmount)}
+                          {item.type === "installment" ? "Cuota" : "Total"} {formatCurrency(item.totalAmount)} · tu parte {formatCurrency(item.shareAmount)}
                         </p>
                       </div>
                       <span className={cn(

@@ -1,11 +1,13 @@
 "use server";
 
 import { db } from "@/shared/lib/db";
-import { expense } from "@/shared/lib/db/schema";
+import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { getHouseholdMembers } from "@/household/queries";
+import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { canMarkInstallmentPaid } from "./installment-utils";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
 
@@ -66,12 +68,15 @@ export async function createInstallment(rawData: unknown) {
 }
 
 export async function markInstallmentPaid(expenseId: string): Promise<{ error?: string }> {
-  await getUser();
+  const user = await getUser();
 
   const [current] = await db
     .select({
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
+      isShared: expense.isShared,
+      installmentAmount: expense.installmentAmount,
+      householdId: expense.householdId,
     })
     .from(expense)
     .where(eq(expense.id, expenseId))
@@ -82,9 +87,32 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
   const paid = current.installmentsPaid ?? 0;
   const total = current.installmentsTotal ?? 0;
 
-  // Scenario 3.6 — server-side guard
   if (!canMarkInstallmentPaid(paid, total)) {
     return { error: "Todas las cuotas ya fueron pagadas" };
+  }
+
+  // Para cuotas compartidas, registrar el pago mensual en fixedExpensePayment
+  if (current.isShared && current.installmentAmount) {
+    const members = await getHouseholdMembers(current.householdId);
+    const shareAmount = (parseFloat(current.installmentAmount) / members.length).toFixed(2);
+    const periodMonth = currentPeriodMonth();
+
+    try {
+      await db.insert(fixedExpensePayment).values({
+        expenseId,
+        householdId: current.householdId,
+        paidBy: user.id,
+        periodMonth,
+        amount: shareAmount,
+        status: "paid",
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
+        return { error: "Ya registraste tu pago este mes" };
+      }
+      throw err;
+    }
   }
 
   await db
@@ -93,6 +121,50 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
     .where(eq(expense.id, expenseId));
 
   revalidatePath("/compras");
+  revalidatePath("/balances");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+/** Registra la parte del deudor sin incrementar el contador de cuotas. */
+export async function registerInstallmentShare(expenseId: string): Promise<{ error?: string }> {
+  const user = await getUser();
+
+  const [current] = await db
+    .select({
+      installmentAmount: expense.installmentAmount,
+      householdId: expense.householdId,
+      isShared: expense.isShared,
+    })
+    .from(expense)
+    .where(eq(expense.id, expenseId))
+    .limit(1);
+
+  if (!current?.isShared) return { error: "Gasto no encontrado o no compartido" };
+
+  const members = await getHouseholdMembers(current.householdId);
+  const shareAmount = (parseFloat(current.installmentAmount ?? "0") / members.length).toFixed(2);
+  const periodMonth = currentPeriodMonth();
+
+  try {
+    await db.insert(fixedExpensePayment).values({
+      expenseId,
+      householdId: current.householdId,
+      paidBy: user.id,
+      periodMonth,
+      amount: shareAmount,
+      status: "paid",
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
+      return { error: "Ya registraste tu parte este mes" };
+    }
+    throw err;
+  }
+
+  revalidatePath("/compras");
+  revalidatePath("/balances");
   revalidatePath("/dashboard");
   return {};
 }

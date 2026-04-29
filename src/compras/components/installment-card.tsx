@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
-import { markInstallmentPaid } from "@/compras/actions";
+import { markInstallmentPaid, registerInstallmentShare } from "@/compras/actions";
+import { markPaidForOther, unmarkOtherPayment } from "@/gastos-fijos/actions";
 import { canMarkInstallmentPaid } from "@/compras/installment-utils";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { EditInstallmentDialog } from "./edit-installment-dialog";
+import { Users } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -21,33 +23,146 @@ type Props = {
     cardName?: string | null;
     cardColor?: string | null;
     cardLastFour?: string | null;
+    isShared?: boolean;
+    currentUserStatus?: "none" | "reserved" | "paid";
+    isPaidThisMonth?: boolean;
+    isSettled?: boolean;
+    paidByName?: string | null;
+    myShareAmount?: string;
   };
 };
 
 export function InstallmentCard({ expense }: Props) {
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmShareOpen, setConfirmShareOpen] = useState(false);
+  const [confirmMarkBothOpen, setConfirmMarkBothOpen] = useState(false);
+  const [confirmUnmarkOpen, setConfirmUnmarkOpen] = useState(false);
+  const [loading, startLoading] = useTransition();
+  const [sharingLoading, startShare] = useTransition();
+  const [markingBoth, startMarkBoth] = useTransition();
+  const [unmarking, startUnmark] = useTransition();
 
   const paid = expense.installmentsPaid ?? 0;
   const total = expense.installmentsTotal ?? 0;
   const canPay = canMarkInstallmentPaid(paid, total);
   const progress = total > 0 ? Math.round((paid / total) * 100) : 0;
 
+  const isShared = expense.isShared ?? false;
+  const isPaidThisMonth = expense.isPaidThisMonth ?? false;
+  const isSettled = expense.isSettled ?? false;
+  const currentUserStatus = expense.currentUserStatus ?? "none";
+
   async function handlePay() {
-    setLoading(true);
-    setError(null);
-    const result = await markInstallmentPaid(expense.id);
-    if (result?.error) setError(result.error);
-    setLoading(false);
-    setConfirmOpen(false);
+    startLoading(async () => {
+      const result = await markInstallmentPaid(expense.id);
+      if (result?.error) setError(result.error);
+      setConfirmOpen(false);
+    });
+  }
+
+  async function handleShare() {
+    startShare(async () => {
+      const result = await registerInstallmentShare(expense.id);
+      if (result?.error) setError(result.error);
+      setConfirmShareOpen(false);
+    });
+  }
+
+  function handleMarkBoth() {
+    startMarkBoth(async () => {
+      await markPaidForOther(expense.id);
+      setConfirmMarkBothOpen(false);
+    });
+  }
+
+  function handleUnmark() {
+    startUnmark(async () => {
+      await unmarkOtherPayment(expense.id);
+      setConfirmUnmarkOpen(false);
+    });
+  }
+
+  // ── Botón de acción ──────────────────────────────────
+  let actionButton: React.ReactNode;
+
+  if (!canPay) {
+    actionButton = (
+      <Button size="sm" variant="ghost" disabled className="text-muted-foreground ml-auto">
+        Completado
+      </Button>
+    );
+  } else if (!isShared) {
+    actionButton = (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setConfirmOpen(true)}
+        className="ml-auto"
+      >
+        Marcar cuota pagada
+      </Button>
+    );
+  } else if (isSettled) {
+    actionButton = (
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => setConfirmUnmarkOpen(true)}
+        className="ml-auto text-emerald-600 hover:text-amber-600 hover:bg-amber-50"
+      >
+        Saldado ✓ · Editar
+      </Button>
+    );
+  } else if (isPaidThisMonth && currentUserStatus === "paid") {
+    actionButton = (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setConfirmMarkBothOpen(true)}
+        className="ml-auto gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+      >
+        <Users size={13} />
+        Marcar saldado por ambos
+      </Button>
+    );
+  } else if (isPaidThisMonth && currentUserStatus === "none") {
+    actionButton = (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setConfirmShareOpen(true)}
+        className="ml-auto border-amber-300 text-amber-700 hover:bg-amber-50"
+      >
+        Pagado por {expense.paidByName ?? "otro"} · Saldar mi parte
+      </Button>
+    );
+  } else {
+    // Nadie pagó este mes aún
+    actionButton = (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setConfirmOpen(true)}
+        className="ml-auto"
+      >
+        Registrar pago cuota
+      </Button>
+    );
   }
 
   return (
     <div className="bg-card border border-border shadow-sm rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <Link href={`/gastos/${expense.id}`} className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
+            {isShared && (
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary shrink-0">
+                Compartido
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             {expense.categoryName && (
               <span className="text-xs text-muted-foreground">{expense.categoryName}</span>
@@ -103,17 +218,14 @@ export function InstallmentCard({ expense }: Props) {
         {expense.installmentAmount && (
           <span className="text-sm font-semibold text-foreground">
             {formatCurrency(parseFloat(expense.installmentAmount))}/cuota
+            {isShared && expense.myShareAmount && (
+              <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                (tu parte {formatCurrency(parseFloat(expense.myShareAmount))})
+              </span>
+            )}
           </span>
         )}
-        <Button
-          size="sm"
-          variant={canPay ? "outline" : "ghost"}
-          disabled={!canPay}
-          onClick={() => canPay && setConfirmOpen(true)}
-          className={canPay ? "" : "text-muted-foreground ml-auto"}
-        >
-          {canPay ? "Marcar cuota pagada" : "Completado"}
-        </Button>
+        {actionButton}
       </div>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
@@ -126,6 +238,37 @@ export function InstallmentCard({ expense }: Props) {
         confirmText="Sí, marcar pagada"
         loading={loading}
         onConfirm={handlePay}
+      />
+
+      <ConfirmDialog
+        open={confirmShareOpen}
+        onOpenChange={setConfirmShareOpen}
+        title="¿Registrar tu parte?"
+        description={`Esto registra que saldaste tu parte de la cuota de "${expense.description}" este mes.`}
+        confirmText="Sí, registrar"
+        loading={sharingLoading}
+        onConfirm={handleShare}
+      />
+
+      <ConfirmDialog
+        open={confirmMarkBothOpen}
+        onOpenChange={setConfirmMarkBothOpen}
+        title="¿Marcar saldado por ambos?"
+        description={`Esto registrará el pago de "${expense.description}" por la otra persona. Podrás deshacerlo si fue un error.`}
+        confirmText="Sí, marcar por ambos"
+        loading={markingBoth}
+        onConfirm={handleMarkBoth}
+      />
+
+      <ConfirmDialog
+        open={confirmUnmarkOpen}
+        onOpenChange={setConfirmUnmarkOpen}
+        title="¿Editar registro de pago?"
+        description={`Esto eliminará el registro de pago de ${expense.paidByName ?? "el otro miembro"} para este mes.`}
+        confirmText="Sí, deshacer"
+        variant="destructive"
+        loading={unmarking}
+        onConfirm={handleUnmark}
       />
     </div>
   );

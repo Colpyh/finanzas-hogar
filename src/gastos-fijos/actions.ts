@@ -145,7 +145,10 @@ export async function markPaidForOther(expenseId: string): Promise<{ error?: str
   const [exp] = await db.select().from(expense).where(eq(expense.id, expenseId)).limit(1);
   if (!exp) return { error: "Gasto no encontrado" };
 
-  const shareAmount = (parseFloat(exp.amount ?? "0") / members.length).toFixed(2);
+  const monthlyAmount = exp.type === "installment"
+    ? parseFloat(exp.installmentAmount ?? "0")
+    : parseFloat(exp.amount ?? "0");
+  const shareAmount = (monthlyAmount / members.length).toFixed(2);
   const markerName = user.email ?? "otro miembro";
 
   try {
