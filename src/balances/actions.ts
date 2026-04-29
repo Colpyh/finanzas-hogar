@@ -34,7 +34,11 @@ export async function settleBalanceItem(
   const otherMember = members.find((m) => m.userId !== user.id);
   if (!otherMember) return { error: "No hay otro miembro en el hogar" };
 
-  const [exp] = await db.select().from(expense).where(eq(expense.id, expenseId)).limit(1);
+  const [exp] = await db
+    .select()
+    .from(expense)
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .limit(1);
   if (!exp) return { error: "Gasto no encontrado" };
 
   const monthlyAmount =

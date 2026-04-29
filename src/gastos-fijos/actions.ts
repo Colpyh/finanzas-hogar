@@ -21,7 +21,7 @@ export async function createFixedExpense(rawData: unknown) {
 
   const data = createFixedExpenseSchema.parse(rawData);
 
-  const [created] = await db
+  await db
     .insert(expense)
     .values({
       ...data,
@@ -47,6 +47,14 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
 
   const data = markPaidSchema.parse(rawData);
   const periodMonth = currentPeriodMonth();
+
+  // Verify expense belongs to this household
+  const [exp] = await db
+    .select({ id: expense.id })
+    .from(expense)
+    .where(and(eq(expense.id, data.expenseId), eq(expense.householdId, household.id)))
+    .limit(1);
+  if (!exp) return { error: "Gasto no encontrado" };
 
   try {
     await db.insert(fixedExpensePayment).values({
@@ -85,6 +93,7 @@ export async function upgradeToPaid(expenseId: string): Promise<{ error?: string
       .where(
         and(
           eq(fixedExpensePayment.expenseId, expenseId),
+          eq(fixedExpensePayment.householdId, household.id),
           eq(fixedExpensePayment.periodMonth, periodMonth),
           eq(fixedExpensePayment.paidBy, user.id)
         )
@@ -100,11 +109,13 @@ export async function upgradeToPaid(expenseId: string): Promise<{ error?: string
 
 export async function toggleFixedExpenseActive(expenseId: string): Promise<void> {
   const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
 
   const [current] = await db
     .select({ isActive: expense.isActive })
     .from(expense)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
   if (!current) throw new Error("Expense not found");
@@ -112,20 +123,23 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<void>
   await db
     .update(expense)
     .set({ isActive: !current.isActive })
-    .where(eq(expense.id, expenseId));
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
 }
 
 export async function updateFixedExpense(expenseId: string, rawData: unknown) {
-  await getUser();
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
+
   const data = updateFixedExpenseSchema.parse(rawData);
 
   const [updated] = await db
     .update(expense)
     .set(data)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .returning();
 
   revalidatePath("/gastos-fijos");
@@ -142,7 +156,11 @@ export async function markPaidForOther(expenseId: string): Promise<{ error?: str
   if (!otherMember) return { error: "No hay otro miembro en el hogar" };
 
   const periodMonth = currentPeriodMonth();
-  const [exp] = await db.select().from(expense).where(eq(expense.id, expenseId)).limit(1);
+  const [exp] = await db
+    .select()
+    .from(expense)
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .limit(1);
   if (!exp) return { error: "Gasto no encontrado" };
 
   const monthlyAmount = exp.type === "installment"
@@ -190,6 +208,7 @@ export async function unmarkOtherPayment(expenseId: string): Promise<{ error?: s
     .where(
       and(
         eq(fixedExpensePayment.expenseId, expenseId),
+        eq(fixedExpensePayment.householdId, household.id),
         eq(fixedExpensePayment.periodMonth, periodMonth),
         eq(fixedExpensePayment.paidBy, otherMember.userId)
       )
@@ -201,12 +220,14 @@ export async function unmarkOtherPayment(expenseId: string): Promise<{ error?: s
 }
 
 export async function deleteFixedExpense(expenseId: string): Promise<void> {
-  await getUser();
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
 
   await db
     .update(expense)
     .set({ deletedAt: new Date() })
-    .where(eq(expense.id, expenseId));
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");

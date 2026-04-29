@@ -58,12 +58,14 @@ export async function generateInvite(): Promise<void> {
 }
 
 export async function revokeInvite(inviteId: string) {
-  await getUser();
+  const user = await getUser();
+  const userHousehold = await getUserHousehold(user.id);
+  if (!userHousehold) throw new Error("No household");
 
   await db
     .update(householdInvite)
     .set({ redeemedAt: new Date() })
-    .where(eq(householdInvite.id, inviteId));
+    .where(and(eq(householdInvite.id, inviteId), eq(householdInvite.householdId, userHousehold.id)));
 
   revalidatePath("/ajustes");
 }
@@ -128,13 +130,13 @@ export async function removeMember(memberId: string) {
   const [target] = await db
     .select()
     .from(householdMember)
-    .where(eq(householdMember.id, memberId))
+    .where(and(eq(householdMember.id, memberId), eq(householdMember.householdId, userHousehold.id)))
     .limit(1);
 
   if (!target) throw new Error("Miembro no encontrado");
   if (target.userId === user.id) throw new Error("No puedes eliminarte a ti mismo");
 
-  await db.delete(householdMember).where(eq(householdMember.id, memberId));
+  await db.delete(householdMember).where(and(eq(householdMember.id, memberId), eq(householdMember.householdId, userHousehold.id)));
 
   revalidatePath("/ajustes");
 }

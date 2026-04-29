@@ -18,7 +18,7 @@ export async function createPurchase(rawData: unknown) {
 
   const data = createPurchaseSchema.parse(rawData);
 
-  const [created] = await db
+  await db
     .insert(expense)
     .values({
       ...data,
@@ -42,7 +42,7 @@ export async function createInstallment(rawData: unknown) {
 
   const data = createInstallmentSchema.parse(rawData);
 
-  const [created] = await db
+  await db
     .insert(expense)
     .values({
       description: data.description,
@@ -68,7 +68,9 @@ export async function createInstallment(rawData: unknown) {
 }
 
 export async function markInstallmentPaid(expenseId: string): Promise<{ error?: string }> {
-  await getUser();
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
 
   const [current] = await db
     .select({
@@ -76,7 +78,7 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
       installmentsTotal: expense.installmentsTotal,
     })
     .from(expense)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
   if (!current) return { error: "Gasto no encontrado" };
@@ -91,7 +93,7 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
   await db
     .update(expense)
     .set({ installmentsPaid: paid + 1 })
-    .where(eq(expense.id, expenseId));
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
   revalidatePath("/compras");
   revalidatePath("/dashboard");
@@ -101,27 +103,28 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
 /** Solo registra el pago mensual en balance, sin tocar el contador de cuotas. */
 export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
 
   const [current] = await db
     .select({
       installmentAmount: expense.installmentAmount,
-      householdId: expense.householdId,
       isShared: expense.isShared,
     })
     .from(expense)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
   if (!current?.isShared) return { error: "Gasto no encontrado o no compartido" };
 
-  const members = await getHouseholdMembers(current.householdId);
+  const members = await getHouseholdMembers(household.id);
   const shareAmount = (parseFloat(current.installmentAmount ?? "0") / members.length).toFixed(2);
   const periodMonth = currentPeriodMonth();
 
   try {
     await db.insert(fixedExpensePayment).values({
       expenseId,
-      householdId: current.householdId,
+      householdId: household.id,
       paidBy: user.id,
       periodMonth,
       amount: shareAmount,
@@ -144,27 +147,28 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
 /** Registra la parte del deudor sin incrementar el contador de cuotas. */
 export async function registerInstallmentShare(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
 
   const [current] = await db
     .select({
       installmentAmount: expense.installmentAmount,
-      householdId: expense.householdId,
       isShared: expense.isShared,
     })
     .from(expense)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
   if (!current?.isShared) return { error: "Gasto no encontrado o no compartido" };
 
-  const members = await getHouseholdMembers(current.householdId);
+  const members = await getHouseholdMembers(household.id);
   const shareAmount = (parseFloat(current.installmentAmount ?? "0") / members.length).toFixed(2);
   const periodMonth = currentPeriodMonth();
 
   try {
     await db.insert(fixedExpensePayment).values({
       expenseId,
-      householdId: current.householdId,
+      householdId: household.id,
       paidBy: user.id,
       periodMonth,
       amount: shareAmount,
@@ -185,13 +189,16 @@ export async function registerInstallmentShare(expenseId: string): Promise<{ err
 }
 
 export async function updateExpense(expenseId: string, rawData: unknown) {
-  await getUser();
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
+
   const data = updateExpenseSchema.parse(rawData);
 
   const [updated] = await db
     .update(expense)
     .set(data)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .returning();
 
   revalidatePath("/compras");
@@ -204,12 +211,14 @@ export async function updateInstallment(
   expenseId: string,
   rawData: unknown,
 ): Promise<{ error?: string }> {
-  await getUser();
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
 
   const [current] = await db
     .select({ installmentsTotal: expense.installmentsTotal })
     .from(expense)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
   if (!current) return { error: "Gasto no encontrado" };
@@ -227,7 +236,7 @@ export async function updateInstallment(
       installmentsPaid: data.installmentsPaid,
       ...(data.isShared !== undefined ? { isShared: data.isShared } : {}),
     })
-    .where(eq(expense.id, expenseId));
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
   revalidatePath("/compras");
   revalidatePath("/balances");
@@ -244,14 +253,14 @@ export async function updateExpenseCard(
   if (!household) return { error: "No household" };
 
   const [row] = await db
-    .select({ id: expense.id, householdId: expense.householdId })
+    .select({ id: expense.id })
     .from(expense)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
-  if (!row || row.householdId !== household.id) return { error: "Gasto no encontrado" };
+  if (!row) return { error: "Gasto no encontrado" };
 
-  await db.update(expense).set({ cardId }).where(eq(expense.id, expenseId));
+  await db.update(expense).set({ cardId }).where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
@@ -260,12 +269,13 @@ export async function updateExpenseCard(
 
 export async function deleteExpense(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) return { error: "No household" };
 
-  // Scenario 3.11 — only creator can delete
   const [row] = await db
     .select({ createdBy: expense.createdBy })
     .from(expense)
-    .where(eq(expense.id, expenseId))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
   if (!row) return { error: "Gasto no encontrado" };
@@ -274,7 +284,7 @@ export async function deleteExpense(expenseId: string): Promise<{ error?: string
   await db
     .update(expense)
     .set({ deletedAt: new Date() })
-    .where(eq(expense.id, expenseId));
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
   revalidatePath("/compras");
   revalidatePath("/dashboard");
