@@ -13,15 +13,18 @@ import { FixedExpensesWidget } from "@/dashboard/components/fixed-expenses-widge
 import { InstallmentsWidget } from "@/dashboard/components/installments-widget";
 import { RecentPurchasesWidget } from "@/dashboard/components/recent-purchases-widget";
 import { QuickAddFab } from "@/dashboard/components/quick-add-fab";
+import { WhatsappShareButton } from "@/dashboard/components/whatsapp-share-button";
 import { AnimatedWidgets } from "@/shared/components/animated-widgets";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
+import { getPendingBalances } from "@/balances/queries";
 import type {
   DashboardSummary,
   FixedBillWithStatus,
   ActiveInstallment,
   RecentPurchase,
 } from "@/dashboard/types";
+import type { MemberBalance } from "@/balances/queries";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -72,6 +75,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   let bills = MOCK_BILLS;
   let installments = MOCK_INSTALLMENTS;
   let purchases = MOCK_PURCHASES;
+  let balances: MemberBalance[] = [];
   let householdName = "Hogar Demo";
   let currentUserId = "";
   let memberNames: Record<string, string> = {};
@@ -82,17 +86,20 @@ export default async function DashboardPage({ searchParams }: Props) {
     if (household) {
       householdName = household.name;
       currentUserId = user.id;
-      const [sumData, billsData, installData, purchaseData, members] = await Promise.all([
+      const members = await getHouseholdMembers(household.id);
+      const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Otro"]));
+      const [sumData, billsData, installData, purchaseData, balanceData] = await Promise.all([
         getDashboardSummary(household.id, user.id, month),
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
         getRecentPurchases(household.id, month, 5),
-        getHouseholdMembers(household.id),
+        getPendingBalances(household.id, month, members.length, memberMap, user.id),
       ]);
       summary = sumData;
       bills = billsData;
       installments = installData;
       purchases = purchaseData;
+      balances = balanceData;
       memberNames = Object.fromEntries(
         members
           .filter((m) => m.userId !== user.id)
@@ -108,7 +115,19 @@ export default async function DashboardPage({ searchParams }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-2xl font-bold text-foreground tracking-tight">{householdName}</h1>
-        <MonthSelector month={month} />
+        <div className="flex items-center gap-1">
+          <WhatsappShareButton
+            month={month}
+            householdName={householdName}
+            summary={summary}
+            bills={bills}
+            installments={installments}
+            purchases={purchases}
+            balances={balances}
+            memberNames={memberNames}
+          />
+          <MonthSelector month={month} />
+        </div>
       </div>
 
       <AnimatedWidgets>
