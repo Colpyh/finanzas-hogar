@@ -49,6 +49,7 @@ export const updateExpenseSchema = z.object({
 export const updateInstallmentSchema = z.object({
   description: z.string().min(1, "La descripción es requerida").max(200),
   installmentsPaid: z.number().int().min(0),
+  isShared: z.boolean().optional(),
 });
 
 export type CreatePurchaseInput = z.input<typeof createPurchaseSchema>;

@@ -199,6 +199,7 @@ export function InstallmentCard({ expense }: Props) {
               description: expense.description,
               installmentsPaid: paid,
               installmentsTotal: total,
+              isShared: expense.isShared,
             }}
           />
         </div>

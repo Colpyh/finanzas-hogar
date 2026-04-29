@@ -222,10 +222,15 @@ export async function updateInstallment(
 
   await db
     .update(expense)
-    .set({ description: data.description, installmentsPaid: data.installmentsPaid })
+    .set({
+      description: data.description,
+      installmentsPaid: data.installmentsPaid,
+      ...(data.isShared !== undefined ? { isShared: data.isShared } : {}),
+    })
     .where(eq(expense.id, expenseId));
 
   revalidatePath("/compras");
+  revalidatePath("/balances");
   revalidatePath("/dashboard");
   return {};
 }

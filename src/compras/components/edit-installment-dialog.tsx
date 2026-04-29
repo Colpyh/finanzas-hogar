@@ -19,6 +19,7 @@ type Props = {
     description: string;
     installmentsPaid: number;
     installmentsTotal: number;
+    isShared?: boolean;
   };
 };
 
@@ -26,6 +27,7 @@ export function EditInstallmentDialog({ expense }: Props) {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState(expense.description);
   const [installmentsPaid, setInstallmentsPaid] = useState(expense.installmentsPaid);
+  const [isShared, setIsShared] = useState(expense.isShared ?? false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -33,6 +35,7 @@ export function EditInstallmentDialog({ expense }: Props) {
     if (value) {
       setDescription(expense.description);
       setInstallmentsPaid(expense.installmentsPaid);
+      setIsShared(expense.isShared ?? false);
       setError(null);
     }
     setOpen(value);
@@ -45,6 +48,7 @@ export function EditInstallmentDialog({ expense }: Props) {
       const result = await updateInstallment(expense.id, {
         description,
         installmentsPaid,
+        isShared,
       });
       if (result?.error) {
         setError(result.error);
@@ -95,6 +99,24 @@ export function EditInstallmentDialog({ expense }: Props) {
               required
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsShared((v) => !v)}
+            className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
+              isShared ? "border-primary/40 bg-primary/5" : "border-border bg-card"
+            }`}
+            disabled={pending}
+          >
+            <div className="text-left">
+              <p className="text-sm font-medium text-foreground">Gasto compartido</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Se divide entre los dos, uno lo paga</p>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${isShared ? "bg-primary" : "bg-muted"}`}>
+              <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isShared ? "translate-x-4" : "translate-x-0"}`} />
+            </div>
+          </button>
+
           {error && <p className="text-xs text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
