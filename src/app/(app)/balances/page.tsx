@@ -9,6 +9,7 @@ import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam, currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { EmptyState } from "@/shared/components/empty-state";
+import { SettleButton } from "@/balances/components/settle-button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Balances" };
@@ -100,9 +101,9 @@ export default async function BalancesPage({ searchParams }: Props) {
                 {/* Expense breakdown */}
                 <div className="divide-y divide-border">
                   {balance.items.map((item) => (
-                    <div key={item.expenseId} className="flex items-center justify-between px-5 py-3">
-                      <div>
-                        <div className="flex items-center gap-1.5">
+                    <div key={item.expenseId} className="flex items-center justify-between px-5 py-3 gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-sm font-medium text-foreground">{item.description}</p>
                           {item.type === "installment" && (
                             <span className="inline-flex items-center rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
@@ -114,12 +115,21 @@ export default async function BalancesPage({ searchParams }: Props) {
                           {item.type === "installment" ? "Cuota" : "Total"} {formatCurrency(item.totalAmount)} · tu parte {formatCurrency(item.shareAmount)}
                         </p>
                       </div>
-                      <span className={cn(
-                        "text-sm font-semibold",
-                        isOwed ? "text-emerald-600" : "text-amber-600"
-                      )}>
-                        {formatCurrency(item.shareAmount)}
-                      </span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={cn(
+                          "text-sm font-semibold",
+                          isOwed ? "text-emerald-600" : "text-amber-600"
+                        )}>
+                          {formatCurrency(item.shareAmount)}
+                        </span>
+                        <SettleButton
+                          expenseId={item.expenseId}
+                          description={item.description}
+                          shareAmount={item.shareAmount}
+                          periodMonth={month}
+                          iAmCreditor={item.payerId === user.id}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
