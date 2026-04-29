@@ -68,15 +68,12 @@ export async function createInstallment(rawData: unknown) {
 }
 
 export async function markInstallmentPaid(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
+  await getUser();
 
   const [current] = await db
     .select({
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
-      isShared: expense.isShared,
-      installmentAmount: expense.installmentAmount,
-      householdId: expense.householdId,
     })
     .from(expense)
     .where(eq(expense.id, expenseId))
@@ -91,34 +88,52 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
     return { error: "Todas las cuotas ya fueron pagadas" };
   }
 
-  // Para cuotas compartidas, registrar el pago mensual en fixedExpensePayment
-  if (current.isShared && current.installmentAmount) {
-    const members = await getHouseholdMembers(current.householdId);
-    const shareAmount = (parseFloat(current.installmentAmount) / members.length).toFixed(2);
-    const periodMonth = currentPeriodMonth();
-
-    try {
-      await db.insert(fixedExpensePayment).values({
-        expenseId,
-        householdId: current.householdId,
-        paidBy: user.id,
-        periodMonth,
-        amount: shareAmount,
-        status: "paid",
-      });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
-        return { error: "Ya registraste tu pago este mes" };
-      }
-      throw err;
-    }
-  }
-
   await db
     .update(expense)
     .set({ installmentsPaid: paid + 1 })
     .where(eq(expense.id, expenseId));
+
+  revalidatePath("/compras");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+/** Solo registra el pago mensual en balance, sin tocar el contador de cuotas. */
+export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: string }> {
+  const user = await getUser();
+
+  const [current] = await db
+    .select({
+      installmentAmount: expense.installmentAmount,
+      householdId: expense.householdId,
+      isShared: expense.isShared,
+    })
+    .from(expense)
+    .where(eq(expense.id, expenseId))
+    .limit(1);
+
+  if (!current?.isShared) return { error: "Gasto no encontrado o no compartido" };
+
+  const members = await getHouseholdMembers(current.householdId);
+  const shareAmount = (parseFloat(current.installmentAmount ?? "0") / members.length).toFixed(2);
+  const periodMonth = currentPeriodMonth();
+
+  try {
+    await db.insert(fixedExpensePayment).values({
+      expenseId,
+      householdId: current.householdId,
+      paidBy: user.id,
+      periodMonth,
+      amount: shareAmount,
+      status: "paid",
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
+      return { error: "Ya registraste tu pago este mes" };
+    }
+    throw err;
+  }
 
   revalidatePath("/compras");
   revalidatePath("/balances");

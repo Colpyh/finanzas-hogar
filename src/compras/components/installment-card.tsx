@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
-import { markInstallmentPaid, registerInstallmentShare } from "@/compras/actions";
+import { markInstallmentPaid, markAsMonthlyPayer, registerInstallmentShare } from "@/compras/actions";
 import { markPaidForOther, unmarkOtherPayment } from "@/gastos-fijos/actions";
 import { canMarkInstallmentPaid } from "@/compras/installment-utils";
 import { formatCurrency } from "@/shared/components/currency-display";
@@ -55,7 +55,10 @@ export function InstallmentCard({ expense }: Props) {
 
   async function handlePay() {
     startLoading(async () => {
-      const result = await markInstallmentPaid(expense.id);
+      // Para compartidas: solo registra en balance sin tocar el contador
+      const result = isShared
+        ? await markAsMonthlyPayer(expense.id)
+        : await markInstallmentPaid(expense.id);
       if (result?.error) setError(result.error);
       setConfirmOpen(false);
     });
@@ -138,7 +141,7 @@ export function InstallmentCard({ expense }: Props) {
       </Button>
     );
   } else {
-    // Nadie pagó este mes aún
+    // Nadie registró pago este mes aún
     actionButton = (
       <Button
         size="sm"
@@ -146,7 +149,7 @@ export function InstallmentCard({ expense }: Props) {
         onClick={() => setConfirmOpen(true)}
         className="ml-auto"
       >
-        Registrar pago cuota
+        {isShared ? "Registrar que pagué este mes" : "Marcar cuota pagada"}
       </Button>
     );
   }
@@ -233,9 +236,13 @@ export function InstallmentCard({ expense }: Props) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="¿Marcar cuota como pagada?"
-        description={`Cuota ${paid + 1} de ${total} de "${expense.description}".`}
-        confirmText="Sí, marcar pagada"
+        title={isShared ? "¿Registrar pago de este mes?" : "¿Marcar cuota como pagada?"}
+        description={
+          isShared
+            ? `Esto registra que pagaste la cuota de "${expense.description}" este mes. El otro miembro verá que te debe su parte en el balance.`
+            : `Cuota ${paid + 1} de ${total} de "${expense.description}".`
+        }
+        confirmText="Sí, registrar"
         loading={loading}
         onConfirm={handlePay}
       />
