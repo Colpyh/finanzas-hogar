@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { getHouseholdMembers } from "@/household/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import {
   createFixedExpenseSchema,
@@ -129,6 +130,71 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
 
   revalidatePath("/gastos-fijos");
   return updated;
+}
+
+export async function markPaidForOther(expenseId: string): Promise<{ error?: string }> {
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
+
+  const members = await getHouseholdMembers(household.id);
+  const otherMember = members.find((m) => m.userId !== user.id);
+  if (!otherMember) return { error: "No hay otro miembro en el hogar" };
+
+  const periodMonth = currentPeriodMonth();
+  const [exp] = await db.select().from(expense).where(eq(expense.id, expenseId)).limit(1);
+  if (!exp) return { error: "Gasto no encontrado" };
+
+  const shareAmount = (parseFloat(exp.amount ?? "0") / members.length).toFixed(2);
+  const markerName = user.email ?? "otro miembro";
+
+  try {
+    await db.insert(fixedExpensePayment).values({
+      expenseId,
+      householdId: household.id,
+      paidBy: otherMember.userId,
+      periodMonth,
+      amount: shareAmount,
+      status: "paid",
+      notes: `Marcado por ${markerName}`,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
+      return { error: "El otro miembro ya tiene un pago registrado este mes" };
+    }
+    throw err;
+  }
+
+  revalidatePath("/gastos-fijos");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+export async function unmarkOtherPayment(expenseId: string): Promise<{ error?: string }> {
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
+
+  const members = await getHouseholdMembers(household.id);
+  const otherMember = members.find((m) => m.userId !== user.id);
+  if (!otherMember) return { error: "No hay otro miembro en el hogar" };
+
+  const periodMonth = currentPeriodMonth();
+
+  await db
+    .delete(fixedExpensePayment)
+    .where(
+      and(
+        eq(fixedExpensePayment.expenseId, expenseId),
+        eq(fixedExpensePayment.periodMonth, periodMonth),
+        eq(fixedExpensePayment.paidBy, otherMember.userId)
+      )
+    );
+
+  revalidatePath("/gastos-fijos");
+  revalidatePath("/dashboard");
+  return {};
 }
 
 export async function deleteFixedExpense(expenseId: string): Promise<void> {

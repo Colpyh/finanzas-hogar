@@ -4,9 +4,9 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
-import { toggleFixedExpenseActive, upgradeToPaid } from "@/gastos-fijos/actions";
+import { toggleFixedExpenseActive, upgradeToPaid, markPaidForOther, unmarkOtherPayment } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CheckCircle2, Clock, PiggyBank, Pencil } from "lucide-react";
+import { CheckCircle2, Clock, PiggyBank, Pencil, Users } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -40,11 +40,29 @@ export function FixedExpenseCard({
   const [confirmUpgradeOpen, setConfirmUpgradeOpen] = useState(false);
   const [toggling, startToggle] = useTransition();
   const [upgrading, startUpgrade] = useTransition();
+  const [confirmMarkBothOpen, setConfirmMarkBothOpen] = useState(false);
+  const [confirmUnmarkOpen, setConfirmUnmarkOpen] = useState(false);
+  const [markingBoth, startMarkBoth] = useTransition();
+  const [unmarking, startUnmark] = useTransition();
 
   function handleUpgrade() {
     startUpgrade(async () => {
       await upgradeToPaid(expense.id);
       setConfirmUpgradeOpen(false);
+    });
+  }
+
+  function handleMarkBoth() {
+    startMarkBoth(async () => {
+      await markPaidForOther(expense.id);
+      setConfirmMarkBothOpen(false);
+    });
+  }
+
+  function handleUnmark() {
+    startUnmark(async () => {
+      await unmarkOtherPayment(expense.id);
+      setConfirmUnmarkOpen(false);
     });
   }
 
@@ -99,17 +117,26 @@ export function FixedExpenseCard({
     }
   } else {
     if (isSettled) {
-      // Ambos registraron su parte
       primaryButton = (
-        <Button size="sm" variant="ghost" disabled className="flex-1">
-          Saldado ✓
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setConfirmUnmarkOpen(true)}
+          className="flex-1 text-emerald-600 hover:text-amber-600 hover:bg-amber-50"
+        >
+          Saldado ✓ · Editar
         </Button>
       );
     } else if (isPaidThisMonth && currentUserStatus === "paid") {
-      // Yo pagué, el otro aún no saldó su parte
       primaryButton = (
-        <Button size="sm" variant="ghost" disabled className="flex-1 text-amber-600">
-          Pagado · falta que {paidByName ?? "el otro"} salde su parte
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setConfirmMarkBothOpen(true)}
+          className="flex-1 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+        >
+          <Users size={13} />
+          Marcar saldado por ambos
         </Button>
       );
     } else if (isPaidThisMonth && currentUserStatus === "none") {
@@ -238,6 +265,27 @@ export function FixedExpenseCard({
         confirmText="Sí, confirmar pago"
         loading={upgrading}
         onConfirm={handleUpgrade}
+      />
+
+      <ConfirmDialog
+        open={confirmMarkBothOpen}
+        onOpenChange={setConfirmMarkBothOpen}
+        title="¿Marcar saldado por ambos?"
+        description={`Esto registrará el pago de "${expense.description}" por la otra persona. Podrás deshacerlo si fue un error.`}
+        confirmText="Sí, marcar por ambos"
+        loading={markingBoth}
+        onConfirm={handleMarkBoth}
+      />
+
+      <ConfirmDialog
+        open={confirmUnmarkOpen}
+        onOpenChange={setConfirmUnmarkOpen}
+        title="¿Editar registro de pago?"
+        description={`Esto eliminará el registro de pago de ${paidByName ?? "el otro miembro"} para "${expense.description}" este mes.`}
+        confirmText="Sí, deshacer"
+        variant="destructive"
+        loading={unmarking}
+        onConfirm={handleUnmark}
       />
     </>
   );
