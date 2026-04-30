@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and, isNull, or, sql } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 export type BalanceItem = {
   expenseId: string;
@@ -31,14 +31,6 @@ export async function getPendingBalances(
   memberMap: Map<string, string>,
   currentUserId: string
 ): Promise<MemberBalance[]> {
-  const activeSharedCondition = or(
-    and(eq(expense.type, "fixed"), eq(expense.isActive, true)),
-    and(
-      eq(expense.type, "installment"),
-      sql`${expense.installmentsPaid} < ${expense.installmentsTotal}`
-    )
-  );
-
   const expenses = await db
     .select()
     .from(expense)
@@ -46,8 +38,7 @@ export async function getPendingBalances(
       and(
         eq(expense.householdId, householdId),
         eq(expense.isShared, true),
-        isNull(expense.deletedAt),
-        activeSharedCondition
+        isNull(expense.deletedAt)
       )
     );
 
@@ -62,7 +53,6 @@ export async function getPendingBalances(
         eq(expense.householdId, householdId),
         eq(expense.isShared, true),
         isNull(expense.deletedAt),
-        activeSharedCondition,
         eq(fixedExpensePayment.periodMonth, periodMonth)
       )
     );

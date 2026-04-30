@@ -49,6 +49,9 @@ export default async function BalancesPage({ searchParams }: Props) {
         </div>
         <MonthSelector month={month} />
       </div>
+      {!isCurrentMonth && (
+        <p className="text-xs text-muted-foreground">Historial — los gastos saldados no aparecen</p>
+      )}
 
       {balances.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-8 flex flex-col items-center gap-3 text-center">
