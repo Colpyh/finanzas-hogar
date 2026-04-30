@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getPendingCount } from "@/email-inbound/queries";
+import { UnauthorizedError } from "@/auth/types";
 import { AppProviders } from "./providers";
 import type { HouseholdContextValue } from "@/shared/hooks/use-household";
 
@@ -31,8 +32,17 @@ export default async function AppLayout({
 
   // Sin dev bypass: verificar sesión real de Supabase
   const result = await getUser()
-    .then(async (u) => ({ ok: true as const, user: u, household: await getUserHousehold(u.id) }))
-    .catch(() => ({ ok: false as const }));
+    .then(async (u) => {
+      const household = await getUserHousehold(u.id);
+      return { ok: true as const, user: u, household };
+    })
+    .catch((err: unknown) => {
+      if (err instanceof UnauthorizedError) {
+        return { ok: false as const, reason: "unauthorized" as const };
+      }
+      // Real server error — rethrow so Next.js error boundary catches it
+      throw err;
+    });
 
   if (!result.ok) redirect("/auth/login");
 
