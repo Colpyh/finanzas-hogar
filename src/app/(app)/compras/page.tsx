@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { getExpenses, getSharedInstallmentPaymentsForPeriod } from "@/compras/queries";
+import { getExpenses, countExpenses, getSharedInstallmentPaymentsForPeriod } from "@/compras/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { getHouseholdCards } from "@/tarjetas/queries";
 import { PurchaseList } from "@/compras/components/purchase-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { buttonVariants } from "@/components/ui/button";
-import { Plus, CreditCard } from "lucide-react";
+import { Plus, CreditCard, Download, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const PAGE_SIZE = 20;
+
 type Props = {
-  searchParams: Promise<{ type?: string; from?: string; to?: string; month?: string; card?: string }>;
+  searchParams: Promise<{ type?: string; from?: string; to?: string; month?: string; card?: string; q?: string; page?: string }>;
 };
 
 export const metadata: Metadata = { title: "Compras" };
@@ -68,11 +70,22 @@ const MOCK_EXPENSES: ExpenseRow[] = [
   },
 ];
 
+function buildSearchParams(base: Record<string, string | undefined | null>, overrides: Record<string, string | undefined | null>): string {
+  const merged = { ...base, ...overrides };
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(merged)) {
+    if (v != null && v !== "") params.set(k, v);
+  }
+  return params.toString();
+}
+
 export default async function ComprasPage({ searchParams }: Props) {
   const params = await searchParams;
   const typeFilter = (params.type as "one_time" | "installment" | "all") ?? "all";
   const cardFilter = params.card ?? null;
   const month = parseMonthParam(params.month);
+  const q = params.q?.trim() ?? "";
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
   // Derive date range from month unless explicit from/to are set
   const mParts = month.split("-").map(Number);
@@ -84,17 +97,40 @@ export default async function ComprasPage({ searchParams }: Props) {
 
   let expenses: ExpenseRow[] = MOCK_EXPENSES;
   let cards: { id: string; name: string; color: string }[] = [];
+  let totalCount = 0;
+  let isAuthenticated = false;
+
+  // Base params for preserving filters in links/forms
+  const baseParams: Record<string, string | undefined | null> = {
+    type: typeFilter !== "all" ? typeFilter : undefined,
+    month,
+    card: cardFilter,
+    from: params.from,
+    to: params.to,
+  };
 
   try {
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      const [dbExpenses, members, dbCards, sharedPayments] = await Promise.all([
-        getExpenses(household.id, { type: typeFilter, dateFrom, dateTo, cardId: cardFilter }),
+      isAuthenticated = true;
+      const sharedFilters = {
+        type: typeFilter,
+        dateFrom,
+        dateTo,
+        cardId: cardFilter,
+        search: q || undefined,
+      };
+
+      const [dbExpenses, total, members, dbCards, sharedPayments] = await Promise.all([
+        getExpenses(household.id, { ...sharedFilters, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+        countExpenses(household.id, sharedFilters),
         getHouseholdMembers(household.id),
         getHouseholdCards(household.id),
         getSharedInstallmentPaymentsForPeriod(household.id, month),
       ]);
+
+      totalCount = total;
       cards = dbCards.map((c) => ({ id: c.id, name: c.name, color: c.color }));
       const memberCount = members.length || 1;
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
@@ -151,11 +187,19 @@ export default async function ComprasPage({ searchParams }: Props) {
     ? expenses
     : expenses.filter((e) => e.type === typeFilter);
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
   const FILTERS = [
     { label: "Todos", value: "all" },
     { label: "Compras", value: "one_time" },
     { label: "Cuotas", value: "installment" },
   ];
+
+  // Export URL: all current filters, no page/limit
+  const exportParams = buildSearchParams(
+    { type: typeFilter !== "all" ? typeFilter : undefined, month, card: cardFilter, from: params.from, to: params.to },
+    { q: q || undefined }
+  );
 
   return (
     <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
@@ -170,13 +214,58 @@ export default async function ComprasPage({ searchParams }: Props) {
         </div>
       </div>
 
+      {/* Search + Export bar */}
+      <div className="flex gap-2 items-center">
+        <form method="GET" className="flex-1 flex gap-2 items-center">
+          {/* Preserve existing filters */}
+          {typeFilter !== "all" && <input type="hidden" name="type" value={typeFilter} />}
+          <input type="hidden" name="month" value={month} />
+          {cardFilter && <input type="hidden" name="card" value={cardFilter} />}
+          {params.from && <input type="hidden" name="from" value={params.from} />}
+          {params.to && <input type="hidden" name="to" value={params.to} />}
+
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar gasto..."
+              className="w-full h-8 rounded-xl border border-border bg-card pl-8 pr-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 placeholder:text-muted-foreground"
+            />
+          </div>
+          <button
+            type="submit"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}
+          >
+            Buscar
+          </button>
+          {q && (
+            <Link
+              href={`/compras?${buildSearchParams(baseParams, { q: undefined })}`}
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "shrink-0 gap-1")}
+            >
+              <X size={13} />
+              Limpiar
+            </Link>
+          )}
+        </form>
+
+        {isAuthenticated && (
+          <a
+            href={`/api/compras/export${exportParams ? `?${exportParams}` : ""}`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 gap-1")}
+          >
+            <Download size={13} />
+            Exportar CSV
+          </a>
+        )}
+      </div>
+
       <div className="flex gap-3 items-start">
         <nav className="flex flex-col gap-1 shrink-0 w-[72px]">
           {FILTERS.map((opt) => {
             const isActive = typeFilter === opt.value;
-            const href = cardFilter
-              ? `/compras?type=${opt.value}&month=${month}&card=${cardFilter}`
-              : `/compras?type=${opt.value}&month=${month}`;
+            const href = `/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { type: opt.value !== "all" ? opt.value : undefined, page: undefined })}`;
             return (
               <Link
                 key={opt.value}
@@ -202,9 +291,7 @@ export default async function ComprasPage({ searchParams }: Props) {
               <div className="my-1 border-t border-border" />
               {cards.map((c) => {
                 const isActive = cardFilter === c.id;
-                const href = isActive
-                  ? `/compras?type=${typeFilter}&month=${month}`
-                  : `/compras?type=${typeFilter}&month=${month}&card=${c.id}`;
+                const href = `/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { card: isActive ? undefined : c.id, page: undefined })}`;
                 return (
                   <Link
                     key={c.id}
@@ -230,8 +317,39 @@ export default async function ComprasPage({ searchParams }: Props) {
           )}
         </nav>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-4">
           <PurchaseList expenses={filtered} />
+
+          {/* Pagination — only show when authenticated and data is paginated */}
+          {isAuthenticated && totalPages > 1 && (
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <Link
+                href={`/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { page: page > 1 ? String(page - 1) : undefined })}`}
+                aria-disabled={page <= 1}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  page <= 1 && "pointer-events-none opacity-50"
+                )}
+              >
+                Anterior
+              </Link>
+
+              <span className="text-xs text-muted-foreground">
+                Página {page} de {totalPages}
+              </span>
+
+              <Link
+                href={`/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { page: page < totalPages ? String(page + 1) : String(page) })}`}
+                aria-disabled={page >= totalPages}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  page >= totalPages && "pointer-events-none opacity-50"
+                )}
+              >
+                Siguiente
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
