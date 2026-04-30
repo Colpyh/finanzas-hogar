@@ -3,13 +3,15 @@ import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { getHouseholdCards, getCardUsageSummary, getCardExpenseCounts } from "@/tarjetas/queries";
+import { getCategories } from "@/categories/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { MemberList } from "@/household/components/member-list";
 import { AddMemberModal } from "@/household/components/add-member-modal";
 import { CardManager } from "@/tarjetas/components/card-manager";
+import { CategoryManager } from "@/categories/components/category-manager";
 import { SignOutButton } from "@/auth/components/sign-out-button";
 import { Button } from "@/components/ui/button";
-import { Users, Home, Palette, CreditCard, Bug, ShieldAlert } from "lucide-react";
+import { Users, Home, Palette, CreditCard, Bug, ShieldAlert, Tag } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { BugReportForm } from "@/bug-report/components/bug-report-form";
 import { BugReportPanel } from "@/bug-report/components/bug-report-panel";
@@ -28,21 +30,26 @@ export default async function AjustesPage() {
   let cards: { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number; expenseCount: number }[] = [];
   let isOwner = true;
   let isAdmin = false;
+  let householdId = "";
   let bugReports: Awaited<ReturnType<typeof getAllBugReports>> = [];
+  let categories: Awaited<ReturnType<typeof getCategories>> = [];
 
   try {
     const user = await getUser();
     const userHousehold = await getUserHousehold(user.id);
     if (userHousehold) {
       householdName = userHousehold.name;
+      householdId = userHousehold.id;
       isOwner = userHousehold.role === "owner";
       const month = currentPeriodMonth();
-      const [dbMembers, dbCards, usageMap, countMap] = await Promise.all([
+      const [dbMembers, dbCards, usageMap, countMap, dbCategories] = await Promise.all([
         getHouseholdMembers(userHousehold.id),
         getHouseholdCards(userHousehold.id),
         getCardUsageSummary(userHousehold.id, month),
         getCardExpenseCounts(userHousehold.id),
+        getCategories(userHousehold.id),
       ]);
+      categories = dbCategories;
       cards = dbCards.map((c) => ({
         id: c.id,
         name: c.name,
@@ -104,6 +111,15 @@ export default async function AjustesPage() {
         </div>
         <CardManager cards={cards} />
       </div>
+
+      {/* Categorías */}
+      <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Tag size={15} />
+          <span className="text-xs font-medium uppercase tracking-wide">Categorías</span>
+        </div>
+        <CategoryManager categories={categories} householdId={householdId} />
+      </section>
 
       {/* Apariencia */}
       <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
