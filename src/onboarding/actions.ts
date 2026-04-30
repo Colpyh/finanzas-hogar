@@ -32,6 +32,35 @@ export async function createHousehold(rawData: unknown) {
   return newHousehold;
 }
 
+export async function createHouseholdAndReturn(
+  rawData: unknown
+): Promise<{ householdId?: string; error?: string }> {
+  try {
+    const user = await getUser();
+    const { name } = createHouseholdSchema.parse(rawData);
+
+    const [newHousehold] = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(household)
+        .values({ name, createdBy: user.id })
+        .returning();
+
+      await tx.insert(householdMember).values({
+        householdId: created!.id,
+        userId: user.id,
+        role: "owner",
+        displayName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null,
+      });
+
+      return [created];
+    });
+
+    return { householdId: newHousehold!.id };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Error al crear el hogar" };
+  }
+}
+
 export async function redeemInvite(rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const { token } = redeemInviteSchema.parse(rawData);

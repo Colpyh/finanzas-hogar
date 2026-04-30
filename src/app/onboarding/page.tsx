@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold, getInviteByToken } from "@/onboarding/queries";
-import { CreateHouseholdForm } from "@/onboarding/components/create-household-form";
+import { OnboardingWizard } from "@/onboarding/components/onboarding-wizard";
 import { InviteRedemption } from "@/onboarding/components/invite-redemption";
 import { signOut } from "@/auth/actions";
 import { LogOut } from "lucide-react";
@@ -50,7 +50,7 @@ export default async function OnboardingPage({ searchParams }: Props) {
   // Path A: create household
   return (
     <OnboardingShell>
-      <CreateHouseholdForm />
+      <OnboardingWizard />
     </OnboardingShell>
   );
 }
