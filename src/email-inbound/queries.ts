@@ -3,7 +3,10 @@ import { db } from "@/shared/lib/db";
 import { pendingExpense } from "@/shared/lib/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 
-export async function listPendingByHousehold(householdId: string) {
+export async function listPendingByHousehold(
+  householdId: string,
+  opts?: { limit?: number; offset?: number }
+) {
   return db
     .select()
     .from(pendingExpense)
@@ -13,7 +16,9 @@ export async function listPendingByHousehold(householdId: string) {
         eq(pendingExpense.status, "pending")
       )
     )
-    .orderBy(desc(pendingExpense.createdAt));
+    .orderBy(desc(pendingExpense.createdAt))
+    .limit(opts?.limit ?? 1000)
+    .offset(opts?.offset ?? 0);
 }
 
 export async function getPendingById(id: string, householdId: string) {
