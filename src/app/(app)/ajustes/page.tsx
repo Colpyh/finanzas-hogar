@@ -13,6 +13,7 @@ import { SignOutButton } from "@/auth/components/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { Users, Home, Palette, CreditCard, Bug, ShieldAlert, Tag } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
+import { PushNotificationToggle } from "@/shared/components/push-notification-toggle";
 import { BugReportForm } from "@/bug-report/components/bug-report-form";
 import { BugReportPanel } from "@/bug-report/components/bug-report-panel";
 import { getAllBugReports } from "@/bug-report/queries";
@@ -119,6 +120,15 @@ export default async function AjustesPage() {
           <span className="text-xs font-medium uppercase tracking-wide">Categorías</span>
         </div>
         <CategoryManager categories={categories} householdId={householdId} />
+      </section>
+
+      {/* Notificaciones */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Notificaciones</h2>
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-sm mb-3">Recibí alertas cuando se detecte un nuevo gasto desde tu email.</p>
+          <PushNotificationToggle />
+        </div>
       </section>
 
       {/* Apariencia */}

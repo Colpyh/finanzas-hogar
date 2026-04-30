@@ -7,3 +7,4 @@ export * from "@/db/schema/income";
 export * from "@/db/schema/card";
 export * from "@/db/schema/pending-expense";
 export * from "@/db/schema/bug-report";
+export * from "@/db/schema/push-subscription";

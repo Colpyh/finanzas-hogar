@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/shared/lib/supabase/service";
 import { parseBciEmail } from "@/email-inbound/parser";
 import { postmarkInboundSchema } from "@/email-inbound/webhook/postmark";
+import { sendPushToHousehold } from "@/shared/lib/push";
 
 export const runtime = "nodejs"; // needs node:crypto
 
@@ -117,6 +118,13 @@ export async function POST(
     });
     return NextResponse.json({ error: "insert_failed" }, { status: 500 });
   }
+
+  // Fire-and-forget: push notification to all household members
+  sendPushToHousehold(householdId, {
+    title: "Nuevo gasto detectado",
+    body: `$${parsedEmail?.amount?.toLocaleString("es-CL") ?? "?"} en ${parsedEmail?.merchant ?? "comercio desconocido"}`,
+    url: "/gastos-pendientes",
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, pendingId: inserted.id });
 }
