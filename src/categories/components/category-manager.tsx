@@ -16,6 +16,7 @@ type Category = {
   name: string;
   icon: string | null;
   color: string | null;
+  monthlyBudget: string | null;
   createdAt: Date;
 };
 
@@ -48,10 +49,12 @@ function CategoryFields({
   name, setName,
   icon, setIcon,
   color, setColor,
+  budget, setBudget,
 }: {
   name: string; setName: (v: string) => void;
   icon: string; setIcon: (v: string) => void;
   color: string; setColor: (v: string) => void;
+  budget: string; setBudget: (v: string) => void;
 }) {
   return (
     <>
@@ -88,6 +91,19 @@ function CategoryFields({
           />
         </div>
       </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="cat-budget">Presupuesto mensual (opcional)</Label>
+        <Input
+          id="cat-budget"
+          type="number"
+          min="0"
+          step="1000"
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+          placeholder="Ej: 50000"
+          className="h-10"
+        />
+      </div>
     </>
   );
 }
@@ -96,6 +112,7 @@ function EditCategoryInline({ cat, onClose }: { cat: Category; onClose: () => vo
   const [name, setName] = useState(cat.name);
   const [icon, setIcon] = useState(cat.icon ?? "");
   const [color, setColor] = useState(cat.color ?? "");
+  const [budget, setBudget] = useState(cat.monthlyBudget ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -107,6 +124,7 @@ function EditCategoryInline({ cat, onClose }: { cat: Category; onClose: () => vo
         name,
         icon: icon || undefined,
         color: color || undefined,
+        monthlyBudget: Number(budget) || undefined,
       });
       if (result.error) {
         setError(result.error);
@@ -134,6 +152,7 @@ function EditCategoryInline({ cat, onClose }: { cat: Category; onClose: () => vo
         name={name} setName={setName}
         icon={icon} setIcon={setIcon}
         color={color} setColor={setColor}
+        budget={budget} setBudget={setBudget}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-2">
@@ -183,6 +202,11 @@ function CategoryItem({ cat, householdId }: { cat: Category; householdId: string
               Sistema
             </Badge>
           )}
+          {cat.monthlyBudget && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Presupuesto: ${Number(cat.monthlyBudget).toLocaleString("es-CL")}
+            </p>
+          )}
         </div>
         {!isSystem && (
           <>
@@ -223,6 +247,7 @@ function AddCategoryForm({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
   const [color, setColor] = useState("");
+  const [budget, setBudget] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -234,6 +259,7 @@ function AddCategoryForm({ onClose }: { onClose: () => void }) {
         name,
         icon: icon || undefined,
         color: color || undefined,
+        monthlyBudget: Number(budget) || undefined,
       });
       if (result.error) {
         setError(result.error);
@@ -250,6 +276,7 @@ function AddCategoryForm({ onClose }: { onClose: () => void }) {
         name={name} setName={setName}
         icon={icon} setIcon={setIcon}
         color={color} setColor={setColor}
+        budget={budget} setBudget={setBudget}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-2">

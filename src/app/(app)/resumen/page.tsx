@@ -12,6 +12,7 @@ import { MonthPickerNav } from "@/resumen/components/month-picker-nav";
 import { CategoryChart } from "@/resumen/components/category-chart";
 import { FixedVariableBreakdown } from "@/resumen/components/fixed-variable-breakdown";
 import { AnnualChart } from "@/resumen/components/annual-chart";
+import { BudgetProgress } from "@/resumen/components/budget-progress";
 import { formatCurrency } from "@/shared/components/currency-display";
 import type { MonthlySummary, FixedVsVariableBreakdown as FVB, InstallmentBurden } from "@/resumen/types";
 import type { MonthlyDataPoint } from "@/resumen/annual-queries";
@@ -26,11 +27,11 @@ const MOCK_SUMMARY: MonthlySummary = {
   oneTimeTotal: 294500,
   grandTotal: 1238480,
   byCategory: [
-    { categoryId: "1", categoryName: "Vivienda", total: 735000 },
-    { categoryId: "2", categoryName: "Alimentación", total: 187500 },
-    { categoryId: "3", categoryName: "Transporte", total: 113000 },
-    { categoryId: "4", categoryName: "Salud", total: 42000 },
-    { categoryId: "5", categoryName: "Tecnología", total: 160980 },
+    { categoryId: "1", categoryName: "Vivienda", total: 735000, budget: null },
+    { categoryId: "2", categoryName: "Alimentación", total: 187500, budget: null },
+    { categoryId: "3", categoryName: "Transporte", total: 113000, budget: null },
+    { categoryId: "4", categoryName: "Salud", total: 42000, budget: null },
+    { categoryId: "5", categoryName: "Tecnología", total: 160980, budget: null },
   ],
 };
 
@@ -108,6 +109,27 @@ export default async function ResumenPage({ searchParams }: Props) {
             <h2 className="text-sm font-semibold">Por categoría</h2>
             <CategoryChart categories={summary.byCategory} />
           </div>
+
+          {/* Presupuesto mensual */}
+          {(() => {
+            const withBudget = summary.byCategory.filter((c) => c.budget !== null);
+            if (withBudget.length === 0) return null;
+            return (
+              <div className="rounded-2xl bg-card border border-border p-4 space-y-4">
+                <h2 className="text-sm font-semibold">Presupuesto mensual</h2>
+                <div className="space-y-4">
+                  {withBudget.map((c) => (
+                    <BudgetProgress
+                      key={c.categoryId}
+                      categoryName={c.categoryName}
+                      spent={c.total}
+                      budget={c.budget!}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Fijos vs Variables */}
           <div className="rounded-2xl bg-card border border-border p-4 space-y-3">

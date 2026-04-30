@@ -3,7 +3,7 @@ export type MonthlySummary = {
   installmentsTotal: number;
   oneTimeTotal: number;
   grandTotal: number;
-  byCategory: { categoryId: string; categoryName: string; total: number }[];
+  byCategory: { categoryId: string; categoryName: string; total: number; budget: number | null }[];
 };
 
 export type FixedVsVariableBreakdown = {

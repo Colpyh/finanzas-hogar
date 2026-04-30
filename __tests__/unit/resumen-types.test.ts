@@ -19,8 +19,8 @@ describe("MonthlySummary contract", () => {
     const summary: MonthlySummary = {
       ...aggregateTotals({ fixedTotal: 20000, installmentsTotal: 8000, oneTimeTotal: 5000, incomeTotal: 0 }),
       byCategory: [
-        { categoryId: "c1", categoryName: "Alimentación", total: 5000 },
-        { categoryId: "c2", categoryName: "Servicios", total: 3000 },
+        { categoryId: "c1", categoryName: "Alimentación", total: 5000, budget: null },
+        { categoryId: "c2", categoryName: "Servicios", total: 3000, budget: null },
       ],
     };
     expect(summary.grandTotal).toBe(33000);

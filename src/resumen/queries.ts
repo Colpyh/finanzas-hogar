@@ -76,12 +76,13 @@ export async function getMonthlySummary(
   );
 
   // byCategory: group one_time + installment expenses by category
-  // Fetch category names
+  // Fetch category names and budgets
   const allCategories = await db
-    .select({ id: category.id, name: category.name })
+    .select({ id: category.id, name: category.name, monthlyBudget: category.monthlyBudget })
     .from(category);
 
   const categoryMap = new Map(allCategories.map((c) => [c.id, c.name]));
+  const categoryBudgetMap = new Map(allCategories.map((c) => [c.id, c.monthlyBudget]));
 
   // Collect all variable expenses with category
   const activeInstallments = await db
@@ -118,11 +119,15 @@ export async function getMonthlySummary(
   }
 
   const byCategory = Array.from(byCategoryMap.entries())
-    .map(([categoryId, total]) => ({
-      categoryId,
-      categoryName: categoryMap.get(categoryId) ?? "Sin categoría",
-      total,
-    }))
+    .map(([categoryId, total]) => {
+      const rawBudget = categoryBudgetMap.get(categoryId);
+      return {
+        categoryId,
+        categoryName: categoryMap.get(categoryId) ?? "Sin categoría",
+        total,
+        budget: rawBudget != null ? Number(rawBudget) : null,
+      };
+    })
     .sort((a, b) => b.total - a.total);
 
   return {

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric } from "drizzle-orm/pg-core";
 import { household } from "./household";
 
 export const category = pgTable("category", {
@@ -10,6 +10,7 @@ export const category = pgTable("category", {
   name: text("name").notNull(),
   icon: text("icon"),
   color: text("color"),
+  monthlyBudget: numeric("monthly_budget", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

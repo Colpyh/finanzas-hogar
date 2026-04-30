@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 
-type CategoryInput = { name: string; icon?: string; color?: string };
+type CategoryInput = { name: string; icon?: string; color?: string; monthlyBudget?: number };
 
 export async function createCategory(rawData: CategoryInput): Promise<{ error?: string }> {
   try {
@@ -23,6 +23,7 @@ export async function createCategory(rawData: CategoryInput): Promise<{ error?: 
       name,
       icon: rawData.icon?.trim() || null,
       color: rawData.color?.trim() || null,
+      monthlyBudget: rawData.monthlyBudget != null ? String(rawData.monthlyBudget) : null,
     });
 
     revalidatePath("/ajustes");
@@ -50,6 +51,7 @@ export async function updateCategory(
         name,
         icon: rawData.icon?.trim() || null,
         color: rawData.color?.trim() || null,
+        monthlyBudget: rawData.monthlyBudget != null ? String(rawData.monthlyBudget) : null,
       })
       .where(and(eq(category.id, id), eq(category.householdId, household.id)));
 
