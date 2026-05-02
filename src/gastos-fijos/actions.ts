@@ -79,12 +79,12 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
   return {};
 }
 
-export async function upgradeToPaid(expenseId: string): Promise<{ error?: string }> {
+export async function upgradeToPaid(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
 
-  const periodMonth = currentPeriodMonth();
+  const periodMonth = month ?? currentPeriodMonth();
 
   try {
     await db

@@ -50,7 +50,16 @@ export function FixedExpenseCard({
 
   function handleUpgrade() {
     startUpgrade(async () => {
-      await upgradeToPaid(expense.id);
+      try {
+        const result = await upgradeToPaid(expense.id, periodMonth);
+        if (result?.error) {
+          toast.error(result.error);
+        } else {
+          toast.success("Pago confirmado");
+        }
+      } catch {
+        toast.error("Error al confirmar el pago. Intentá de nuevo.");
+      }
       setConfirmUpgradeOpen(false);
     });
   }
