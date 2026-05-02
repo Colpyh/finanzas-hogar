@@ -146,7 +146,7 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
   return updated;
 }
 
-export async function markPaidForOther(expenseId: string): Promise<{ error?: string }> {
+export async function markPaidForOther(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
@@ -155,7 +155,7 @@ export async function markPaidForOther(expenseId: string): Promise<{ error?: str
   const otherMember = members.find((m) => m.userId !== user.id);
   if (!otherMember) return { error: "No hay otro miembro en el hogar" };
 
-  const periodMonth = currentPeriodMonth();
+  const periodMonth = month ?? currentPeriodMonth();
   const [exp] = await db
     .select()
     .from(expense)
@@ -192,7 +192,7 @@ export async function markPaidForOther(expenseId: string): Promise<{ error?: str
   return {};
 }
 
-export async function unmarkOtherPayment(expenseId: string): Promise<{ error?: string }> {
+export async function unmarkOtherPayment(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
@@ -201,7 +201,7 @@ export async function unmarkOtherPayment(expenseId: string): Promise<{ error?: s
   const otherMember = members.find((m) => m.userId !== user.id);
   if (!otherMember) return { error: "No hay otro miembro en el hogar" };
 
-  const periodMonth = currentPeriodMonth();
+  const periodMonth = month ?? currentPeriodMonth();
 
   await db
     .delete(fixedExpensePayment)

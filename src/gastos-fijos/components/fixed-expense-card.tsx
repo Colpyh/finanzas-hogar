@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
@@ -25,6 +26,7 @@ type Props = {
   currentUserStatus: "none" | "reserved" | "paid";
   paidByName?: string | null;
   myShareAmount?: string;
+  periodMonth: string;
 };
 
 export function FixedExpenseCard({
@@ -34,6 +36,7 @@ export function FixedExpenseCard({
   currentUserStatus,
   paidByName,
   myShareAmount,
+  periodMonth,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmToggleOpen, setConfirmToggleOpen] = useState(false);
@@ -54,14 +57,30 @@ export function FixedExpenseCard({
 
   function handleMarkBoth() {
     startMarkBoth(async () => {
-      await markPaidForOther(expense.id);
+      try {
+        const result = await markPaidForOther(expense.id, periodMonth);
+        if (result?.error) {
+          toast.error(result.error);
+        } else {
+          toast.success("Saldado por ambos");
+        }
+      } catch {
+        toast.error("Error al registrar el pago. Intentá de nuevo.");
+      }
       setConfirmMarkBothOpen(false);
     });
   }
 
   function handleUnmark() {
     startUnmark(async () => {
-      await unmarkOtherPayment(expense.id);
+      try {
+        const result = await unmarkOtherPayment(expense.id, periodMonth);
+        if (result?.error) {
+          toast.error(result.error);
+        }
+      } catch {
+        toast.error("Error al deshacer el pago. Intentá de nuevo.");
+      }
       setConfirmUnmarkOpen(false);
     });
   }

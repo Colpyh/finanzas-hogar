@@ -139,7 +139,7 @@ export default async function GastosFijosPage({ searchParams }: Props) {
           <span className="text-xs text-amber-600">Ver balances →</span>
         </Link>
       )}
-      <FixedExpenseList expenses={expenses} memberCount={memberCount} />
+      <FixedExpenseList expenses={expenses} memberCount={memberCount} periodMonth={month} />
     </div>
   );
 }

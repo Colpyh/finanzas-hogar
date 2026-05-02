@@ -21,9 +21,10 @@ type EnrichedExpense = {
 type Props = {
   expenses: EnrichedExpense[];
   memberCount: number;
+  periodMonth: string;
 };
 
-export function FixedExpenseList({ expenses, memberCount }: Props) {
+export function FixedExpenseList({ expenses, memberCount, periodMonth }: Props) {
   if (expenses.length === 0) {
     return (
       <EmptyState
@@ -44,6 +45,7 @@ export function FixedExpenseList({ expenses, memberCount }: Props) {
           currentUserStatus={exp.currentUserStatus}
           paidByName={exp.paidByName}
           myShareAmount={exp.myShareAmount}
+          periodMonth={periodMonth}
         />
       ))}
     </div>
