@@ -14,7 +14,8 @@ const amountField = z
 export const createFixedExpenseSchema = z.object({
   description: z.string().min(1, "La descripción es requerida").max(200),
   categoryId: z.string().uuid("Categoría inválida"),
-  amount: amountField,
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Monto inválido").optional().default("0"),
+  expenseType: z.enum(["fixed", "variable"]).default("fixed"),
   currency: z.string().default("ARS"),
   recurrenceDay: recurrenceDayField,
   isShared: z.boolean().default(false),

@@ -7,7 +7,7 @@ import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { toggleFixedExpenseActive, upgradeToPaid, markPaidForOther, unmarkOtherPayment } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CheckCircle2, Clock, PiggyBank, Pencil, Users } from "lucide-react";
+import { CheckCircle2, Clock, PiggyBank, Pencil, Users, HelpCircle } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
     id: string;
     description: string;
     amount: string;
+    type?: string;
     recurrenceDay: number | null;
     isActive: boolean | null;
     categoryName?: string;
@@ -102,6 +103,7 @@ export function FixedExpenseCard({
   }
 
   // ── Icon ──────────────────────────────────────────────
+  const isVariable = expense.type === "variable";
   let icon: React.ReactNode;
   if (isSettled || (!expense.isShared && isPaidThisMonth)) {
     icon = <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />;
@@ -110,6 +112,8 @@ export function FixedExpenseCard({
     icon = <CheckCircle2 size={18} className="text-amber-500 shrink-0" />;
   } else if (currentUserStatus === "reserved") {
     icon = <PiggyBank size={18} className="text-violet-500 shrink-0" />;
+  } else if (isVariable && currentUserStatus === "none") {
+    icon = <HelpCircle size={18} className="text-amber-400 shrink-0" />;
   } else {
     icon = <Clock size={18} className="text-amber-500 shrink-0" />;
   }
@@ -117,7 +121,14 @@ export function FixedExpenseCard({
   // ── Button logic ──────────────────────────────────────
   let primaryButton: React.ReactNode;
 
-  if (!expense.isShared) {
+  // Variable expenses with no payment yet — prompt user to enter the actual amount
+  if (isVariable && currentUserStatus === "none" && !isPaidThisMonth) {
+    primaryButton = (
+      <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)} className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50">
+        Ingresar monto y pagar
+      </Button>
+    );
+  } else if (!expense.isShared) {
     if (currentUserStatus === "paid") {
       primaryButton = (
         <Button size="sm" variant="ghost" disabled className="flex-1">
@@ -235,7 +246,9 @@ export function FixedExpenseCard({
           </div>
           <div className="text-right shrink-0 flex flex-col items-end gap-1">
             <p className="text-sm font-semibold text-foreground">
-              {formatCurrency(parseFloat(expense.amount))}
+              {isVariable && currentUserStatus === "none" && !isPaidThisMonth
+                ? <span className="text-amber-500">Variable</span>
+                : formatCurrency(parseFloat(expense.amount))}
             </p>
             {expense.recurrenceDay && (
               <p className="text-xs text-muted-foreground">día {expense.recurrenceDay}</p>

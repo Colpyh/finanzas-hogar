@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { createFixedExpenseSchema } from "@/gastos-fijos/types";
 import { createFixedExpense } from "@/gastos-fijos/actions";
 import { CardPills } from "@/shared/components/card-pills";
+import { cn } from "@/lib/utils";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
@@ -26,6 +27,7 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
     isPrivate: false,
     responsibleId: "" as string,
   });
+  const [expenseType, setExpenseType] = useState<"fixed" | "variable">("fixed");
   const [cardId, setCardId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -37,12 +39,18 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (expenseType === "fixed" && !form.amount) {
+      setErrors((prev) => ({ ...prev, amount: "El monto es requerido" }));
+      return;
+    }
     const parsed = createFixedExpenseSchema.safeParse({
       ...form,
+      amount: expenseType === "variable" && !form.amount ? undefined : form.amount,
       recurrenceDay: Number(form.recurrenceDay),
       isShared: form.isShared,
       responsibleId: form.responsibleId || null,
       cardId: cardId || null,
+      expenseType,
     });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
@@ -78,6 +86,28 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
       </div>
 
       <div className="space-y-1.5">
+        <Label>Tipo de monto</Label>
+        <div className="flex rounded-lg border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setExpenseType("fixed")}
+            disabled={loading}
+            className={cn("flex-1 py-2 text-sm", expenseType === "fixed" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}
+          >
+            Monto fijo
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpenseType("variable")}
+            disabled={loading}
+            className={cn("flex-1 py-2 text-sm", expenseType === "variable" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}
+          >
+            Varía cada mes
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
         <Label htmlFor="category">Categoría</Label>
         <select
           id="category"
@@ -94,14 +124,17 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="amount">Monto estimado (CLP)</Label>
+        <Label htmlFor="amount">
+          {expenseType === "variable" ? "Monto de referencia (opcional)" : "Monto estimado (CLP)"}
+        </Label>
         <Input
           id="amount"
           type="number"
           min="0"
           value={form.amount}
           onChange={(e) => set("amount", e.target.value)}
-          placeholder="Ej: 650000"
+          placeholder={expenseType === "variable" ? "Sin referencia" : "Ej: 650000"}
+          required={expenseType === "fixed"}
           disabled={loading}
           className="h-11"
         />

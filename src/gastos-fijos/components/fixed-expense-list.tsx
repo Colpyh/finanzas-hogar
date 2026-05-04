@@ -5,6 +5,7 @@ type EnrichedExpense = {
   id: string;
   description: string;
   amount: string;
+  type?: string;
   recurrenceDay: number | null;
   isActive: boolean | null;
   categoryName?: string;

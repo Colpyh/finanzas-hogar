@@ -25,7 +25,7 @@ export const expense = pgTable("expense", {
     .notNull()
     .references(() => category.id),
   type: text("type", {
-    enum: ["fixed", "one_time", "installment"],
+    enum: ["fixed", "one_time", "installment", "variable"],
   }).notNull(),
   description: text("description").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),

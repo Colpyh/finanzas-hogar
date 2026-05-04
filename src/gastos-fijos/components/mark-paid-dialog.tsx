@@ -27,7 +27,7 @@ export function MarkPaidDialog({
   open,
   onOpenChange,
 }: Props) {
-  const [amount, setAmount] = useState(estimatedAmount);
+  const [amount, setAmount] = useState(estimatedAmount === "0" ? "" : estimatedAmount);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

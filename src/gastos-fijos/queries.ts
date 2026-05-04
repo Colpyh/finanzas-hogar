@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, inArray } from "drizzle-orm";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -13,7 +13,7 @@ export async function getActiveFixedExpenses(householdId: string) {
     .where(
       and(
         eq(expense.householdId, householdId),
-        eq(expense.type, "fixed"),
+        inArray(expense.type, ["fixed", "variable"]),
         eq(expense.isActive, true),
         isNull(expense.deletedAt)
       )
@@ -54,7 +54,7 @@ export async function getAllFixedPaymentsForPeriod(householdId: string, periodMo
     .where(
       and(
         eq(expense.householdId, householdId),
-        eq(expense.type, "fixed"),
+        inArray(expense.type, ["fixed", "variable"]),
         eq(expense.isActive, true),
         isNull(expense.deletedAt),
         eq(fixedExpensePayment.periodMonth, periodMonth)

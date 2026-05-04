@@ -25,7 +25,7 @@ export async function createFixedExpense(rawData: unknown) {
     .insert(expense)
     .values({
       ...data,
-      type: "fixed",
+      type: data.expenseType ?? "fixed",
       householdId: household.id,
       createdBy: user.id,
       isActive: true,

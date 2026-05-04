@@ -21,6 +21,7 @@ type EnrichedExpense = {
   id: string;
   description: string;
   amount: string;
+  type: string;
   recurrenceDay: number | null;
   isActive: boolean | null;
   isShared: boolean;
@@ -34,10 +35,10 @@ type EnrichedExpense = {
 };
 
 const MOCK_EXPENSES: EnrichedExpense[] = [
-  { id: "1", description: "Arriendo", amount: "650000", recurrenceDay: 5, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: true, isSettled: true, currentUserStatus: "paid", confirmedCount: 1, paidByName: null },
-  { id: "2", description: "Internet + TV", amount: "25990", recurrenceDay: 10, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "reserved", confirmedCount: 1, paidByName: null },
-  { id: "3", description: "Gastos comunes", amount: "85000", recurrenceDay: 15, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "none", confirmedCount: 0, paidByName: null },
-  { id: "4", description: "Seguro auto", amount: "48000", recurrenceDay: 20, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "none", confirmedCount: 0, paidByName: null },
+  { id: "1", description: "Arriendo", amount: "650000", type: "fixed", recurrenceDay: 5, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: true, isSettled: true, currentUserStatus: "paid", confirmedCount: 1, paidByName: null },
+  { id: "2", description: "Internet + TV", amount: "25990", type: "fixed", recurrenceDay: 10, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "reserved", confirmedCount: 1, paidByName: null },
+  { id: "3", description: "Gastos comunes", amount: "85000", type: "fixed", recurrenceDay: 15, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "none", confirmedCount: 0, paidByName: null },
+  { id: "4", description: "Seguro auto", amount: "48000", type: "fixed", recurrenceDay: 20, isActive: true, isShared: false, responsibleName: null, isPaidThisMonth: false, isSettled: false, currentUserStatus: "none", confirmedCount: 0, paidByName: null },
 ];
 
 export default async function GastosFijosPage({ searchParams }: Props) {
@@ -88,14 +89,21 @@ export default async function GastosFijosPage({ searchParams }: Props) {
         const paidByName = otherPaidPayment
           ? (memberMap.get(otherPaidPayment.paidBy) ?? null)
           : null;
+        const isVariable = e.type === "variable";
         const totalAmount = parseFloat(e.amount ?? "0");
-        const myShareAmount = isShared && memberCount > 1
-          ? (totalAmount / memberCount).toFixed(2)
-          : (e.amount ?? "0");
+        let myShareAmount: string;
+        if (isVariable && currentUserStatus === "none" && !isPaidThisMonth) {
+          myShareAmount = "0";
+        } else if (isShared && memberCount > 1) {
+          myShareAmount = (totalAmount / memberCount).toFixed(2);
+        } else {
+          myShareAmount = e.amount ?? "0";
+        }
         return {
           id: e.id,
           description: e.description,
           amount: e.amount ?? "0",
+          type: e.type,
           recurrenceDay: e.recurrenceDay,
           isActive: e.isActive,
           isShared,

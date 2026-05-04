@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and, isNull, lte, desc } from "drizzle-orm";
+import { eq, and, isNull, lte, desc, inArray } from "drizzle-orm";
 import { getMonthlyIncomeTotal, getMyMonthlyIncomeTotal } from "@/ingresos/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
@@ -33,7 +33,7 @@ export async function getDashboardSummary(
     .where(
       and(
         eq(expense.householdId, householdId),
-        eq(expense.type, "fixed"),
+        inArray(expense.type, ["fixed", "variable"]),
         eq(expense.isActive, true),
         isNull(expense.deletedAt)
       )
