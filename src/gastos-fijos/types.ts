@@ -27,7 +27,8 @@ export const createFixedExpenseSchema = z.object({
 export const updateFixedExpenseSchema = z.object({
   description: z.string().min(1).max(200).optional(),
   categoryId: z.string().uuid().optional(),
-  amount: amountField.optional(),
+  type: z.enum(["fixed", "variable"]).optional(),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Monto inválido").optional(),
   currency: z.string().optional(),
   recurrenceDay: recurrenceDayField.optional(),
   isShared: z.boolean().optional(),

@@ -17,6 +17,7 @@ type Props = {
     id: string;
     description: string;
     amount: string;
+    type: string;
     recurrenceDay: number | null;
     cardId: string | null;
   };
@@ -26,7 +27,10 @@ type Props = {
 export function EditFixedExpenseForm({ expense, cards = [] }: Props) {
   const router = useRouter();
   const [description, setDescription] = useState(expense.description);
-  const [amount, setAmount] = useState(expense.amount);
+  const [expenseType, setExpenseType] = useState<"fixed" | "variable">(
+    expense.type === "variable" ? "variable" : "fixed"
+  );
+  const [amount, setAmount] = useState(expense.amount === "0" ? "" : expense.amount);
   const [recurrenceDay, setRecurrenceDay] = useState(String(expense.recurrenceDay ?? ""));
   const [cardId, setCardId] = useState<string | null>(expense.cardId);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +45,8 @@ export function EditFixedExpenseForm({ expense, cards = [] }: Props) {
       try {
         await updateFixedExpense(expense.id, {
           description,
-          amount,
+          type: expenseType,
+          amount: expenseType === "variable" ? "0" : amount,
           recurrenceDay: recurrenceDay ? Number(recurrenceDay) : undefined,
           cardId,
         });
@@ -71,19 +76,48 @@ export function EditFixedExpenseForm({ expense, cards = [] }: Props) {
             className="h-11"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="ef-amount">Monto estimado</Label>
-            <Input
-              id="ef-amount"
-              type="number"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="h-11"
-            />
+        <div className="space-y-1.5">
+          <Label>Tipo de monto</Label>
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setExpenseType("fixed")}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                expenseType === "fixed"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-transparent text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              Monto fijo
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpenseType("variable")}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                expenseType === "variable"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-transparent text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              Varía cada mes
+            </button>
           </div>
-          <div className="space-y-1.5">
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {expenseType === "fixed" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="ef-amount">Monto estimado</Label>
+              <Input
+                id="ef-amount"
+                type="number"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="h-11"
+              />
+            </div>
+          )}
+          <div className={`space-y-1.5 ${expenseType === "variable" ? "col-span-2" : ""}`}>
             <Label htmlFor="ef-day">Día de vencimiento</Label>
             <Input
               id="ef-day"

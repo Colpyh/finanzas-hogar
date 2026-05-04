@@ -63,6 +63,7 @@ export default async function GastoFijoDetailPage({ params }: Props) {
             id: exp.id,
             description: exp.description,
             amount: exp.amount ?? "0",
+            type: exp.type,
             recurrenceDay: exp.recurrenceDay ?? null,
             cardId: exp.cardId ?? null,
           }}
