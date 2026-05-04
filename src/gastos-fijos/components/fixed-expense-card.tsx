@@ -246,7 +246,7 @@ export function FixedExpenseCard({
           </div>
           <div className="text-right shrink-0 flex flex-col items-end gap-1">
             <p className="text-sm font-semibold text-foreground">
-              {isVariable && currentUserStatus === "none" && !isPaidThisMonth
+              {isVariable
                 ? <span className="text-amber-500">Variable</span>
                 : formatCurrency(parseFloat(expense.amount))}
             </p>
