@@ -24,7 +24,7 @@ export const createInstallmentSchema = z
     installmentsTotal: z
       .number()
       .int()
-      .min(2, "Debe tener al menos 2 cuotas"),
+      .min(1, "Debe tener al menos 1 cuota"),
     installmentAmount: amountField,
     startMonth: z.string().date("Mes de inicio inválido"),
     responsibleId: z.string().uuid().nullable().optional(),
