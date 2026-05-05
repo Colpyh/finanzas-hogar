@@ -114,7 +114,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
           <Input
             id="inst-n"
             type="number"
-            min="2"
+            min="1"
             value={installmentsTotal}
             onChange={(e) => setInstallmentsTotal(e.target.value)}
             placeholder="12"
