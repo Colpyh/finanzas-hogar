@@ -283,6 +283,17 @@ export function FixedExpenseCard({
 
         <div className="flex gap-2">
           {primaryButton}
+          {expense.isShared && currentUserStatus === "paid" && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-amber-600 hover:bg-amber-50"
+              disabled={unmarkingMine}
+              onClick={() => setConfirmUnmarkMineOpen(true)}
+            >
+              Deshacer
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
