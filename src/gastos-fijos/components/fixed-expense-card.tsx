@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
-import { toggleFixedExpenseActive, upgradeToPaid, markPaidForOther, unmarkOtherPayment } from "@/gastos-fijos/actions";
+import { toggleFixedExpenseActive, upgradeToPaid, markPaidForOther, unmarkOtherPayment, unmarkMyPayment } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { CheckCircle2, Clock, PiggyBank, Pencil, Users, HelpCircle } from "lucide-react";
 import Link from "next/link";
@@ -46,8 +46,10 @@ export function FixedExpenseCard({
   const [upgrading, startUpgrade] = useTransition();
   const [confirmMarkBothOpen, setConfirmMarkBothOpen] = useState(false);
   const [confirmUnmarkOpen, setConfirmUnmarkOpen] = useState(false);
+  const [confirmUnmarkMineOpen, setConfirmUnmarkMineOpen] = useState(false);
   const [markingBoth, startMarkBoth] = useTransition();
   const [unmarking, startUnmark] = useTransition();
+  const [unmarkingMine, startUnmarkMine] = useTransition();
 
   function handleUpgrade() {
     startUpgrade(async () => {
@@ -78,6 +80,17 @@ export function FixedExpenseCard({
         toast.error("Error al registrar el pago. Intentá de nuevo.");
       }
       setConfirmMarkBothOpen(false);
+    });
+  }
+
+  function handleUnmarkMine() {
+    startUnmarkMine(async () => {
+      try {
+        await unmarkMyPayment(expense.id, periodMonth);
+      } catch {
+        toast.error("Error al deshacer el pago. Intentá de nuevo.");
+      }
+      setConfirmUnmarkMineOpen(false);
     });
   }
 
@@ -131,8 +144,13 @@ export function FixedExpenseCard({
   } else if (!expense.isShared) {
     if (currentUserStatus === "paid") {
       primaryButton = (
-        <Button size="sm" variant="ghost" disabled className="flex-1">
-          Pagado este mes
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setConfirmUnmarkMineOpen(true)}
+          className="flex-1 text-emerald-600 hover:text-amber-600 hover:bg-amber-50"
+        >
+          Pagado ✓ · Deshacer
         </Button>
       );
     } else if (currentUserStatus === "reserved") {
@@ -328,6 +346,17 @@ export function FixedExpenseCard({
         variant="destructive"
         loading={unmarking}
         onConfirm={handleUnmark}
+      />
+
+      <ConfirmDialog
+        open={confirmUnmarkMineOpen}
+        onOpenChange={setConfirmUnmarkMineOpen}
+        title="¿Deshacer tu pago?"
+        description={`Esto eliminará tu registro de pago para "${expense.description}" y volverá a quedar pendiente.`}
+        confirmText="Sí, deshacer"
+        variant="destructive"
+        loading={unmarkingMine}
+        onConfirm={handleUnmarkMine}
       />
     </>
   );

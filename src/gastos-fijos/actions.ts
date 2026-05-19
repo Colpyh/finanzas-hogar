@@ -197,6 +197,29 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
   return {};
 }
 
+export async function unmarkMyPayment(expenseId: string, month?: string): Promise<{ error?: string }> {
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) throw new Error("No household");
+
+  const periodMonth = month ?? currentPeriodMonth();
+
+  await db
+    .delete(fixedExpensePayment)
+    .where(
+      and(
+        eq(fixedExpensePayment.expenseId, expenseId),
+        eq(fixedExpensePayment.householdId, household.id),
+        eq(fixedExpensePayment.periodMonth, periodMonth),
+        eq(fixedExpensePayment.paidBy, user.id)
+      )
+    );
+
+  revalidatePath("/gastos-fijos");
+  revalidatePath("/dashboard");
+  return {};
+}
+
 export async function unmarkOtherPayment(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
