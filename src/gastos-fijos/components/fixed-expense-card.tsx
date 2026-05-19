@@ -281,6 +281,7 @@ export function FixedExpenseCard({
         estimatedAmount={myShareAmount ?? expense.amount}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        periodMonth={periodMonth}
       />
 
       <ConfirmDialog

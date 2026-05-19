@@ -45,8 +45,13 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
 
-  const data = markPaidSchema.parse(rawData);
-  const periodMonth = currentPeriodMonth();
+  let data: ReturnType<typeof markPaidSchema.parse>;
+  try {
+    data = markPaidSchema.parse(rawData);
+  } catch {
+    return { error: "Datos de pago inválidos" };
+  }
+  const periodMonth = data.periodMonth ?? currentPeriodMonth();
 
   // Verify expense belongs to this household
   const [exp] = await db

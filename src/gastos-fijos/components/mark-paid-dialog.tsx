@@ -19,6 +19,7 @@ type Props = {
   estimatedAmount: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  periodMonth: string;
 };
 
 export function MarkPaidDialog({
@@ -26,6 +27,7 @@ export function MarkPaidDialog({
   estimatedAmount,
   open,
   onOpenChange,
+  periodMonth,
 }: Props) {
   const [amount, setAmount] = useState(estimatedAmount === "0" ? "" : estimatedAmount);
   const [notes, setNotes] = useState("");
@@ -36,7 +38,7 @@ export function MarkPaidDialog({
     setLoading(true);
     setError(null);
 
-    const result = await markFixedExpensePaid({ expenseId, amount, status, notes: notes || undefined });
+    const result = await markFixedExpensePaid({ expenseId, amount, status, notes: notes || undefined, periodMonth });
 
     if (result?.error) {
       setError(result.error);

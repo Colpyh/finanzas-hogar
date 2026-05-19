@@ -40,6 +40,7 @@ export const markPaidSchema = z.object({
   amount: amountField,
   status: z.enum(["reserved", "paid"]).default("paid"),
   notes: z.string().max(500).optional(),
+  periodMonth: z.string().regex(/^\d{4}-\d{2}-01$/).optional(),
 });
 
 export type CreateFixedExpenseInput = z.infer<typeof createFixedExpenseSchema>;
