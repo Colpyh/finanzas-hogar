@@ -79,10 +79,12 @@ export async function getPendingBalances(
     const payer = paidPayments[0];
     if (!payer) continue;
 
-    // Para cuotas usar el monto mensual, no el total de la compra
+    // Para cuotas usar el monto mensual; para variables usar el monto real pagado ese período
     const totalAmount = exp.type === "installment"
       ? parseFloat(exp.installmentAmount ?? "0")
-      : parseFloat(exp.amount ?? "0");
+      : exp.type === "variable"
+        ? parseFloat(payer.amount ?? "0")
+        : parseFloat(exp.amount ?? "0");
     const shareAmount = totalAmount / memberCount;
 
     // Find members who haven't paid
