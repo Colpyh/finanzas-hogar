@@ -31,3 +31,13 @@ export function currentMonth(): string {
   const now = new Date();
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
+
+/** Returns calendar months elapsed from startMonth to targetMonth.
+ * Accepts 'YYYY-MM' or 'YYYY-MM-DD'. Result is 0 when same month, negative if target is before start. */
+export function elapsedMonths(startMonth: string, targetMonth: string): number {
+  const sy = parseInt(startMonth.slice(0, 4));
+  const sm = parseInt(startMonth.slice(5, 7));
+  const ty = parseInt(targetMonth.slice(0, 4));
+  const tm = parseInt(targetMonth.slice(5, 7));
+  return (ty - sy) * 12 + (tm - sm);
+}

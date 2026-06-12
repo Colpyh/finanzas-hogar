@@ -1,6 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, income } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte } from "drizzle-orm";
+import { elapsedMonths } from "./month-utils";
 
 export type MonthlyDataPoint = {
   month: string; // 'YYYY-MM-01'
@@ -97,13 +98,7 @@ export async function getAnnualSummary(householdId: string): Promise<MonthlyData
         if (r.startMonth > month) return false;
         const paid = r.installmentsPaid ?? 0;
         const total = r.installmentsTotal ?? 0;
-        // Compute how many months have elapsed since startMonth
-        const startIdx = months.indexOf(r.startMonth);
-        const currIdx = months.indexOf(month);
-        // If startMonth is before our 12-month window, estimate from index 0
-        const elapsed = startIdx === -1
-          ? months.indexOf(month) + 12 // rough — installment started before window
-          : currIdx - startIdx;
+        const elapsed = elapsedMonths(r.startMonth, month);
         return elapsed < total && paid < total;
       })
       .reduce((acc, r) => acc + Number(r.installmentAmount ?? 0), 0);

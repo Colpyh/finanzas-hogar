@@ -1,13 +1,14 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and, isNull, lte, desc, inArray } from "drizzle-orm";
+import { eq, and, isNull, lte, gte, lt, desc, inArray } from "drizzle-orm";
 import { getMonthlyIncomeTotal, getMyMonthlyIncomeTotal } from "@/ingresos/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
 import {
   getActiveFixedExpenses,
-  getPaymentsForMonth,
+  getAllFixedPaymentsForPeriod,
 } from "@/gastos-fijos/queries";
+import { getNextMonth, monthToDate } from "@/resumen/month-utils";
 import type {
   DashboardSummary,
   FixedBillWithStatus,
@@ -128,23 +129,21 @@ export async function getFixedExpenseStatusThisMonth(
   householdId: string,
   month: string
 ): Promise<FixedBillWithStatus[]> {
-  const expenses = await getActiveFixedExpenses(householdId);
+  const [expenses, payments] = await Promise.all([
+    getActiveFixedExpenses(householdId),
+    getAllFixedPaymentsForPeriod(householdId, month),
+  ]);
 
-  const results = await Promise.all(
-    expenses.map(async (exp) => {
-      const payments = await getPaymentsForMonth(exp.id, month);
-      return {
-        id: exp.id,
-        description: exp.description,
-        amount: Number(exp.amount ?? 0),
-        paid: payments.length > 0,
-        responsibleId: exp.responsibleId ?? null,
-        isShared: exp.isShared,
-      };
-    })
-  );
+  const paidIds = new Set(payments.map((p) => p.payment.expenseId));
 
-  return results;
+  return expenses.map((exp) => ({
+    id: exp.id,
+    description: exp.description,
+    amount: Number(exp.amount ?? 0),
+    paid: paidIds.has(exp.id),
+    responsibleId: exp.responsibleId ?? null,
+    isShared: exp.isShared,
+  }));
 }
 
 export async function getActiveInstallments(
@@ -189,7 +188,7 @@ export async function getRecentPurchases(
   month: string,
   limit = 5
 ): Promise<RecentPurchase[]> {
-  const monthPrefix = month.slice(0, 7);
+  const nextMonthDate = monthToDate(getNextMonth(month.slice(0, 7)));
 
   const rows = await db
     .select({
@@ -204,16 +203,15 @@ export async function getRecentPurchases(
       and(
         eq(expense.householdId, householdId),
         eq(expense.type, "one_time"),
-        isNull(expense.deletedAt)
+        isNull(expense.deletedAt),
+        gte(expense.expenseDate, month),
+        lt(expense.expenseDate, nextMonthDate)
       )
     )
-    .orderBy(desc(expense.createdAt));
+    .orderBy(desc(expense.createdAt))
+    .limit(limit);
 
-  const filtered = rows.filter(
-    (r) => r.expenseDate != null && r.expenseDate.startsWith(monthPrefix)
-  );
-
-  return filtered.slice(0, limit).map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     description: row.description,
     amount: Number(row.amount ?? 0),

@@ -91,6 +91,16 @@ export async function POST(
     payload.TextBody ?? payload.HtmlBody ?? ""
   );
 
+  if (!parsedEmail) {
+    console.warn("[email-inbound] parse_failed", {
+      householdId,
+      from: payload.From,
+      subject: payload.Subject,
+      hasTxt: !!payload.TextBody,
+      hasHtml: !!payload.HtmlBody,
+    });
+  }
+
   // 8. INSERT pending_expense (even if parse failed — row is still useful for inspection)
   const { data: inserted, error } = await svc
     .from("pending_expense")
@@ -124,7 +134,15 @@ export async function POST(
     title: "Nuevo gasto detectado",
     body: `$${parsedEmail?.amount?.toLocaleString("es-CL") ?? "?"} en ${parsedEmail?.merchant ?? "comercio desconocido"}`,
     url: "/gastos-pendientes",
-  }).catch(() => {});
+  }).catch(() => {
+    console.warn("[email-inbound] push_failed", { householdId });
+  });
+
+  console.info("[email-inbound] processed", {
+    householdId,
+    pendingId: inserted.id,
+    parsed: !!parsedEmail,
+  });
 
   return NextResponse.json({ ok: true, pendingId: inserted.id });
 }

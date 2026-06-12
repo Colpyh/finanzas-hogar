@@ -8,10 +8,12 @@ import {
   getActiveInstallments,
   getRecentPurchases,
 } from "@/dashboard/queries";
+import { getCategoryBudgetStatus } from "@/categories/queries";
 import { MonthlySummaryCard } from "@/dashboard/components/monthly-summary-card";
 import { FixedExpensesWidget } from "@/dashboard/components/fixed-expenses-widget";
 import { InstallmentsWidget } from "@/dashboard/components/installments-widget";
 import { RecentPurchasesWidget } from "@/dashboard/components/recent-purchases-widget";
+import { BudgetAlertsWidget } from "@/dashboard/components/budget-alerts-widget";
 import { QuickAddFab } from "@/dashboard/components/quick-add-fab";
 import { WhatsappShareButton } from "@/dashboard/components/whatsapp-share-button";
 import { AnimatedWidgets } from "@/shared/components/animated-widgets";
@@ -23,6 +25,7 @@ import type {
   FixedBillWithStatus,
   ActiveInstallment,
   RecentPurchase,
+  CategoryBudgetStatus,
 } from "@/dashboard/types";
 import type { MemberBalance } from "@/balances/queries";
 
@@ -67,6 +70,11 @@ const MOCK_PURCHASES: RecentPurchase[] = [
   { id: "3", description: "Bencina Shell", amount: 65000, expenseDate: "2026-04-03", responsibleId: null },
 ];
 
+const MOCK_BUDGETS: CategoryBudgetStatus[] = [
+  { id: "1", name: "Supermercado", icon: "🛒", color: null, monthlyBudget: 300000, spent: 187500, percentage: 63 },
+  { id: "2", name: "Transporte", icon: "🚗", color: null, monthlyBudget: 80000, spent: 65000, percentage: 81 },
+];
+
 export default async function DashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const month = parseMonthParam(params.month);
@@ -76,6 +84,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   let installments = MOCK_INSTALLMENTS;
   let purchases = MOCK_PURCHASES;
   let balances: MemberBalance[] = [];
+  let budgets: CategoryBudgetStatus[] = MOCK_BUDGETS;
   let householdName = "Hogar Demo";
   let currentUserId = "";
   let memberNames: Record<string, string> = {};
@@ -88,18 +97,20 @@ export default async function DashboardPage({ searchParams }: Props) {
       currentUserId = user.id;
       const members = await getHouseholdMembers(household.id);
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Otro"]));
-      const [sumData, billsData, installData, purchaseData, balanceData] = await Promise.all([
+      const [sumData, billsData, installData, purchaseData, balanceData, budgetData] = await Promise.all([
         getDashboardSummary(household.id, user.id, month),
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
         getRecentPurchases(household.id, month, 5),
         getPendingBalances(household.id, month, members.length, memberMap, user.id),
+        getCategoryBudgetStatus(household.id, month),
       ]);
       summary = sumData;
       bills = billsData;
       installments = installData;
       purchases = purchaseData;
       balances = balanceData;
+      budgets = budgetData;
       memberNames = Object.fromEntries(
         members
           .filter((m) => m.userId !== user.id)
@@ -132,6 +143,7 @@ export default async function DashboardPage({ searchParams }: Props) {
 
       <AnimatedWidgets>
         <MonthlySummaryCard summary={summary} />
+        <BudgetAlertsWidget categories={budgets} />
         <FixedExpensesWidget bills={bills} currentUserId={currentUserId} memberNames={memberNames} />
         <InstallmentsWidget installments={installments} currentUserId={currentUserId} memberNames={memberNames} />
         <RecentPurchasesWidget purchases={purchases} currentUserId={currentUserId} memberNames={memberNames} />

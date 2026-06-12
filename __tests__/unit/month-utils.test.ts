@@ -1,4 +1,4 @@
-import { getPrevMonth, getNextMonth, formatMonthLabel, monthToDate } from "@/resumen/month-utils";
+import { getPrevMonth, getNextMonth, formatMonthLabel, monthToDate, elapsedMonths } from "@/resumen/month-utils";
 
 // ============================================================
 // getPrevMonth — Scenario 5.4
@@ -60,5 +60,44 @@ describe("monthToDate", () => {
 
   it("works for December", () => {
     expect(monthToDate("2026-12")).toBe("2026-12-01");
+  });
+});
+
+// ============================================================
+// elapsedMonths — months between two month strings
+// ============================================================
+describe("elapsedMonths", () => {
+  it("returns 0 for same month (YYYY-MM format)", () => {
+    expect(elapsedMonths("2026-04", "2026-04")).toBe(0);
+  });
+
+  it("returns 0 for same month (YYYY-MM-DD format)", () => {
+    expect(elapsedMonths("2026-04-01", "2026-04-01")).toBe(0);
+  });
+
+  it("returns 1 for consecutive months", () => {
+    expect(elapsedMonths("2026-03", "2026-04")).toBe(1);
+  });
+
+  it("crosses year boundary correctly", () => {
+    expect(elapsedMonths("2025-11", "2026-02")).toBe(3);
+  });
+
+  it("handles full year gap", () => {
+    expect(elapsedMonths("2025-01", "2026-01")).toBe(12);
+  });
+
+  it("handles installment started before 12-month window — the original bug", () => {
+    // Installment started Jan 2024, window starts Jul 2024 (6 months later).
+    // For the first month of the window, elapsed should be 6, not 12.
+    expect(elapsedMonths("2024-01-01", "2024-07-01")).toBe(6);
+  });
+
+  it("returns negative when target is before start", () => {
+    expect(elapsedMonths("2026-04", "2026-01")).toBe(-3);
+  });
+
+  it("accepts mixed formats (YYYY-MM-DD and YYYY-MM)", () => {
+    expect(elapsedMonths("2024-01-01", "2026-06")).toBe(29);
   });
 });
