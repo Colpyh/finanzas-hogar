@@ -16,6 +16,8 @@ type CardRow = {
   lastFour: string | null;
   color: string;
   creditLimit: number | null;
+  closingDay: number | null;
+  paymentDueDay: number | null;
   used: number;
   expenseCount: number;
 };
@@ -55,11 +57,15 @@ function CardFields({
   lastFour, setLastFour,
   color, setColor,
   creditLimit, setCreditLimit,
+  closingDay, setClosingDay,
+  paymentDueDay, setPaymentDueDay,
 }: {
   name: string; setName: (v: string) => void;
   lastFour: string; setLastFour: (v: string) => void;
   color: string; setColor: (v: string) => void;
   creditLimit: string; setCreditLimit: (v: string) => void;
+  closingDay: string; setClosingDay: (v: string) => void;
+  paymentDueDay: string; setPaymentDueDay: (v: string) => void;
 }) {
   return (
     <>
@@ -94,6 +100,36 @@ function CardFields({
             value={creditLimit}
             onChange={(e) => setCreditLimit(e.target.value)}
             placeholder="Opcional"
+            className="h-10"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="card-closing">Día de cierre</Label>
+          <Input
+            id="card-closing"
+            type="number"
+            min="1"
+            max="28"
+            value={closingDay}
+            onChange={(e) => setClosingDay(e.target.value)}
+            placeholder="Ej: 25"
+            inputMode="numeric"
+            className="h-10"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="card-due">Día de pago</Label>
+          <Input
+            id="card-due"
+            type="number"
+            min="1"
+            max="28"
+            value={paymentDueDay}
+            onChange={(e) => setPaymentDueDay(e.target.value)}
+            placeholder="Ej: 10"
+            inputMode="numeric"
             className="h-10"
           />
         </div>
@@ -208,6 +244,8 @@ function EditCardInline({ card, onClose }: { card: CardRow; onClose: () => void 
   const [lastFour, setLastFour] = useState(card.lastFour ?? "");
   const [color, setColor] = useState<string>(card.color);
   const [creditLimit, setCreditLimit] = useState(card.creditLimit != null ? String(card.creditLimit) : "");
+  const [closingDay, setClosingDay] = useState(card.closingDay != null ? String(card.closingDay) : "");
+  const [paymentDueDay, setPaymentDueDay] = useState(card.paymentDueDay != null ? String(card.paymentDueDay) : "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -220,6 +258,8 @@ function EditCardInline({ card, onClose }: { card: CardRow; onClose: () => void 
         lastFour: lastFour || undefined,
         color,
         creditLimit: creditLimit || undefined,
+        closingDay: closingDay ? parseInt(closingDay) : undefined,
+        paymentDueDay: paymentDueDay ? parseInt(paymentDueDay) : undefined,
       });
       if (result.error) {
         setError(result.error);
@@ -247,6 +287,8 @@ function EditCardInline({ card, onClose }: { card: CardRow; onClose: () => void 
         lastFour={lastFour} setLastFour={setLastFour}
         color={color} setColor={setColor}
         creditLimit={creditLimit} setCreditLimit={setCreditLimit}
+        closingDay={closingDay} setClosingDay={setClosingDay}
+        paymentDueDay={paymentDueDay} setPaymentDueDay={setPaymentDueDay}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-2">
@@ -267,6 +309,8 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
   const [lastFour, setLastFour] = useState("");
   const [color, setColor] = useState<string>(CARD_COLORS[0]?.value ?? "#6366f1");
   const [creditLimit, setCreditLimit] = useState("");
+  const [closingDay, setClosingDay] = useState("");
+  const [paymentDueDay, setPaymentDueDay] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -279,6 +323,8 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
         lastFour: lastFour || undefined,
         color,
         creditLimit: creditLimit || undefined,
+        closingDay: closingDay ? parseInt(closingDay) : undefined,
+        paymentDueDay: paymentDueDay ? parseInt(paymentDueDay) : undefined,
       });
       if (result.error) {
         setError(result.error);
@@ -295,6 +341,8 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
         lastFour={lastFour} setLastFour={setLastFour}
         color={color} setColor={setColor}
         creditLimit={creditLimit} setCreditLimit={setCreditLimit}
+        closingDay={closingDay} setClosingDay={setClosingDay}
+        paymentDueDay={paymentDueDay} setPaymentDueDay={setPaymentDueDay}
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-2">

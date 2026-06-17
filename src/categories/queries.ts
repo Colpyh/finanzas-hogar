@@ -1,7 +1,8 @@
 import { db } from "@/shared/lib/db";
-import { category, expense } from "@/shared/lib/db/schema";
+import { category, expense, card } from "@/shared/lib/db/schema";
 import { or, isNull, isNotNull, eq, and, asc, inArray, lte } from "drizzle-orm";
 import type { CategoryBudgetStatus } from "@/dashboard/types";
+import { effectiveBillingMonth } from "@/shared/lib/billing";
 
 export async function getCategories(householdId: string) {
   return db
@@ -33,8 +34,9 @@ export async function getCategoryBudgetStatus(
 
   const [oneTimeRows, fixedRows, installmentRows] = await Promise.all([
     db
-      .select({ amount: expense.amount, categoryId: expense.categoryId, expenseDate: expense.expenseDate })
+      .select({ amount: expense.amount, categoryId: expense.categoryId, expenseDate: expense.expenseDate, closingDay: card.closingDay })
       .from(expense)
+      .leftJoin(card, eq(expense.cardId, card.id))
       .where(
         and(
           eq(expense.householdId, householdId),
@@ -77,7 +79,11 @@ export async function getCategoryBudgetStatus(
   const spentMap: Record<string, number> = {};
 
   for (const r of oneTimeRows) {
-    if (r.categoryId && r.expenseDate?.startsWith(monthPrefix)) {
+    if (!r.categoryId || !r.expenseDate) continue;
+    const effectiveMonth = r.closingDay != null
+      ? effectiveBillingMonth(r.expenseDate, r.closingDay)
+      : r.expenseDate.slice(0, 7);
+    if (effectiveMonth === monthPrefix) {
       spentMap[r.categoryId] = (spentMap[r.categoryId] ?? 0) + Number(r.amount ?? 0);
     }
   }

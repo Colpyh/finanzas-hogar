@@ -9,11 +9,20 @@ export const CARD_COLORS = [
   { value: "#475569", label: "Gris" },
 ] as const;
 
+const billingDay = z
+  .number()
+  .int()
+  .min(1, "Mínimo día 1")
+  .max(28, "Máximo día 28")
+  .optional();
+
 export const addCardSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").max(50),
   lastFour: z.string().length(4, "Debe tener 4 dígitos").regex(/^\d+$/, "Solo dígitos").optional().or(z.literal("")),
   color: z.string().regex(/^#[0-9a-f]{6}$/i, "Color inválido").default("#6366f1"),
   creditLimit: z.string().regex(/^\d+(\.\d{1,2})?$/, "Monto inválido").optional().or(z.literal("")),
+  closingDay: billingDay,
+  paymentDueDay: billingDay,
 });
 
 export type AddCardInput = z.infer<typeof addCardSchema>;

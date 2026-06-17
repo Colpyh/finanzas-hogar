@@ -22,6 +22,8 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
       lastFour: data.lastFour || null,
       color: data.color,
       creditLimit: data.creditLimit || null,
+      closingDay: data.closingDay ?? null,
+      paymentDueDay: data.paymentDueDay ?? null,
     });
 
     revalidatePath("/ajustes");
@@ -47,6 +49,8 @@ export async function updateCard(id: string, rawData: unknown): Promise<{ error?
         lastFour: data.lastFour || null,
         color: data.color,
         creditLimit: data.creditLimit || null,
+        closingDay: data.closingDay ?? null,
+        paymentDueDay: data.paymentDueDay ?? null,
       })
       .where(and(eq(card.id, id), eq(card.householdId, household.id)));
 

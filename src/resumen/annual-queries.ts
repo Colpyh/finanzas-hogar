@@ -1,7 +1,8 @@
 import { db } from "@/shared/lib/db";
-import { expense, income } from "@/shared/lib/db/schema";
+import { expense, income, card } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte } from "drizzle-orm";
 import { elapsedMonths } from "./month-utils";
+import { effectiveBillingMonth } from "@/shared/lib/billing";
 
 export type MonthlyDataPoint = {
   month: string; // 'YYYY-MM-01'
@@ -35,10 +36,11 @@ export async function getAnnualSummary(householdId: string): Promise<MonthlyData
   const newest = months[months.length - 1]!;
   const newestPrefix = newest.slice(0, 7);
 
-  // One-time expenses per month
+  // One-time expenses per month, with card closingDay for billing attribution
   const oneTimeRows = await db
-    .select({ amount: expense.amount, expenseDate: expense.expenseDate })
+    .select({ amount: expense.amount, expenseDate: expense.expenseDate, closingDay: card.closingDay })
     .from(expense)
+    .leftJoin(card, eq(expense.cardId, card.id))
     .where(
       and(
         eq(expense.householdId, householdId),
@@ -89,7 +91,13 @@ export async function getAnnualSummary(householdId: string): Promise<MonthlyData
     const prefix = month.slice(0, 7);
 
     const oneTime = oneTimeRows
-      .filter((r) => r.expenseDate?.startsWith(prefix))
+      .filter((r) => {
+        if (!r.expenseDate) return false;
+        if (r.closingDay != null) {
+          return effectiveBillingMonth(r.expenseDate, r.closingDay) === prefix;
+        }
+        return r.expenseDate.startsWith(prefix);
+      })
       .reduce((acc, r) => acc + Number(r.amount ?? 0), 0);
 
     const installments = installmentRows

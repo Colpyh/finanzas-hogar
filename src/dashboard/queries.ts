@@ -9,6 +9,8 @@ import {
   getAllFixedPaymentsForPeriod,
 } from "@/gastos-fijos/queries";
 import { getNextMonth, monthToDate } from "@/resumen/month-utils";
+import { effectiveBillingMonth } from "@/shared/lib/billing";
+import { card } from "@/shared/lib/db/schema";
 import type {
   DashboardSummary,
   FixedBillWithStatus,
@@ -78,15 +80,18 @@ export async function getDashboardSummary(
     0
   );
 
-  // oneTimeTotal: sum of one_time expenses for this period_month
+  // oneTimeTotal: sum of one_time expenses for this period_month,
+  // applying billing attribution for card purchases (closingDay shifts month).
   const monthPrefix = month.slice(0, 7);
   const allOneTime = await db
     .select({
       amount: expense.amount,
       expenseDate: expense.expenseDate,
       responsibleId: expense.responsibleId,
+      closingDay: card.closingDay,
     })
     .from(expense)
+    .leftJoin(card, eq(expense.cardId, card.id))
     .where(
       and(
         eq(expense.householdId, householdId),
@@ -95,9 +100,13 @@ export async function getDashboardSummary(
       )
     );
 
-  const thisMonthOneTime = allOneTime.filter(
-    (row) => row.expenseDate != null && row.expenseDate.startsWith(monthPrefix)
-  );
+  const thisMonthOneTime = allOneTime.filter((row) => {
+    if (!row.expenseDate) return false;
+    if (row.closingDay != null) {
+      return effectiveBillingMonth(row.expenseDate, row.closingDay) === monthPrefix;
+    }
+    return row.expenseDate.startsWith(monthPrefix);
+  });
   const oneTimeTotal = thisMonthOneTime.reduce(
     (acc, row) => acc + Number(row.amount ?? 0),
     0
@@ -188,7 +197,15 @@ export async function getRecentPurchases(
   month: string,
   limit = 5
 ): Promise<RecentPurchase[]> {
-  const nextMonthDate = monthToDate(getNextMonth(month.slice(0, 7)));
+  // Fetch a 3-month window to cover billing period attribution
+  // (a purchase from prev-prev month can belong to this month's bill)
+  const y = parseInt(month.slice(0, 4));
+  const m = parseInt(month.slice(5, 7));
+  const prevPrevM = m <= 2 ? m + 10 : m - 2;
+  const prevPrevY = m <= 2 ? y - 1 : y;
+  const windowStart = `${prevPrevY}-${String(prevPrevM).padStart(2, "0")}-01`;
+  const windowEnd = monthToDate(getNextMonth(month.slice(0, 7)));
+  const monthPrefix = month.slice(0, 7);
 
   const rows = await db
     .select({
@@ -197,21 +214,30 @@ export async function getRecentPurchases(
       amount: expense.amount,
       expenseDate: expense.expenseDate,
       responsibleId: expense.responsibleId,
+      closingDay: card.closingDay,
     })
     .from(expense)
+    .leftJoin(card, eq(expense.cardId, card.id))
     .where(
       and(
         eq(expense.householdId, householdId),
         eq(expense.type, "one_time"),
         isNull(expense.deletedAt),
-        gte(expense.expenseDate, month),
-        lt(expense.expenseDate, nextMonthDate)
+        gte(expense.expenseDate, windowStart),
+        lt(expense.expenseDate, windowEnd)
       )
     )
-    .orderBy(desc(expense.createdAt))
-    .limit(limit);
+    .orderBy(desc(expense.createdAt));
 
-  return rows.map((row) => ({
+  const filtered = rows.filter((r) => {
+    if (!r.expenseDate) return false;
+    if (r.closingDay != null) {
+      return effectiveBillingMonth(r.expenseDate, r.closingDay) === monthPrefix;
+    }
+    return r.expenseDate.startsWith(monthPrefix);
+  });
+
+  return filtered.slice(0, limit).map((row) => ({
     id: row.id,
     description: row.description,
     amount: Number(row.amount ?? 0),

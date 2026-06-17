@@ -4,6 +4,7 @@ import {
   text,
   boolean,
   numeric,
+  smallint,
   timestamp,
 } from "drizzle-orm/pg-core";
 import { household } from "./household";
@@ -17,6 +18,9 @@ export const card = pgTable("card", {
   lastFour: text("last_four"), // optional last 4 digits for display
   color: text("color").notNull().default("#6366f1"),
   creditLimit: numeric("credit_limit", { precision: 12, scale: 2 }), // nullable — no limit if null
+  // Billing cycle fields (nullable — debit cards / cards without cycle tracking leave these null)
+  closingDay: smallint("closing_day"),   // day of month the billing period closes (1-28)
+  paymentDueDay: smallint("payment_due_day"), // day of month the payment is due
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()

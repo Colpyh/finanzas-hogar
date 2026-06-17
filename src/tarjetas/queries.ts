@@ -1,6 +1,19 @@
 import { db } from "@/shared/lib/db";
 import { card, expense } from "@/shared/lib/db/schema";
-import { eq, and, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, gte, lte } from "drizzle-orm";
+import { billingPeriodForMonth } from "@/shared/lib/billing";
+
+export type CardPaymentDue = {
+  cardId: string;
+  cardName: string;
+  cardColor: string;
+  cardLastFour: string | null;
+  paymentDueDay: number;
+  closingDay: number;
+  billingStart: string; // YYYY-MM-DD
+  billingEnd: string;   // YYYY-MM-DD
+  amount: number;
+};
 
 export async function getHouseholdCards(householdId: string) {
   return db
@@ -67,6 +80,86 @@ export async function getCardUsageSummary(
   }
 
   return usage;
+}
+
+/**
+ * Returns the card payment amounts due in `month` for cards that have billing
+ * cycle dates configured (closingDay + paymentDueDay).
+ *
+ * Each result represents: "pay [amount] for [card] by day [paymentDueDay] of this month,
+ * covering expenses from [billingStart] to [billingEnd]."
+ */
+export async function getCardPaymentsDue(
+  householdId: string,
+  month: string
+): Promise<CardPaymentDue[]> {
+  const billingCards = await db
+    .select()
+    .from(card)
+    .where(
+      and(
+        eq(card.householdId, householdId),
+        eq(card.isActive, true),
+        isNotNull(card.closingDay),
+        isNotNull(card.paymentDueDay)
+      )
+    );
+
+  if (billingCards.length === 0) return [];
+
+  const cardIds = billingCards.map((c) => c.id);
+
+  // Compute the overall date window to fetch expenses (covers all billing periods)
+  const periods = billingCards.map((c) =>
+    billingPeriodForMonth(month, c.closingDay!)
+  );
+  const windowStart = periods.map((p) => p.start).sort()[0]!;
+  const windowEnd = periods.map((p) => p.end).sort().at(-1)!;
+
+  const rows = await db
+    .select({ amount: expense.amount, expenseDate: expense.expenseDate, cardId: expense.cardId })
+    .from(expense)
+    .where(
+      and(
+        eq(expense.householdId, householdId),
+        isNull(expense.deletedAt),
+        // inArray would be ideal but not imported here — use filter in JS after broad fetch
+        gte(expense.expenseDate, windowStart),
+        lte(expense.expenseDate, windowEnd)
+      )
+    );
+
+  // Only keep rows for billing cards
+  const cardIdSet = new Set(cardIds);
+  const cardRows = rows.filter((r) => r.cardId && cardIdSet.has(r.cardId));
+
+  return billingCards
+    .map((c) => {
+      const { start, end } = billingPeriodForMonth(month, c.closingDay!);
+      const amount = cardRows
+        .filter(
+          (r) =>
+            r.cardId === c.id &&
+            r.expenseDate &&
+            r.expenseDate >= start &&
+            r.expenseDate <= end
+        )
+        .reduce((acc, r) => acc + Number(r.amount ?? 0), 0);
+
+      return {
+        cardId: c.id,
+        cardName: c.name,
+        cardColor: c.color,
+        cardLastFour: c.lastFour ?? null,
+        paymentDueDay: c.paymentDueDay!,
+        closingDay: c.closingDay!,
+        billingStart: start,
+        billingEnd: end,
+        amount,
+      };
+    })
+    .filter((r) => r.amount > 0)
+    .sort((a, b) => a.paymentDueDay - b.paymentDueDay);
 }
 
 /**
