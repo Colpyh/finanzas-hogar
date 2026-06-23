@@ -154,84 +154,81 @@ export function InstallmentCard({ expense }: Props) {
     );
   }
 
+  const paidAmount = expense.installmentAmount ? parseFloat(expense.installmentAmount) * paid : 0;
+  const leftAmount = expense.installmentAmount ? parseFloat(expense.installmentAmount) * (total - paid) : 0;
+
   return (
-    <div className="bg-card border border-border rounded-[20px] p-4 space-y-3" style={{ boxShadow: "var(--shadow-md)" }}>
-      <div className="flex items-start justify-between gap-2">
+    <div className="bg-card border border-border rounded-[18px] p-4" style={{ boxShadow: "var(--shadow-sm)" }}>
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
         <Link href={`/gastos/${expense.id}`} className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="font-medium text-sm text-foreground truncate">{expense.description}</p>
+          <p className="font-bold text-[15px] text-foreground truncate">{expense.description}</p>
+          <div className="flex items-center gap-[7px] mt-[4px] flex-wrap">
+            {expense.cardName && (
+              <span
+                className="text-[10.5px] font-bold px-[7px] py-[2px] rounded-[6px]"
+                style={{
+                  color: expense.cardColor ?? "#7c3aed",
+                  background: `${expense.cardColor ?? "#7c3aed"}22`,
+                }}
+              >
+                {expense.cardName}{expense.cardLastFour ? ` ···${expense.cardLastFour}` : ""}
+              </span>
+            )}
+            <span className="text-[11.5px] font-semibold text-muted-foreground">
+              {paid}/{total} cuotas
+            </span>
             {isShared && (
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary shrink-0">
+              <span className="text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-primary/10 text-primary">
                 Compartido
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-            {expense.categoryName && (
-              <span className="text-xs text-muted-foreground">{expense.categoryName}</span>
-            )}
-            {expense.responsibleName && (
-              <>
-                {expense.categoryName && <span className="text-xs text-muted-foreground/50">·</span>}
-                <span className="text-xs font-medium text-primary/80">Paga: {expense.responsibleName}</span>
-              </>
-            )}
-            {expense.cardName && (
-              <>
-                <span className="text-xs text-muted-foreground/50">·</span>
-                <span
-                  className="text-xs font-medium"
-                  style={{ color: expense.cardColor ?? undefined }}
-                >
-                  {expense.cardName}{expense.cardLastFour ? ` ···· ${expense.cardLastFour}` : ""}
-                </span>
-              </>
-            )}
-          </div>
         </Link>
-        <div className="flex items-center gap-2 shrink-0 mt-0.5">
-          <span className="text-xs text-muted-foreground">
-            {paid}/{total} cuotas
-          </span>
-          <EditInstallmentDialog
-            expense={{
-              id: expense.id,
-              description: expense.description,
-              installmentsPaid: paid,
-              installmentsTotal: total,
-              isShared: expense.isShared,
-            }}
-          />
+        <div className="text-right shrink-0">
+          {expense.installmentAmount && (
+            <>
+              <p className="text-[15px] font-extrabold text-foreground num">
+                {formatCurrency(parseFloat(expense.installmentAmount))}
+              </p>
+              <p className="text-[10.5px] text-muted-foreground mt-[1px]">por mes</p>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${progress}%`, background: "linear-gradient(90deg, #7c3aed, #6d28d9)" }}
-          />
-        </div>
-        <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0 num">
-          {progress}%
-        </span>
+      {/* Progress bar */}
+      <div
+        className="h-[8px] rounded-[5px] overflow-hidden mt-[13px]"
+        style={{ background: "var(--card-2, #f4f2fb)" }}
+      >
+        <div
+          className="h-full rounded-[5px] transition-all duration-500"
+          style={{ width: `${progress}%`, background: "linear-gradient(90deg,#8b46f0,#6d28d9)" }}
+        />
       </div>
 
-      <div className="flex items-center justify-between">
-        {expense.installmentAmount && (
-          <span className="text-[15px] font-extrabold text-foreground num">
-            {formatCurrency(parseFloat(expense.installmentAmount))}/cuota
-            {isShared && expense.myShareAmount && (
-              <span className="text-xs font-normal text-muted-foreground ml-1.5">
-                (tu parte {formatCurrency(parseFloat(expense.myShareAmount))})
-              </span>
-            )}
-          </span>
-        )}
+      {/* Paid / Remaining */}
+      <div className="flex justify-between mt-[7px]">
+        <span className="text-[11px] text-muted-foreground num">Pagado {formatCurrency(paidAmount)}</span>
+        <span className="text-[11px] text-muted-foreground num">Falta {formatCurrency(leftAmount)}</span>
+      </div>
+
+      {/* Action + edit row */}
+      <div className="flex items-center justify-between gap-2 mt-3">
+        <EditInstallmentDialog
+          expense={{
+            id: expense.id,
+            description: expense.description,
+            installmentsPaid: paid,
+            installmentsTotal: total,
+            isShared: expense.isShared,
+          }}
+        />
         {actionButton}
       </div>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
 
       <ConfirmDialog
         open={confirmOpen}

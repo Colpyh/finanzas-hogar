@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
 import { PurchaseCard } from "./purchase-card";
 import { InstallmentCard } from "./installment-card";
 import { EmptyState } from "@/shared/components/empty-state";
@@ -27,33 +26,38 @@ type Expense = {
   myShareAmount?: string;
 };
 
-type Props = { expenses: Expense[] };
+type Props = { expenses: Expense[]; tab: "compras" | "cuotas" };
 
-export function PurchaseList({ expenses }: Props) {
+export function PurchaseList({ expenses, tab }: Props) {
   if (expenses.length === 0) {
     return (
       <EmptyState
-        message="No hay compras registradas."
+        message={tab === "cuotas" ? "No hay cuotas activas." : "No hay compras registradas."}
         description="Usá el botón + para agregar una."
       />
     );
   }
 
+  if (tab === "cuotas") {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+        {expenses.map((exp) => (
+          <InstallmentCard key={exp.id} expense={exp} />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      {expenses.map((exp, i) => (
-        <motion.div
+    <div
+      className="bg-card border border-border rounded-[20px] overflow-hidden"
+      style={{ boxShadow: "var(--shadow-sm)" }}
+    >
+      {expenses.map((exp) => (
+        <PurchaseCard
           key={exp.id}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.05, duration: 0.3, ease: "easeOut" }}
-        >
-          {exp.type === "installment" ? (
-            <InstallmentCard expense={exp} />
-          ) : (
-            <PurchaseCard expense={{ ...exp, amount: exp.amount ?? "0" }} />
-          )}
-        </motion.div>
+          expense={{ ...exp, amount: exp.amount ?? "0" }}
+        />
       ))}
     </div>
   );

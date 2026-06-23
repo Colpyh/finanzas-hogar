@@ -9,7 +9,7 @@ import { PurchaseList } from "@/compras/components/purchase-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { buttonVariants } from "@/components/ui/button";
-import { Plus, CreditCard, Download, Search, X } from "lucide-react";
+import { Plus, Download, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
@@ -183,17 +183,13 @@ export default async function ComprasPage({ searchParams }: Props) {
     // Sin sesión — datos de ejemplo
   }
 
-  const filtered = typeFilter === "all"
-    ? expenses
-    : expenses.filter((e) => e.type === typeFilter);
+  // Active tab: default to "compras" (one_time) unless installment is explicitly selected
+  const activeTab: "compras" | "cuotas" = typeFilter === "installment" ? "cuotas" : "compras";
+  const filtered = activeTab === "cuotas"
+    ? expenses.filter((e) => e.type === "installment")
+    : expenses.filter((e) => e.type !== "installment");
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-
-  const FILTERS = [
-    { label: "Todos", value: "all" },
-    { label: "Compras", value: "one_time" },
-    { label: "Cuotas", value: "installment" },
-  ];
 
   // Export URL: all current filters, no page/limit
   const exportParams = buildSearchParams(
@@ -201,156 +197,141 @@ export default async function ComprasPage({ searchParams }: Props) {
     { q: q || undefined }
   );
 
+  const cardPills = [
+    { id: null as string | null, name: "Todas" as string, color: null as string | null },
+    ...cards.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+  ];
+
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 max-w-5xl mx-auto pb-8">
-      <div className="flex items-center justify-between pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">Compras</h1>
+    <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h1
+          className="text-[23px] font-semibold text-foreground"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          Tarjeta
+        </h1>
         <div className="flex items-center gap-2">
           <MonthSelector month={month} />
-          <Link href="/compras/nuevo" className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
+          {isAuthenticated && (
+            <a
+              href={`/api/compras/export${exportParams ? `?${exportParams}` : ""}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+            >
+              <Download size={13} />
+              CSV
+            </a>
+          )}
+          <Link
+            href="/compras/nuevo"
+            className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
+            style={{ background: "linear-gradient(135deg,#8b46f0,#6d28d9)", border: "none" }}
+          >
             <Plus size={15} />
             Nueva
           </Link>
         </div>
       </div>
 
-      {/* Search + Export bar */}
-      <div className="flex gap-2 items-center">
-        <form method="GET" className="flex-1 flex gap-2 items-center">
-          {/* Preserve existing filters */}
-          {typeFilter !== "all" && <input type="hidden" name="type" value={typeFilter} />}
-          <input type="hidden" name="month" value={month} />
-          {cardFilter && <input type="hidden" name="card" value={cardFilter} />}
-          {params.from && <input type="hidden" name="from" value={params.from} />}
-          {params.to && <input type="hidden" name="to" value={params.to} />}
-
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <input
-              name="q"
-              defaultValue={q}
-              placeholder="Buscar gasto..."
-              className="w-full h-8 rounded-xl border border-border bg-card pl-8 pr-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 placeholder:text-muted-foreground"
-            />
-          </div>
-          <button
-            type="submit"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}
-          >
-            Buscar
-          </button>
-          {q && (
+      {/* Tabs */}
+      <div
+        className="flex border border-border rounded-[13px] p-[3px] mb-3"
+        style={{ background: "var(--card-2, #f4f2fb)" }}
+      >
+        {(["compras", "cuotas"] as const).map((tab) => {
+          const isActive = activeTab === tab;
+          const typeVal = tab === "cuotas" ? "installment" : "one_time";
+          const href = `/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { type: typeVal, page: undefined })}`;
+          return (
             <Link
-              href={`/compras?${buildSearchParams(baseParams, { q: undefined })}`}
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "shrink-0 gap-1")}
+              key={tab}
+              href={href}
+              className="flex-1 text-center text-[13.5px] font-bold py-[9px] rounded-[10px] transition-colors"
+              style={isActive
+                ? { background: "linear-gradient(135deg,#8b46f0,#6d28d9)", color: "#fff" }
+                : { background: "transparent", color: "var(--muted-foreground)" }}
             >
-              <X size={13} />
-              Limpiar
+              {tab === "compras" ? "Compras" : "Cuotas"}
             </Link>
-          )}
-        </form>
-
-        {isAuthenticated && (
-          <a
-            href={`/api/compras/export${exportParams ? `?${exportParams}` : ""}`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 gap-1")}
-          >
-            <Download size={13} />
-            Exportar CSV
-          </a>
-        )}
+          );
+        })}
       </div>
 
-      <div className="flex gap-3 items-start">
-        <nav className="flex flex-col gap-1 shrink-0 w-[72px]">
-          {FILTERS.map((opt) => {
-            const isActive = typeFilter === opt.value;
-            const href = `/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { type: opt.value !== "all" ? opt.value : undefined, page: undefined })}`;
+      {/* Card filter pills */}
+      {cardPills.length > 1 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
+          {cardPills.map((c) => {
+            const isActive = cardFilter === c.id;
+            const href = `/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { card: isActive ? undefined : (c.id ?? undefined), page: undefined })}`;
             return (
               <Link
-                key={opt.value}
+                key={c.id ?? "all"}
                 href={href}
-                className={cn(
-                  "relative flex items-center justify-center py-2.5 px-2 text-xs font-medium rounded-xl transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
+                className="shrink-0 text-[12px] font-bold px-[13px] py-[7px] rounded-[20px] border transition-colors"
+                style={isActive
+                  ? { background: "linear-gradient(135deg,#8b46f0,#6d28d9)", color: "#fff", borderColor: "transparent" }
+                  : { background: "var(--card)", color: "var(--muted-foreground)", borderColor: "var(--border)" }}
               >
-                {isActive && (
-                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary" />
-                )}
-                {opt.label}
+                {c.name}
               </Link>
             );
           })}
-
-          {/* Card filters */}
-          {cards.length > 0 && (
-            <>
-              <div className="my-1 border-t border-border" />
-              {cards.map((c) => {
-                const isActive = cardFilter === c.id;
-                const href = `/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { card: isActive ? undefined : c.id, page: undefined })}`;
-                return (
-                  <Link
-                    key={c.id}
-                    href={href}
-                    title={c.name}
-                    className={cn(
-                      "relative flex items-center justify-center py-2.5 px-2 rounded-xl transition-colors",
-                      isActive ? "bg-primary/10" : "hover:bg-muted"
-                    )}
-                  >
-                    {isActive && (
-                      <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary" />
-                    )}
-                    <CreditCard
-                      size={15}
-                      style={{ color: isActive ? c.color : undefined }}
-                      className={isActive ? "" : "text-muted-foreground"}
-                    />
-                  </Link>
-                );
-              })}
-            </>
-          )}
-        </nav>
-
-        <div className="flex-1 min-w-0 space-y-4">
-          <PurchaseList expenses={filtered} />
-
-          {/* Pagination — only show when authenticated and data is paginated */}
-          {isAuthenticated && totalPages > 1 && (
-            <div className="flex items-center justify-between gap-2 pt-2">
-              <Link
-                href={`/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { page: page > 1 ? String(page - 1) : undefined })}`}
-                aria-disabled={page <= 1}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  page <= 1 && "pointer-events-none opacity-50"
-                )}
-              >
-                Anterior
-              </Link>
-
-              <span className="text-xs text-muted-foreground">
-                Página {page} de {totalPages}
-              </span>
-
-              <Link
-                href={`/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { page: page < totalPages ? String(page + 1) : String(page) })}`}
-                aria-disabled={page >= totalPages}
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  page >= totalPages && "pointer-events-none opacity-50"
-                )}
-              >
-                Siguiente
-              </Link>
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Search bar */}
+      <form method="GET" className="flex gap-2 items-center mb-4">
+        <input type="hidden" name="type" value={activeTab === "cuotas" ? "installment" : "one_time"} />
+        <input type="hidden" name="month" value={month} />
+        {cardFilter && <input type="hidden" name="card" value={cardFilter} />}
+
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Buscar..."
+            className="w-full h-9 rounded-xl border border-border bg-card pl-8 pr-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 placeholder:text-muted-foreground"
+          />
+        </div>
+        <button type="submit" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
+          Buscar
+        </button>
+        {q && (
+          <Link
+            href={`/compras?${buildSearchParams(baseParams, { q: undefined })}`}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "shrink-0 gap-1")}
+          >
+            <X size={13} />
+            Limpiar
+          </Link>
+        )}
+      </form>
+
+      {/* Content */}
+      <div className="space-y-4">
+        <PurchaseList expenses={filtered} tab={activeTab} />
+
+        {isAuthenticated && totalPages > 1 && (
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <Link
+              href={`/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { page: page > 1 ? String(page - 1) : undefined })}`}
+              aria-disabled={page <= 1}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), page <= 1 && "pointer-events-none opacity-50")}
+            >
+              Anterior
+            </Link>
+            <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
+            <Link
+              href={`/compras?${buildSearchParams({ ...baseParams, q: q || undefined }, { page: page < totalPages ? String(page + 1) : String(page) })}`}
+              aria-disabled={page >= totalPages}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), page >= totalPages && "pointer-events-none opacity-50")}
+            >
+              Siguiente
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
