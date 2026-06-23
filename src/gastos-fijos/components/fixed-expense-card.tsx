@@ -209,10 +209,7 @@ export function FixedExpenseCard({
       );
     } else {
       actionButtons = (
-        <>
-          <ActionBtn onClick={() => setDialogOpen(true)} title="Reservar en chanchito">🕐</ActionBtn>
-          <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Marcar como pagado">✓</ActionBtn>
-        </>
+        <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Marcar como pagado">✓</ActionBtn>
       );
     }
   } else {
@@ -245,10 +242,7 @@ export function FixedExpenseCard({
       );
     } else {
       actionButtons = (
-        <>
-          <ActionBtn onClick={() => setDialogOpen(true)} title="Reservar en chanchito">🕐</ActionBtn>
-          <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Registrar pago">✓</ActionBtn>
-        </>
+        <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Registrar pago">✓</ActionBtn>
       );
     }
   }
