@@ -2,6 +2,7 @@
 
 import { HouseholdContext, type HouseholdContextValue } from "@/shared/hooks/use-household";
 import { AppNav } from "@/shared/components/app-nav";
+import { BottomNav } from "@/shared/components/bottom-nav";
 import { UserThemeSync } from "@/shared/components/user-theme-sync";
 
 type Props = {
@@ -18,8 +19,9 @@ export function AppProviders({ household, userId, userEmail, pendingCount = 0, c
       <UserThemeSync userId={userId} />
       <div className="flex min-h-screen">
         <AppNav pendingCount={pendingCount} userEmail={userEmail} />
-        <main className="flex-1 pt-14 md:pt-0 md:pl-[252px]">{children}</main>
+        <main className="flex-1 md:pl-[252px] pb-16 md:pb-0">{children}</main>
       </div>
+      <BottomNav pendingCount={pendingCount} />
     </HouseholdContext.Provider>
   );
 }

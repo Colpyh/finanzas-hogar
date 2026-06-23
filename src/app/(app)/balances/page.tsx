@@ -39,7 +39,7 @@ export default async function BalancesPage({ searchParams }: Props) {
   const isCurrentMonth = month === currentPeriodMonth();
 
   return (
-    <div className="p-4 space-y-5 max-w-lg mx-auto pb-8">
+    <div className="p-4 md:p-6 lg:p-8 space-y-5 max-w-5xl mx-auto pb-8">
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
           <Link href="/gastos-fijos" className="text-muted-foreground hover:text-foreground transition-colors">

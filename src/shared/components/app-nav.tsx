@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { useHousehold } from "@/shared/hooks/use-household";
-import { Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { TrendingUp } from "lucide-react";
 
 const PRIMARY_NAV = [
   { href: "/dashboard",     label: "Casa",       icon: "🏠" },
@@ -97,10 +95,10 @@ function SidebarContent({
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 h-14 border-b border-border shrink-0">
         <div
-          className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-[17px] shrink-0"
+          className="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0"
           style={{ background: "linear-gradient(135deg,#8b46f0,#6d28d9)" }}
         >
-          💜
+          <TrendingUp size={18} color="#fff" strokeWidth={2.5} />
         </div>
         <span className="font-extrabold text-[15px] tracking-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
           Finanzas Hogar
@@ -180,41 +178,14 @@ function SidebarContent({
 
 export function AppNav({ pendingCount = 0, userEmail }: Props) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-
-  const currentLabel =
-    [...PRIMARY_NAV, ...SECONDARY_NAV].find((i) => pathname.startsWith(i.href))?.label ?? "Inicio";
 
   return (
-    <>
-      {/* Desktop sidebar — 252px */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-[252px] bg-card border-r border-border flex-col">
-        <SidebarContent
-          pathname={pathname}
-          pendingCount={pendingCount}
-          userEmail={userEmail}
-        />
-      </aside>
-
-      {/* Mobile top header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-card border-b border-border flex items-center px-3 gap-2">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-            <Menu size={20} />
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[252px] p-0" showCloseButton={false}>
-            <SidebarContent
-              pathname={pathname}
-              pendingCount={pendingCount}
-              userEmail={userEmail}
-              onNavigate={() => setOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
-        <span className="font-bold text-sm text-foreground" style={{ letterSpacing: "-0.01em" }}>
-          {currentLabel}
-        </span>
-      </header>
-    </>
+    <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-[252px] bg-card border-r border-border flex-col">
+      <SidebarContent
+        pathname={pathname}
+        pendingCount={pendingCount}
+        userEmail={userEmail}
+      />
+    </aside>
   );
 }

@@ -202,7 +202,7 @@ export default async function ComprasPage({ searchParams }: Props) {
   );
 
   return (
-    <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 max-w-5xl mx-auto pb-8">
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-2xl font-bold tracking-tight">Compras</h1>
         <div className="flex items-center gap-2">

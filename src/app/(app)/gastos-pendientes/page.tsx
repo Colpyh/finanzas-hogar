@@ -56,7 +56,7 @@ export default async function GastosPendientesPage({
   const totalPages = Math.ceil(count / PAGE_SIZE);
 
   return (
-    <div className="px-4 pb-8 pt-6 max-w-2xl mx-auto">
+    <div className="px-4 md:px-6 lg:px-8 pb-8 pt-6 max-w-5xl mx-auto">
       <h1 className="text-xl font-semibold mb-6">Gastos Pendientes</h1>
       <PendingExpenseList items={items} categories={categories} />
       {totalPages > 1 && (
