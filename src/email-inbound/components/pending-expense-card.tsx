@@ -3,12 +3,12 @@
 import { formatCurrency } from "@/shared/components/currency-display";
 import { CreditCard, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PendingExpense } from "@/shared/lib/db/schema";
+import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Props = {
-  item: PendingExpense;
-  onConfirm: (item: PendingExpense) => void;
-  onDiscard: (item: PendingExpense) => void;
+  item: PendingExpenseRow;
+  onConfirm: (item: PendingExpenseRow) => void;
+  onDiscard: (item: PendingExpenseRow) => void;
 };
 
 function formatDate(dateStr: string): string {

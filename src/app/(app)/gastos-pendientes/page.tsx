@@ -8,12 +8,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { db } from "@/shared/lib/db";
 import { category } from "@/shared/lib/db/schema";
 import { or, eq, isNull } from "drizzle-orm";
-import type { PendingExpense } from "@/shared/lib/db/schema";
+import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 export const metadata: Metadata = { title: "Gastos Pendientes" };
 
 const PAGE_SIZE = 15;
-const MOCK_ITEMS: PendingExpense[] = [];
+const MOCK_ITEMS: PendingExpenseRow[] = [];
 const MOCK_CATEGORIES: { id: string; name: string }[] = [];
 
 export default async function GastosPendientesPage({
@@ -24,7 +24,7 @@ export default async function GastosPendientesPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
 
-  let items: PendingExpense[] = MOCK_ITEMS;
+  let items: PendingExpenseRow[] = MOCK_ITEMS;
   let categories: { id: string; name: string }[] = MOCK_CATEGORIES;
   let count = 0;
 

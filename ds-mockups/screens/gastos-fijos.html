@@ -1,0 +1,194 @@
+<!-- @dsCard group="Pantallas" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390">
+<title>Gastos Fijos — Finanzas Hogar</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6fd; --card: #ffffff; --fg: #1a1626; --primary: #7c3aed;
+    --primary-light: #ede9f8; --muted: #f0eef9; --muted-fg: #6b6482;
+    --border: #e2dff2; --destructive: #dc2626; --success: #16a34a; --amber: #d97706; --radius: 14px;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; width: 390px; min-height: 844px; }
+  .screen { padding: 16px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 14px; }
+  .header { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .btn-sm { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; border: none; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-outline { background: var(--card); color: var(--fg); border: 1px solid var(--border); }
+  .month-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 500; color: var(--muted-fg); display: flex; align-items: center; gap: 4px; }
+
+  /* Alert banner */
+  .alert-banner { display: flex; align-items: center; gap: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 14px; color: #92400e; font-size: 13px; }
+  .alert-icon { font-size: 16px; shrink: 0; }
+  .alert-text { flex: 1; font-weight: 500; }
+  .alert-link { font-size: 11px; color: var(--amber); white-space: nowrap; }
+
+  /* Expense card */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .expense-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); position: relative; }
+  .expense-item:last-child { border-bottom: none; }
+  .expense-item.paid { opacity: 0.65; }
+  .status-stripe { position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 2px 2px 0; }
+  .status-stripe.paid { background: var(--success); }
+  .status-stripe.reserved { background: var(--amber); }
+  .status-stripe.none { background: var(--border); }
+  .expense-body { flex: 1; min-width: 0; padding-left: 4px; }
+  .expense-top { display: flex; align-items: center; justify-content: space-between; }
+  .expense-desc { font-size: 14px; font-weight: 600; }
+  .expense-amount { font-size: 14px; font-weight: 700; }
+  .expense-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; }
+  .tag.paid { background: #dcfce7; color: #15803d; }
+  .tag.reserved { background: #fef3c7; color: #b45309; }
+  .tag.pending { background: var(--muted); color: var(--muted-fg); }
+  .tag.variable { background: #ede9f8; color: #6d28d9; }
+  .expense-day { font-size: 11px; color: var(--muted-fg); }
+  .expense-actions { display: flex; align-items: center; gap: 6px; }
+  .action-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted-fg); display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; }
+  .action-btn.primary { background: var(--primary); border-color: var(--primary); color: white; }
+  .action-btn.success { background: #dcfce7; border-color: #86efac; color: #15803d; }
+
+  /* Section label */
+  .section-label { font-size: 11px; font-weight: 600; color: var(--muted-fg); text-transform: uppercase; letter-spacing: 0.6px; padding: 0 2px; }
+
+  /* Bottom Nav */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 390px; height: 64px; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; align-items: stretch; z-index: 50; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--muted-fg); font-size: 9px; font-weight: 400; position: relative; }
+  .nav-item.active { color: var(--primary); font-weight: 600; }
+  .nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 2px; background: var(--primary); border-radius: 1px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <!-- Header -->
+  <div class="header">
+    <h1>Gastos Fijos</h1>
+    <div class="header-actions">
+      <div class="month-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        jun 2026
+      </div>
+      <button class="btn-sm btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo
+      </button>
+    </div>
+  </div>
+
+  <!-- Balance alert -->
+  <div class="alert-banner">
+    <span class="alert-icon">⚖️</span>
+    <span class="alert-text">Hay deudas pendientes este mes</span>
+    <span class="alert-link">Ver balances →</span>
+  </div>
+
+  <!-- Pagados -->
+  <div class="section-label">Pagados</div>
+  <div class="card">
+    <div class="expense-item paid">
+      <div class="status-stripe paid"></div>
+      <div class="expense-body">
+        <div class="expense-top">
+          <span class="expense-desc">Arriendo</span>
+          <span class="expense-amount">$650.000</span>
+        </div>
+        <div class="expense-meta">
+          <span class="tag paid">✓ Pagado</span>
+          <span class="expense-day">día 5 de cada mes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pendientes -->
+  <div class="section-label">Pendientes</div>
+  <div class="card">
+    <div class="expense-item">
+      <div class="status-stripe reserved"></div>
+      <div class="expense-body">
+        <div class="expense-top">
+          <span class="expense-desc">Internet + TV</span>
+          <span class="expense-amount">$25.990</span>
+        </div>
+        <div class="expense-meta">
+          <span class="tag reserved">🕐 Reservado</span>
+          <span class="expense-day">día 10</span>
+        </div>
+      </div>
+      <div class="expense-actions">
+        <button class="action-btn success">✓</button>
+      </div>
+    </div>
+
+    <div class="expense-item">
+      <div class="status-stripe none"></div>
+      <div class="expense-body">
+        <div class="expense-top">
+          <span class="expense-desc">Gastos comunes</span>
+          <span class="expense-amount" style="color:var(--muted-fg);">$85.000</span>
+        </div>
+        <div class="expense-meta">
+          <span class="tag pending">Sin pagar</span>
+          <span class="expense-day">día 15</span>
+        </div>
+      </div>
+      <div class="expense-actions">
+        <button class="action-btn">🕐</button>
+        <button class="action-btn primary">✓</button>
+      </div>
+    </div>
+
+    <div class="expense-item">
+      <div class="status-stripe none"></div>
+      <div class="expense-body">
+        <div class="expense-top">
+          <span class="expense-desc">Seguro auto</span>
+          <span class="expense-amount" style="color:var(--muted-fg);">$48.000</span>
+        </div>
+        <div class="expense-meta">
+          <span class="tag pending">Sin pagar</span>
+          <span class="expense-day">día 20</span>
+        </div>
+      </div>
+      <div class="expense-actions">
+        <button class="action-btn">🕐</button>
+        <button class="action-btn primary">✓</button>
+      </div>
+    </div>
+
+    <div class="expense-item">
+      <div class="status-stripe none"></div>
+      <div class="expense-body">
+        <div class="expense-top">
+          <span class="expense-desc">Netflix</span>
+          <span class="expense-amount" style="color:var(--muted-fg);">—</span>
+        </div>
+        <div class="expense-meta">
+          <span class="tag variable">Varía cada mes</span>
+          <span class="expense-day">día 25</span>
+        </div>
+      </div>
+      <div class="expense-actions">
+        <button class="action-btn">🕐</button>
+        <button class="action-btn primary">✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="#" class="nav-item"><span style="font-size:20px;">⌂</span><span>Inicio</span></a>
+  <a href="#" class="nav-item active"><span style="font-size:20px;">📋</span><span>Fijos</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">🛒</span><span>Compras</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">📊</span><span>Resumen</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">📥</span><span>Pendientes</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">⚙</span><span>Ajustes</span></a>
+</nav>
+</body>
+</html>

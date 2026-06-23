@@ -6,61 +6,68 @@ type Props = {
   categories: CategoryBudgetStatus[];
 };
 
-function barColorClass(percentage: number): string {
-  if (percentage >= 100) return "bg-red-500";
-  if (percentage >= 80) return "bg-amber-400";
-  return "bg-emerald-500";
+function statusClass(pct: number) {
+  if (pct >= 100) return { bar: "bg-red-500", pct: "text-red-500" };
+  if (pct >= 80) return { bar: "bg-amber-400", pct: "text-amber-500" };
+  return { bar: "bg-emerald-500", pct: "text-emerald-600" };
 }
 
 export function BudgetAlertsWidget({ categories }: Props) {
   if (categories.length === 0) return null;
 
-  const alertCount = categories.filter((c) => c.percentage >= 80).length;
-
   return (
-    <div className="rounded-2xl bg-card border border-border shadow-sm p-4 space-y-3">
+    <div
+      className="rounded-[20px] bg-card border border-border p-4 flex flex-col gap-[13px]"
+      style={{ boxShadow: "var(--shadow-md)" }}
+    >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <span className="flex items-center gap-[7px] text-[12px] font-bold uppercase tracking-[0.3px] text-muted-foreground">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary">
+            <path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8" rx="1"/><rect x="14" y="6" width="3" height="12" rx="1"/>
+          </svg>
           Presupuestos
-          {alertCount > 0 && (
-            <span className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
-              {alertCount}
-            </span>
-          )}
-        </h2>
-        <Link href="/ajustes" className="text-xs text-primary font-medium hover:underline">
-          Editar
+        </span>
+        <Link href="/ajustes" className="text-[11px] font-semibold text-primary">
+          Ver todos ›
         </Link>
       </div>
 
-      <ul className="space-y-3">
-        {categories.map((cat) => (
-          <li key={cat.id}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm text-foreground flex items-center gap-1.5">
-                {cat.icon && <span aria-hidden>{cat.icon}</span>}
-                {cat.name}
-              </span>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {formatCurrency(cat.spent)}{" "}
-                <span className="opacity-50">/</span>{" "}
-                {formatCurrency(cat.monthlyBudget)}
-              </span>
+      <div className="flex flex-col gap-[14px]">
+        {categories.map((cat) => {
+          const { bar, pct } = statusClass(cat.percentage);
+          const available = cat.monthlyBudget - cat.spent;
+          return (
+            <div key={cat.id} className="flex flex-col gap-[6px]">
+              <div className="flex justify-between items-baseline">
+                <span className="text-[13px] font-semibold flex items-center gap-[7px]">
+                  <span
+                    className="w-[26px] h-[26px] rounded-[8px] inline-flex items-center justify-center text-[13px] flex-shrink-0"
+                    style={{ background: "var(--muted)" }}
+                  >
+                    {cat.icon ?? "📁"}
+                  </span>
+                  {cat.name}
+                </span>
+                <div className="text-right flex-shrink-0">
+                  <span className="text-[14px] font-bold num">{formatCurrency(cat.spent)}</span>
+                  <span className={`text-[11px] font-bold ${pct}`}> · {Math.round(cat.percentage)}%</span>
+                </div>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${bar}`}
+                  style={{ width: `${Math.min(cat.percentage, 100)}%` }}
+                />
+              </div>
+              <div className="text-[10.5px] text-muted-foreground num">
+                {available > 0
+                  ? `${formatCurrency(available)} disponible de ${formatCurrency(cat.monthlyBudget)}`
+                  : `Excedido en ${formatCurrency(Math.abs(available))}`}
+              </div>
             </div>
-            <div className="h-1.5 w-full rounded-full bg-muted">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${barColorClass(cat.percentage)}`}
-                style={{ width: `${Math.min(cat.percentage, 100)}%` }}
-              />
-            </div>
-            {cat.percentage >= 100 && (
-              <p className="text-xs text-red-500 mt-0.5">
-                Excedido en {formatCurrency(cat.spent - cat.monthlyBudget)}
-              </p>
-            )}
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
     </div>
   );
 }

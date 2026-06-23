@@ -1,0 +1,342 @@
+<!-- @dsCard group="Pantallas" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390">
+<title>Dashboard — Finanzas Hogar</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6fd;
+    --card: #ffffff;
+    --fg: #1a1626;
+    --primary: #7c3aed;
+    --primary-light: #ede9f8;
+    --muted: #f0eef9;
+    --muted-fg: #6b6482;
+    --border: #e2dff2;
+    --destructive: #dc2626;
+    --success: #16a34a;
+    --amber: #d97706;
+    --radius: 14px;
+    --radius-lg: 18px;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; width: 390px; min-height: 844px; overflow-x: hidden; }
+  .screen { padding: 16px; padding-bottom: 80px; max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .header { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-actions { display: flex; align-items: center; gap: 4px; }
+  .icon-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--card); border: 1px solid var(--border); color: var(--muted-fg); cursor: pointer; }
+
+  /* Summary Card */
+  .summary-card { background: var(--primary); border-radius: var(--radius-lg); padding: 20px; color: white; position: relative; overflow: hidden; }
+  .summary-card::before { content: ''; position: absolute; top: -40px; right: -40px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,0.08); }
+  .summary-card::after { content: ''; position: absolute; bottom: -20px; left: 60px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.05); }
+  .summary-label { font-size: 11px; font-weight: 500; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+  .summary-total { font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+  .summary-sub { font-size: 12px; opacity: 0.7; margin-bottom: 16px; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .summary-item { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 8px; }
+  .summary-item-label { font-size: 10px; opacity: 0.7; margin-bottom: 3px; }
+  .summary-item-value { font-size: 14px; font-weight: 700; }
+  .summary-progress { margin-top: 14px; }
+  .summary-progress-bar { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
+  .summary-progress-fill { height: 100%; background: rgba(255,255,255,0.9); border-radius: 2px; width: 68.8%; }
+  .summary-progress-label { display: flex; justify-content: space-between; font-size: 10px; opacity: 0.7; margin-top: 4px; }
+
+  /* Widget Card */
+  .widget { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .widget-title { font-size: 13px; font-weight: 600; color: var(--fg); }
+
+  /* Card Payment Item */
+  .payment-item { display: flex; flex-direction: column; gap: 6px; }
+  .payment-row { display: flex; align-items: center; justify-content: space-between; }
+  .payment-card-info { display: flex; align-items: center; gap: 8px; }
+  .card-icon { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .payment-name { font-size: 13px; font-weight: 500; }
+  .payment-amount { font-size: 13px; font-weight: 700; }
+  .payment-meta { display: flex; justify-content: space-between; padding-left: 32px; font-size: 11px; color: var(--muted-fg); }
+  .payment-due { font-weight: 500; color: var(--fg); }
+
+  /* Budget Alert */
+  .budget-item { display: flex; flex-direction: column; gap: 5px; }
+  .budget-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .budget-name { font-weight: 500; display: flex; align-items: center; gap: 5px; }
+  .budget-pct { font-weight: 600; }
+  .budget-pct.warn { color: var(--amber); }
+  .budget-pct.danger { color: var(--destructive); }
+  .progress-track { height: 6px; background: var(--muted); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+  .progress-fill.ok { background: #16a34a; }
+  .progress-fill.warn { background: var(--amber); }
+  .progress-fill.danger { background: var(--destructive); }
+  .budget-amounts { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted-fg); }
+
+  /* Fixed Expense List */
+  .expense-list { display: flex; flex-direction: column; }
+  .expense-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .expense-item:last-child { border-bottom: none; }
+  .expense-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 14px; shrink: 0; }
+  .expense-info { flex: 1; min-width: 0; }
+  .expense-desc { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .expense-meta { font-size: 11px; color: var(--muted-fg); }
+  .expense-amount { text-align: right; }
+  .expense-price { font-size: 13px; font-weight: 600; }
+  .status-dot { display: flex; align-items: center; justify-content: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.paid { background: var(--success); }
+  .dot.reserved { background: var(--amber); }
+  .dot.none { background: var(--border); }
+
+  /* Recent Purchases */
+  .purchase-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .purchase-item:last-child { border-bottom: none; }
+  .purchase-left { display: flex; flex-direction: column; gap: 2px; }
+  .purchase-desc { font-size: 13px; font-weight: 500; }
+  .purchase-date { font-size: 11px; color: var(--muted-fg); }
+  .purchase-amount { font-size: 13px; font-weight: 600; }
+
+  /* Installment widget */
+  .installment-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .installment-item:last-child { border-bottom: none; }
+  .installment-info { flex: 1; }
+  .installment-desc { font-size: 13px; font-weight: 500; }
+  .installment-progress-text { font-size: 11px; color: var(--muted-fg); margin-top: 2px; }
+  .installment-amount { font-size: 13px; font-weight: 600; }
+  .installment-track { height: 3px; background: var(--muted); border-radius: 2px; overflow: hidden; margin-top: 5px; }
+  .installment-fill { height: 100%; background: var(--primary); border-radius: 2px; }
+
+  /* Balances */
+  .balance-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .balance-item:last-child { border-bottom: none; }
+  .balance-name { font-size: 13px; font-weight: 500; }
+  .balance-amount { font-size: 13px; font-weight: 700; }
+  .balance-amount.positive { color: var(--success); }
+  .balance-amount.negative { color: var(--destructive); }
+
+  /* Bottom Nav */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 390px; height: 64px; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; align-items: stretch; z-index: 50; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--muted-fg); font-size: 9px; font-weight: 400; position: relative; }
+  .nav-item.active { color: var(--primary); font-weight: 600; }
+  .nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 2px; background: var(--primary); border-radius: 1px; }
+  .nav-icon { font-size: 20px; line-height: 1; }
+
+  .chip { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; }
+  .chip.success { background: #dcfce7; color: #15803d; }
+  .chip.warn { background: #fef3c7; color: #b45309; }
+
+  /* FAB */
+  .fab { position: fixed; bottom: 76px; right: 16px; width: 48px; height: 48px; background: var(--primary); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 16px rgba(124,58,237,0.35); z-index: 40; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <!-- Header -->
+  <div class="header">
+    <h1>Hogar Demo</h1>
+    <div class="header-actions">
+      <button class="icon-btn" title="Compartir por WhatsApp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.553 4.105 1.521 5.833L.044 23.25a.75.75 0 0 0 .916.916l5.417-1.477A11.955 11.955 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.946 0-3.768-.534-5.32-1.456l-.38-.228-3.95 1.077 1.044-3.82-.247-.398A9.945 9.945 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+      </button>
+      <button class="icon-btn" title="Cambiar mes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="summary-card">
+    <div class="summary-label">Junio 2026</div>
+    <div class="summary-total">$1.238.480</div>
+    <div class="summary-sub">Ingreso total: $1.800.000</div>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="summary-item-label">Fijos</div>
+        <div class="summary-item-value">$808.990</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-item-label">Cuotas</div>
+        <div class="summary-item-value">$134.990</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-item-label">Variables</div>
+        <div class="summary-item-value">$294.500</div>
+      </div>
+    </div>
+    <div class="summary-progress">
+      <div class="summary-progress-bar"><div class="summary-progress-fill"></div></div>
+      <div class="summary-progress-label"><span>68.8% usado</span><span>Saldo: $561.520</span></div>
+    </div>
+  </div>
+
+  <!-- Card Payments Widget -->
+  <div class="widget">
+    <div class="widget-title">Pagos de tarjetas</div>
+    <div class="payment-item">
+      <div class="payment-row">
+        <div class="payment-card-info">
+          <div class="card-icon" style="background: #6366f120;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <span class="payment-name">Visa <span style="color:var(--muted-fg);font-weight:400">···· 1234</span></span>
+        </div>
+        <span class="payment-amount">$294.500</span>
+      </div>
+      <div class="payment-meta">
+        <span>26 may – 25 jun</span>
+        <span>Vence <span class="payment-due">10 jul</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget Alerts -->
+  <div class="widget">
+    <div class="widget-title">Presupuestos</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="budget-item">
+        <div class="budget-header">
+          <span class="budget-name">🛒 Supermercado</span>
+          <span class="budget-pct warn">63%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill warn" style="width:63%;"></div></div>
+        <div class="budget-amounts"><span>$187.500 gastado</span><span>$112.500 disponible</span></div>
+      </div>
+      <div class="budget-item">
+        <div class="budget-header">
+          <span class="budget-name">🚗 Transporte</span>
+          <span class="budget-pct danger">81%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill danger" style="width:81%;"></div></div>
+        <div class="budget-amounts"><span>$65.000 gastado</span><span>$15.000 disponible</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed Expenses Widget -->
+  <div class="widget">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span class="widget-title">Gastos Fijos</span>
+      <span style="font-size:11px;color:var(--muted-fg);">1 de 4 pagados</span>
+    </div>
+    <div class="expense-list">
+      <div class="expense-item">
+        <div class="expense-icon">🏠</div>
+        <div class="expense-info">
+          <div class="expense-desc">Arriendo</div>
+          <div class="expense-meta">día 5 <span class="chip success">Pagado</span></div>
+        </div>
+        <div class="expense-amount">
+          <div class="expense-price">$650.000</div>
+        </div>
+      </div>
+      <div class="expense-item">
+        <div class="expense-icon">📶</div>
+        <div class="expense-info">
+          <div class="expense-desc">Internet + TV</div>
+          <div class="expense-meta">día 10 <span class="chip warn">Reservado</span></div>
+        </div>
+        <div class="expense-amount">
+          <div class="expense-price">$25.990</div>
+        </div>
+      </div>
+      <div class="expense-item">
+        <div class="expense-icon">🏢</div>
+        <div class="expense-info">
+          <div class="expense-desc">Gastos comunes</div>
+          <div class="expense-meta">día 15</div>
+        </div>
+        <div class="expense-amount">
+          <div class="expense-price" style="color:var(--muted-fg);">$85.000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Installments Widget -->
+  <div class="widget">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span class="widget-title">Cuotas activas</span>
+      <span style="font-size:11px;color:var(--muted-fg);">$134.990/mes</span>
+    </div>
+    <div class="expense-list">
+      <div class="installment-item">
+        <div class="installment-info">
+          <div class="installment-desc">Notebook Samsung</div>
+          <div class="installment-track"><div class="installment-fill" style="width:25%;"></div></div>
+          <div class="installment-progress-text">Cuota 3 de 12</div>
+        </div>
+        <div class="installment-amount">$89.990</div>
+      </div>
+      <div class="installment-item">
+        <div class="installment-info">
+          <div class="installment-desc">Smart TV 55"</div>
+          <div class="installment-track"><div class="installment-fill" style="width:67%;"></div></div>
+          <div class="installment-progress-text">Cuota 8 de 12</div>
+        </div>
+        <div class="installment-amount">$45.000</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Purchases -->
+  <div class="widget">
+    <div class="widget-title">Últimas compras</div>
+    <div>
+      <div class="purchase-item">
+        <div class="purchase-left">
+          <div class="purchase-desc">Supermercado Lider</div>
+          <div class="purchase-date">5 jun</div>
+        </div>
+        <div class="purchase-amount">$187.500</div>
+      </div>
+      <div class="purchase-item">
+        <div class="purchase-left">
+          <div class="purchase-desc">Farmacia Cruz Verde</div>
+          <div class="purchase-date">4 jun</div>
+        </div>
+        <div class="purchase-amount">$42.000</div>
+      </div>
+      <div class="purchase-item">
+        <div class="purchase-left">
+          <div class="purchase-desc">Bencina Shell</div>
+          <div class="purchase-date">3 jun</div>
+        </div>
+        <div class="purchase-amount">$65.000</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<div class="fab">+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="#" class="nav-item active">
+    <span class="nav-icon">⌂</span>
+    <span>Inicio</span>
+  </a>
+  <a href="#" class="nav-item">
+    <span class="nav-icon">📋</span>
+    <span>Fijos</span>
+  </a>
+  <a href="#" class="nav-item">
+    <span class="nav-icon">🛒</span>
+    <span>Compras</span>
+  </a>
+  <a href="#" class="nav-item">
+    <span class="nav-icon">📊</span>
+    <span>Resumen</span>
+  </a>
+  <a href="#" class="nav-item">
+    <span class="nav-icon">📥</span>
+    <span>Pendientes</span>
+  </a>
+  <a href="#" class="nav-item">
+    <span class="nav-icon">⚙</span>
+    <span>Ajustes</span>
+  </a>
+</nav>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!-- @dsCard group="Pantallas" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390">
+<title>Resumen — Finanzas Hogar</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6fd; --card: #ffffff; --fg: #1a1626; --primary: #7c3aed;
+    --primary-light: #ede9f8; --muted: #f0eef9; --muted-fg: #6b6482;
+    --border: #e2dff2; --destructive: #dc2626; --success: #16a34a; --amber: #d97706; --radius: 14px;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; width: 390px; min-height: 844px; }
+  .screen { padding: 16px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 14px; }
+  .header { padding-top: 8px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-sub { font-size: 13px; color: var(--muted-fg); text-transform: capitalize; margin-top: 2px; }
+  .month-nav { display: flex; align-items: center; justify-content: center; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 16px; }
+  .month-nav-btn { color: var(--muted-fg); font-size: 16px; cursor: pointer; }
+  .month-nav-label { font-size: 13px; font-weight: 600; }
+
+  /* Quick stats grid */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .stat-label { font-size: 11px; color: var(--muted-fg); margin-bottom: 4px; }
+  .stat-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+
+  /* Widget */
+  .widget { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .widget-title { font-size: 13px; font-weight: 600; }
+
+  /* Category chart — horizontal bars */
+  .category-list { display: flex; flex-direction: column; gap: 10px; }
+  .category-item { display: flex; flex-direction: column; gap: 5px; }
+  .category-header { display: flex; align-items: center; justify-content: space-between; }
+  .category-name { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+  .category-pct { font-size: 11px; color: var(--muted-fg); }
+  .category-amount { font-size: 12px; font-weight: 600; }
+  .bar-track { height: 7px; background: var(--muted); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  /* Distribution chart */
+  .dist-row { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; }
+  .dist-segment { height: 100%; }
+  .dist-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+  .dist-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+  .dist-dot { width: 8px; height: 8px; border-radius: 2px; }
+  .dist-pct { font-weight: 600; color: var(--fg); }
+
+  /* Annual chart — bar chart approximation */
+  .annual-chart { display: flex; align-items: flex-end; gap: 5px; height: 80px; }
+  .annual-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .annual-bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--primary-light); }
+  .annual-bar.current { background: var(--primary); }
+  .annual-label { font-size: 8px; color: var(--muted-fg); }
+
+  /* Installments list */
+  .installment-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+  .installment-name { flex: 1; truncate: true; color: var(--fg); }
+  .installment-remaining { color: var(--muted-fg); }
+
+  /* Bottom Nav */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 390px; height: 64px; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; align-items: stretch; z-index: 50; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--muted-fg); font-size: 9px; font-weight: 400; position: relative; }
+  .nav-item.active { color: var(--primary); font-weight: 600; }
+  .nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 2px; background: var(--primary); border-radius: 1px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <!-- Header -->
+  <div class="header">
+    <h1>Resumen</h1>
+    <div class="header-sub">Junio 2026</div>
+  </div>
+
+  <!-- Month nav -->
+  <div class="month-nav">
+    <span class="month-nav-btn">‹</span>
+    <span class="month-nav-label">Junio 2026</span>
+    <span class="month-nav-btn">›</span>
+  </div>
+
+  <!-- Quick stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total del mes</div>
+      <div class="stat-value">$1.238.480</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cuotas bloqueadas</div>
+      <div class="stat-value">$134.990</div>
+    </div>
+  </div>
+
+  <!-- Por categoría -->
+  <div class="widget">
+    <div class="widget-title">Por categoría</div>
+    <div class="category-list">
+      <div class="category-item">
+        <div class="category-header">
+          <span class="category-name">🏠 Vivienda</span>
+          <span class="category-amount">$735.000</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:59%;background:#7c3aed;"></div></div>
+        <div style="font-size:10px;color:var(--muted-fg);text-align:right;">59%</div>
+      </div>
+      <div class="category-item">
+        <div class="category-header">
+          <span class="category-name">🛒 Alimentación</span>
+          <span class="category-amount">$187.500</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:15%;background:#ec4899;"></div></div>
+        <div style="font-size:10px;color:var(--muted-fg);text-align:right;">15%</div>
+      </div>
+      <div class="category-item">
+        <div class="category-header">
+          <span class="category-name">🚗 Transporte</span>
+          <span class="category-amount">$113.000</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:9%;background:#16a34a;"></div></div>
+        <div style="font-size:10px;color:var(--muted-fg);text-align:right;">9%</div>
+      </div>
+      <div class="category-item">
+        <div class="category-header">
+          <span class="category-name">💻 Tecnología</span>
+          <span class="category-amount">$160.980</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:13%;background:#2563eb;"></div></div>
+        <div style="font-size:10px;color:var(--muted-fg);text-align:right;">13%</div>
+      </div>
+      <div class="category-item">
+        <div class="category-header">
+          <span class="category-name">💊 Salud</span>
+          <span class="category-amount">$42.000</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:3%;background:#d97706;"></div></div>
+        <div style="font-size:10px;color:var(--muted-fg);text-align:right;">3%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Distribución -->
+  <div class="widget">
+    <div class="widget-title">Distribución</div>
+    <div class="dist-row">
+      <div class="dist-segment" style="width:65%;background:#7c3aed;border-radius:6px 0 0 6px;"></div>
+      <div class="dist-segment" style="width:11%;background:#ec4899;"></div>
+      <div class="dist-segment" style="width:24%;background:#16a34a;border-radius:0 6px 6px 0;"></div>
+    </div>
+    <div class="dist-legend">
+      <div class="dist-legend-item">
+        <div class="dist-dot" style="background:#7c3aed;"></div>
+        <span>Fijos</span> <span class="dist-pct">65%</span>
+      </div>
+      <div class="dist-legend-item">
+        <div class="dist-dot" style="background:#ec4899;"></div>
+        <span>Cuotas</span> <span class="dist-pct">11%</span>
+      </div>
+      <div class="dist-legend-item">
+        <div class="dist-dot" style="background:#16a34a;"></div>
+        <span>Variables</span> <span class="dist-pct">24%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Últimos 12 meses -->
+  <div class="widget">
+    <div class="widget-title">Últimos 12 meses</div>
+    <div class="annual-chart">
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:45px;"></div>
+        <div class="annual-label">jul</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:52px;"></div>
+        <div class="annual-label">ago</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:38px;"></div>
+        <div class="annual-label">sep</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:61px;"></div>
+        <div class="annual-label">oct</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:55px;"></div>
+        <div class="annual-label">nov</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:48px;"></div>
+        <div class="annual-label">dic</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:42px;"></div>
+        <div class="annual-label">ene</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:50px;"></div>
+        <div class="annual-label">feb</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:47px;"></div>
+        <div class="annual-label">mar</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:58px;"></div>
+        <div class="annual-label">abr</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar" style="height:44px;"></div>
+        <div class="annual-label">may</div>
+      </div>
+      <div class="annual-bar-col">
+        <div class="annual-bar current" style="height:70px;"></div>
+        <div class="annual-label" style="color:var(--primary);font-weight:600;">jun</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cuotas activas -->
+  <div class="widget">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span class="widget-title">Cuotas activas</span>
+      <span style="font-size:11px;color:var(--muted-fg);">$134.990/mes</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="installment-row">
+        <span class="installment-name">Notebook Samsung</span>
+        <span class="installment-remaining">9 cuotas restantes</span>
+      </div>
+      <div class="installment-row">
+        <span class="installment-name">Smart TV 55"</span>
+        <span class="installment-remaining">4 cuotas restantes</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="#" class="nav-item"><span style="font-size:20px;">⌂</span><span>Inicio</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">📋</span><span>Fijos</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">🛒</span><span>Compras</span></a>
+  <a href="#" class="nav-item active"><span style="font-size:20px;">📊</span><span>Resumen</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">📥</span><span>Pendientes</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">⚙</span><span>Ajustes</span></a>
+</nav>
+</body>
+</html>

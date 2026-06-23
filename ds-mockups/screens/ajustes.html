@@ -1,0 +1,279 @@
+<!-- @dsCard group="Pantallas" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390">
+<title>Ajustes — Finanzas Hogar</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6fd; --card: #ffffff; --fg: #1a1626; --primary: #7c3aed;
+    --primary-light: #ede9f8; --muted: #f0eef9; --muted-fg: #6b6482;
+    --border: #e2dff2; --destructive: #dc2626; --success: #16a34a; --amber: #d97706; --radius: 14px;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; width: 390px; min-height: 844px; }
+  .screen { padding: 16px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 14px; }
+  .header { padding-top: 8px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+
+  /* Section card */
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .section-header { display: flex; align-items: center; gap: 6px; color: var(--muted-fg); }
+  .section-icon { font-size: 13px; }
+  .section-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; }
+
+  /* Household info */
+  .household-name { font-size: 15px; font-weight: 600; }
+  .household-sub { font-size: 13px; color: var(--muted-fg); }
+
+  /* Members list */
+  .member-list { display: flex; flex-direction: column; gap: 0; }
+  .member-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .member-item:last-child { border-bottom: none; }
+  .member-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--primary); }
+  .member-info { flex: 1; }
+  .member-name { font-size: 13px; font-weight: 500; }
+  .member-role { font-size: 11px; color: var(--muted-fg); }
+  .role-badge { display: inline-flex; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 500; }
+  .role-badge.owner { background: var(--primary-light); color: var(--primary); }
+  .role-badge.member { background: var(--muted); color: var(--muted-fg); }
+  .icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--muted-fg); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
+  .icon-btn.destructive:hover { color: var(--destructive); }
+  .add-link { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--primary); cursor: pointer; }
+
+  /* Cards */
+  .card-item { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .card-item:last-child { border-bottom: none; }
+  .card-top { display: flex; align-items: center; gap: 10px; }
+  .card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .card-info { flex: 1; }
+  .card-name { font-size: 13px; font-weight: 500; }
+  .card-meta { font-size: 11px; color: var(--muted-fg); }
+  .usage-bar-wrap { display: flex; flex-direction: column; gap: 4px; padding-left: 42px; }
+  .usage-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted-fg); }
+  .usage-track { height: 6px; background: var(--muted); border-radius: 3px; overflow: hidden; }
+  .usage-fill { height: 100%; border-radius: 3px; background: #6366f1; }
+
+  /* Categories */
+  .category-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .category-item:last-child { border-bottom: none; }
+  .cat-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; background: var(--muted); }
+  .cat-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .cat-budget { font-size: 12px; color: var(--muted-fg); }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle-label { font-size: 13px; font-weight: 500; }
+  .toggle-sub { font-size: 11px; color: var(--muted-fg); margin-top: 2px; }
+  .toggle { width: 42px; height: 24px; background: var(--primary); border-radius: 12px; position: relative; cursor: pointer; }
+  .toggle-thumb { width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .toggle.off { background: var(--border); }
+  .toggle.off .toggle-thumb { right: auto; left: 2px; }
+
+  /* Theme select */
+  .theme-options { display: flex; gap: 8px; }
+  .theme-opt { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; background: var(--muted); }
+  .theme-opt.active { border-color: var(--primary); background: var(--primary-light); }
+  .theme-preview { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .theme-name { font-size: 11px; font-weight: 500; }
+
+  /* Sign out button */
+  .signout-btn { width: 100%; padding: 12px; border-radius: var(--radius); border: 1px solid #fecaca; background: #fff5f5; color: var(--destructive); font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; }
+
+  /* Bottom Nav */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 390px; height: 64px; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; align-items: stretch; z-index: 50; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--muted-fg); font-size: 9px; font-weight: 400; position: relative; }
+  .nav-item.active { color: var(--primary); font-weight: 600; }
+  .nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 2px; background: var(--primary); border-radius: 1px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="header"><h1>Ajustes</h1></div>
+
+  <!-- Hogar -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🏠</span>
+      <span class="section-label">Tu hogar</span>
+    </div>
+    <div class="household-name">Casa Colpi-Huequen</div>
+    <div class="household-sub">2 miembros</div>
+  </div>
+
+  <!-- Miembros -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">👥</span>
+      <span class="section-label">Miembros</span>
+    </div>
+    <div class="member-list">
+      <div class="member-item">
+        <div class="member-avatar">M</div>
+        <div class="member-info">
+          <div class="member-name">Matías (tú)</div>
+          <div class="member-role"><span class="role-badge owner">Propietario</span></div>
+        </div>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar">P</div>
+        <div class="member-info">
+          <div class="member-name">Pareja</div>
+          <div class="member-role"><span class="role-badge member">Miembro</span></div>
+        </div>
+        <button class="icon-btn destructive">✕</button>
+      </div>
+    </div>
+    <div class="add-link">
+      <span>+</span>
+      <span>Invitar miembro</span>
+    </div>
+  </div>
+
+  <!-- Tarjetas -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">💳</span>
+      <span class="section-label">Tarjetas de pago</span>
+    </div>
+    <div>
+      <div class="card-item">
+        <div class="card-top">
+          <div class="card-icon" style="background:#6366f120;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <div class="card-info">
+            <div class="card-name">Visa</div>
+            <div class="card-meta">•••• 1234 · 5 gastos vinculados</div>
+          </div>
+          <button class="icon-btn">✏</button>
+          <button class="icon-btn">🗑</button>
+        </div>
+        <div class="usage-bar-wrap">
+          <div class="usage-label">
+            <span>$294.500 / $500.000</span>
+            <span>$205.500 disponible</span>
+          </div>
+          <div class="usage-track"><div class="usage-fill" style="width:59%;"></div></div>
+        </div>
+      </div>
+      <div class="card-item">
+        <div class="card-top">
+          <div class="card-icon" style="background:#2563eb20;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <div class="card-info">
+            <div class="card-name">Mastercard</div>
+            <div class="card-meta">2 gastos vinculados</div>
+          </div>
+          <button class="icon-btn">✏</button>
+          <button class="icon-btn">🗑</button>
+        </div>
+      </div>
+    </div>
+    <div class="add-link">
+      <span>+</span>
+      <span>Agregar tarjeta</span>
+    </div>
+  </div>
+
+  <!-- Categorías -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🏷</span>
+      <span class="section-label">Categorías</span>
+    </div>
+    <div>
+      <div class="category-item">
+        <div class="cat-icon">🏠</div>
+        <span class="cat-name">Vivienda</span>
+        <span class="cat-budget">—</span>
+        <button class="icon-btn">✏</button>
+      </div>
+      <div class="category-item">
+        <div class="cat-icon">🛒</div>
+        <span class="cat-name">Supermercado</span>
+        <span class="cat-budget">$300.000/mes</span>
+        <button class="icon-btn">✏</button>
+      </div>
+      <div class="category-item">
+        <div class="cat-icon">🚗</div>
+        <span class="cat-name">Transporte</span>
+        <span class="cat-budget">$80.000/mes</span>
+        <button class="icon-btn">✏</button>
+      </div>
+    </div>
+    <div class="add-link">
+      <span>+</span>
+      <span>Agregar categoría</span>
+    </div>
+  </div>
+
+  <!-- Notificaciones -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🔔</span>
+      <span class="section-label">Notificaciones</span>
+    </div>
+    <div>
+      <p style="font-size:13px;color:var(--muted-fg);margin-bottom:12px;">Recibí alertas cuando se detecte un nuevo gasto desde tu email.</p>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Notificaciones push</div>
+          <div class="toggle-sub">Activas en este dispositivo</div>
+        </div>
+        <div class="toggle"><div class="toggle-thumb"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apariencia -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🎨</span>
+      <span class="section-label">Apariencia</span>
+    </div>
+    <div class="theme-options">
+      <div class="theme-opt active">
+        <div class="theme-preview" style="background:#f8f7fd;border:1px solid #e2dff2;">☀️</div>
+        <span class="theme-name">Claro</span>
+      </div>
+      <div class="theme-opt">
+        <div class="theme-preview" style="background:#1a1626;">🌙</div>
+        <span class="theme-name">Oscuro</span>
+      </div>
+      <div class="theme-opt">
+        <div class="theme-preview" style="background:linear-gradient(135deg,#f8f7fd 50%,#1a1626 50%);">⚙️</div>
+        <span class="theme-name">Sistema</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Soporte -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🐛</span>
+      <span class="section-label">Soporte</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <textarea placeholder="Describí el problema..." style="flex:1;height:60px;border-radius:10px;border:1px solid var(--border);padding:8px 10px;font-size:12px;resize:none;color:var(--fg);background:var(--bg);"></textarea>
+    </div>
+    <button style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card);font-size:13px;font-weight:500;color:var(--fg);cursor:pointer;">Enviar reporte</button>
+  </div>
+
+  <!-- Cerrar sesión -->
+  <button class="signout-btn">Cerrar sesión</button>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="#" class="nav-item"><span style="font-size:20px;">⌂</span><span>Inicio</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">📋</span><span>Fijos</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">🛒</span><span>Compras</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">📊</span><span>Resumen</span></a>
+  <a href="#" class="nav-item"><span style="font-size:20px;">📥</span><span>Pendientes</span></a>
+  <a href="#" class="nav-item active"><span style="font-size:20px;">⚙</span><span>Ajustes</span></a>
+</nav>
+</body>
+</html>

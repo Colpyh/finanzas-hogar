@@ -19,7 +19,9 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const hasDevSession = cookieStore.get("dev-session")?.value === "1";
+  const hasDevSession =
+    process.env.NODE_ENV === "development" &&
+    cookieStore.get("dev-session")?.value === "1";
 
   // Dev bypass: solo cuando hay cookie de sesión local
   if (hasDevSession) {

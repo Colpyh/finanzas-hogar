@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {
@@ -12,10 +13,10 @@ export async function getUserDisplayName(userId: string): Promise<string> {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase.auth.admin.getUserById(userId);
-    if (error || !data?.user) return userId;
+    if (error || !data?.user) return "Usuario";
     const meta = data.user.user_metadata;
-    return meta?.full_name ?? meta?.name ?? data.user.email ?? userId;
+    return meta?.full_name ?? meta?.name ?? "Usuario";
   } catch {
-    return userId;
+    return "Usuario";
   }
 }

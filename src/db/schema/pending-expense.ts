@@ -61,3 +61,4 @@ export const pendingExpense = pgTable(
 
 export type PendingExpense = typeof pendingExpense.$inferSelect;
 export type NewPendingExpense = typeof pendingExpense.$inferInsert;
+export type PendingExpenseRow = Omit<PendingExpense, "rawPayload">;

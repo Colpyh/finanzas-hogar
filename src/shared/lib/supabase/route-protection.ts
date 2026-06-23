@@ -12,6 +12,9 @@ const APP_ROUTES = [
   "/gastos",
   "/resumen",
   "/ajustes",
+  "/ingresos",
+  "/gastos-pendientes",
+  "/balances",
 ];
 
 function isPublic(pathname: string): boolean {

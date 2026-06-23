@@ -12,7 +12,8 @@ type Props = {
 
 export default function AppError({ error, reset }: Props) {
   useEffect(() => {
-    console.error(error);
+    // Log digest only — don't expose stack traces to browser console in production
+    console.error("[app-error]", error.digest ?? error.name);
   }, [error]);
 
   const isAuth =

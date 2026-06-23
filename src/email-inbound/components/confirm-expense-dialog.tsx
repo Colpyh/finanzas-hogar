@@ -19,12 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { confirmPendingExpense } from "@/email-inbound/actions";
-import type { PendingExpense } from "@/shared/lib/db/schema";
+import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Category = { id: string; name: string };
 
 type Props = {
-  item: PendingExpense | null;
+  item: PendingExpenseRow | null;
   categories: Category[];
   open: boolean;
   onClose: () => void;

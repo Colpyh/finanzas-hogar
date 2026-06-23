@@ -78,25 +78,21 @@ export async function addMemberByEmail(
   if (!userHousehold) return { error: "No tienes un hogar" };
   if (userHousehold.role !== "owner") return { error: "Solo el propietario puede agregar miembros" };
 
-  const query = (formData.get("query") as string | null)?.trim().toLowerCase() ?? "";
-  if (!query) return { error: "Ingresa un nombre o correo" };
+  const email = (formData.get("query") as string | null)?.trim().toLowerCase() ?? "";
+  if (!email) return { error: "Ingresa el correo electrónico del usuario" };
+  if (!email.includes("@")) return { error: "Ingresa un correo electrónico válido" };
 
-  let users: { id: string; email?: string; user_metadata: Record<string, string> }[];
+  let target: { id: string; email?: string; user_metadata: Record<string, string> } | null = null;
   try {
     const supabase = createAdminClient();
     const { data, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-    if (listError) return { error: "Error al buscar usuarios. Verificá que SUPABASE_SERVICE_ROLE_KEY esté configurada." };
-    users = data.users;
+    if (listError) return { error: "Error al buscar usuarios." };
+    target = data.users.find((u) => u.email?.toLowerCase() === email) ?? null;
   } catch {
-    return { error: "Error de configuración del servidor. SUPABASE_SERVICE_ROLE_KEY no está disponible." };
+    return { error: "Error de configuración del servidor." };
   }
 
-  const target = users.find((u) => {
-    const name = (u.user_metadata?.full_name ?? u.user_metadata?.name ?? "").toLowerCase();
-    return u.email?.toLowerCase() === query || name.includes(query);
-  });
-
-  if (!target) return { error: "No se encontró ningún usuario con ese nombre o correo" };
+  if (!target) return { error: "No se encontró ningún usuario con ese correo" };
   if (target.id === user.id) return { error: "No puedes agregarte a ti mismo" };
 
   const [existing] = await db

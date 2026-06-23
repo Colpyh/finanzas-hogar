@@ -145,7 +145,10 @@ export default async function DashboardPage({ searchParams }: Props) {
     <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
       {/* Header */}
       <div className="flex items-center justify-between pt-2">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">{householdName}</h1>
+        <div>
+          <p className="text-[12px] font-medium text-muted-foreground">Buen día 👋</p>
+          <h1 className="text-[23px] font-extrabold text-foreground tracking-tight leading-tight">{householdName}</h1>
+        </div>
         <div className="flex items-center gap-1">
           <WhatsappShareButton
             month={month}
@@ -162,7 +165,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       </div>
 
       <AnimatedWidgets>
-        <MonthlySummaryCard summary={summary} />
+        <MonthlySummaryCard summary={summary} month={month} />
         <CardPaymentsWidget payments={cardPayments} month={month} />
         <BudgetAlertsWidget categories={budgets} />
         <FixedExpensesWidget bills={bills} currentUserId={currentUserId} memberNames={memberNames} />

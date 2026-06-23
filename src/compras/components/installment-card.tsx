@@ -155,7 +155,7 @@ export function InstallmentCard({ expense }: Props) {
   }
 
   return (
-    <div className="bg-card border border-border shadow-sm rounded-2xl p-4 space-y-3">
+    <div className="bg-card border border-border rounded-[20px] p-4 space-y-3" style={{ boxShadow: "var(--shadow-md)" }}>
       <div className="flex items-start justify-between gap-2">
         <Link href={`/gastos/${expense.id}`} className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -205,22 +205,21 @@ export function InstallmentCard({ expense }: Props) {
         </div>
       </div>
 
-      {/* Barra de progreso */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
           <div
-            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-all duration-500"
-            style={{ width: `${progress}%` }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${progress}%`, background: "linear-gradient(90deg, #7c3aed, #6d28d9)" }}
           />
         </div>
-        <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0">
+        <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0 num">
           {progress}%
         </span>
       </div>
 
       <div className="flex items-center justify-between">
         {expense.installmentAmount && (
-          <span className="text-sm font-semibold text-foreground">
+          <span className="text-[15px] font-extrabold text-foreground num">
             {formatCurrency(parseFloat(expense.installmentAmount))}/cuota
             {isShared && expense.myShareAmount && (
               <span className="text-xs font-normal text-muted-foreground ml-1.5">

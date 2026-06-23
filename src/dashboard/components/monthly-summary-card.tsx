@@ -1,98 +1,119 @@
-import Link from "next/link";
 import type { DashboardSummary } from "@/dashboard/types";
 import { formatCurrency } from "@/shared/components/currency-display";
 
 type Props = {
   summary: DashboardSummary;
+  month?: string; // "YYYY-MM-DD"
 };
 
-export function MonthlySummaryCard({ summary }: Props) {
+const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+function getPeriodLabel(month?: string): string {
+  if (month) {
+    const [y, m] = month.split("-");
+    const idx = parseInt(m!) - 1;
+    return `${MONTHS[idx]} ${y}`;
+  }
+  const now = new Date();
+  return `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+export function MonthlySummaryCard({ summary, month }: Props) {
   const barWidth = Math.min(summary.porcentajeUsado, 100);
-  const saldoPositive = summary.saldo >= 0;
+  const period = getPeriodLabel(month);
+  const [, totalNum] = formatCurrency(summary.grandTotal).split("$");
 
   return (
-    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-500 p-5 text-white shadow-lg shadow-purple-500/25">
-      {/* Depth circles */}
-      <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/[0.06] pointer-events-none" />
-      <div className="absolute -bottom-10 -left-6 w-44 h-44 rounded-full bg-white/[0.04] pointer-events-none" />
+    <div
+      className="relative rounded-[22px] overflow-hidden text-white"
+      style={{
+        background: "linear-gradient(150deg, #8b46f0 0%, #6d28d9 55%, #5b21b6 100%)",
+        boxShadow: "var(--shadow-violet)",
+        padding: "22px 20px 20px",
+      }}
+    >
+      <div className="absolute -top-[60px] -right-[50px] w-[180px] h-[180px] rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.10)" }} />
+      <div className="absolute -bottom-[50px] left-[30px] w-[130px] h-[130px] rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.06)" }} />
 
       <div className="relative">
-        {/* Header row */}
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-sm font-medium opacity-75">Gastos del mes</p>
-          <Link href="/ingresos" className="text-xs opacity-70 hover:opacity-100 underline underline-offset-2 transition-opacity">
-            {summary.incomeTotal > 0 ? "Editar ingresos" : "Agregar ingresos"}
-          </Link>
+        <div className="flex items-center justify-between">
+          <span
+            className="inline-flex items-center text-[11px] font-semibold uppercase tracking-[0.4px] px-[10px] py-[5px] rounded-full"
+            style={{ background: "rgba(255,255,255,0.16)" }}
+          >
+            {period}
+          </span>
+          {summary.incomeTotal > 0 && (
+            <span
+              className="text-[11px] font-semibold px-[10px] py-[5px] rounded-full"
+              style={{ background: "rgba(255,255,255,0.16)" }}
+            >
+              {summary.porcentajeUsado}% del ingreso
+            </span>
+          )}
         </div>
 
-        {/* Grand total */}
-        <div className="flex items-end gap-3">
-          <p className="text-4xl font-bold tracking-tight">
-            {formatCurrency(summary.grandTotal)}
-          </p>
-          <p className="text-sm opacity-60 mb-1">
-            Tu parte · {formatCurrency(summary.myShareTotal)}
-          </p>
+        <p className="text-[12px] font-medium mt-4 mb-0.5" style={{ opacity: 0.82 }}>
+          Gasto total del mes
+        </p>
+
+        <div className="leading-none tracking-tight num" style={{ fontSize: 44, fontWeight: 800 }}>
+          <span className="font-semibold align-top mt-0.5 mr-0.5" style={{ fontSize: 24, opacity: 0.75 }}>
+            $
+          </span>
+          {totalNum}
         </div>
 
-        {/* Progress bar + % */}
         {summary.incomeTotal > 0 && (
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs opacity-60">del ingreso</span>
-              <span className="text-xs font-semibold opacity-90">{summary.porcentajeUsado}%</span>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-white/20">
-              <div
-                className="h-full rounded-full bg-white/80 transition-all duration-500"
-                style={{ width: `${barWidth}%` }}
-              />
-            </div>
+          <div className="flex items-center gap-1.5 mt-2" style={{ fontSize: 12.5, opacity: 0.78 }}>
+            <span>Ingreso total:</span>
+            <span className="font-semibold num">{formatCurrency(summary.incomeTotal)}</span>
           </div>
         )}
 
-        {/* Breakdown: household + my share per category */}
-        <div className="mt-4 border-t border-white/15 pt-4 space-y-2.5">
-          {/* Headers */}
-          <div className="grid grid-cols-4 gap-1">
-            <div />
-            <p className="text-[10px] opacity-50 text-center">Fijos</p>
-            <p className="text-[10px] opacity-50 text-center">Cuotas</p>
-            <p className="text-[10px] opacity-50 text-center">Compras</p>
-          </div>
-          {/* Household row */}
-          <div className="grid grid-cols-4 gap-1 items-center">
-            <p className="text-[10px] opacity-50">Casa</p>
-            <p className="text-xs font-semibold text-center">{formatCurrency(summary.fixedTotal)}</p>
-            <p className="text-xs font-semibold text-center">{formatCurrency(summary.installmentsTotal)}</p>
-            <p className="text-xs font-semibold text-center">{formatCurrency(summary.oneTimeTotal)}</p>
-          </div>
-          {/* My share row */}
-          <div className="grid grid-cols-4 gap-1 items-center">
-            <p className="text-[10px] opacity-50">Yo</p>
-            <p className="text-xs font-medium text-center opacity-80">{formatCurrency(summary.myShareFixed)}</p>
-            <p className="text-xs font-medium text-center opacity-80">{formatCurrency(summary.myShareInstallments)}</p>
-            <p className="text-xs font-medium text-center opacity-80">{formatCurrency(summary.myShareOneTime)}</p>
-          </div>
+        <div className="grid grid-cols-3 gap-2 mt-[18px]">
+          {[
+            { label: "Fijos", value: summary.fixedTotal },
+            { label: "Cuotas", value: summary.installmentsTotal },
+            { label: "Variables", value: summary.oneTimeTotal },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-[13px] px-[10px] py-[11px]"
+              style={{
+                background: "rgba(255,255,255,0.13)",
+                border: "1px solid rgba(255,255,255,0.10)",
+              }}
+            >
+              <div className="font-medium mb-1" style={{ fontSize: 10.5, opacity: 0.78 }}>
+                {label}
+              </div>
+              <div className="font-bold num" style={{ fontSize: 16 }}>
+                {formatCurrency(value)}
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Saldo */}
         {summary.incomeTotal > 0 && (
-          <div className="mt-3 pt-3 border-t border-white/15 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs opacity-60">Saldo familia</p>
-              <p className={`text-sm font-bold ${saldoPositive ? "text-emerald-300" : "text-red-300"}`}>
-                {saldoPositive ? "+" : ""}{formatCurrency(summary.saldo)}
-              </p>
+          <div className="mt-4">
+            <div className="h-[6px] w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.22)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${barWidth}%`,
+                  background: "#fff",
+                  boxShadow: "0 0 12px rgba(255,255,255,0.5)",
+                }}
+              />
             </div>
-            {summary.myIncomeTotal > 0 && (
-              <div className="flex items-center justify-between">
-                <p className="text-xs opacity-60">Tu saldo</p>
-                <p className={`text-sm font-semibold ${summary.mySaldo >= 0 ? "text-emerald-300" : "text-red-300"}`}>
-                  {summary.mySaldo >= 0 ? "+" : ""}{formatCurrency(summary.mySaldo)}
-                </p>
-              </div>
-            )}
+            <div className="flex justify-between font-medium mt-[7px]" style={{ fontSize: 11, opacity: 0.85 }}>
+              <span>{summary.porcentajeUsado}% usado</span>
+              <span>
+                Saldo:{" "}
+                <span className="num">{formatCurrency(summary.saldo)}</span>
+              </span>
+            </div>
           </div>
         )}
       </div>

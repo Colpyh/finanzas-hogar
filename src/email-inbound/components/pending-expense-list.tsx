@@ -5,18 +5,18 @@ import { PendingExpenseCard } from "./pending-expense-card";
 import { ConfirmExpenseDialog } from "./confirm-expense-dialog";
 import { DiscardConfirmDialog } from "./discard-confirm-dialog";
 import { Inbox } from "lucide-react";
-import type { PendingExpense } from "@/shared/lib/db/schema";
+import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Category = { id: string; name: string };
 
 type Props = {
-  items: PendingExpense[];
+  items: PendingExpenseRow[];
   categories: Category[];
 };
 
 export function PendingExpenseList({ items, categories }: Props) {
-  const [confirmItem, setConfirmItem] = useState<PendingExpense | null>(null);
-  const [discardItem, setDiscardItem] = useState<PendingExpense | null>(null);
+  const [confirmItem, setConfirmItem] = useState<PendingExpenseRow | null>(null);
+  const [discardItem, setDiscardItem] = useState<PendingExpenseRow | null>(null);
 
   if (items.length === 0) {
     return (

@@ -52,11 +52,13 @@ export async function addIncome(rawData: unknown): Promise<{ error?: string }> {
 export async function deleteIncome(id: string): Promise<{ error?: string }> {
   try {
     const user = await getUser();
+    const household = await getUserHousehold(user.id);
+    if (!household) return { error: "No tienes un hogar activo" };
 
     const [row] = await db
       .select({ memberId: income.memberId })
       .from(income)
-      .where(eq(income.id, id))
+      .where(and(eq(income.id, id), eq(income.householdId, household.id)))
       .limit(1);
 
     if (!row) return { error: "Ingreso no encontrado" };

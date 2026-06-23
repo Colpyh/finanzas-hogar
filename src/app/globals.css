@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is([data-theme="dark"] *));
 
 @theme inline {
   --color-background: var(--background);
@@ -49,18 +49,15 @@
 }
 
 :root {
-  /* Fondo muy levemente violáceo */
   --background: oklch(0.979 0.008 285);
   --foreground: oklch(0.16 0.03 285);
 
-  /* Cards blancas con toque cálido */
   --card: oklch(1 0.002 285);
   --card-foreground: oklch(0.16 0.03 285);
 
   --popover: oklch(1 0.002 285);
   --popover-foreground: oklch(0.16 0.03 285);
 
-  /* Primary: violeta moderno */
   --primary: oklch(0.55 0.24 293);
   --primary-foreground: oklch(0.985 0 0);
 
@@ -79,11 +76,11 @@
   --input: oklch(0.9 0.018 285);
   --ring: oklch(0.55 0.24 293);
 
-  --chart-1: oklch(0.55 0.24 293);   /* violeta */
-  --chart-2: oklch(0.62 0.22 340);   /* rosa */
-  --chart-3: oklch(0.62 0.187 152);  /* esmeralda */
-  --chart-4: oklch(0.72 0.18 55);    /* ámbar */
-  --chart-5: oklch(0.58 0.22 220);   /* azul */
+  --chart-1: oklch(0.55 0.24 293);
+  --chart-2: oklch(0.62 0.22 340);
+  --chart-3: oklch(0.62 0.187 152);
+  --chart-4: oklch(0.72 0.18 55);
+  --chart-5: oklch(0.58 0.22 220);
 
   --radius: 0.875rem;
 
@@ -95,9 +92,24 @@
   --sidebar-accent-foreground: oklch(0.45 0.18 293);
   --sidebar-border: oklch(0.9 0.018 285);
   --sidebar-ring: oklch(0.55 0.24 293);
+
+  /* Design system tokens */
+  --card-2: #faf9ff;
+  --fg-soft: #3b3450;
+  --border-strong: #d9d3ee;
+  --success-bg: #dcfce7;
+  --success-fg: #15803d;
+  --success-line: #22c55e;
+  --amber-bg: #fef3c7;
+  --amber-fg: #b45309;
+  --amber-line: #f59e0b;
+  --pending-line: #cbc6dc;
+  --shadow-sm: 0 1px 2px rgba(28, 16, 58, 0.05);
+  --shadow-md: 0 6px 22px -8px rgba(70, 40, 130, 0.18), 0 1px 3px rgba(28, 16, 58, 0.04);
+  --shadow-violet: 0 14px 32px -12px rgba(124, 58, 237, 0.55);
 }
 
-.dark {
+[data-theme="dark"] {
   --background: oklch(0.13 0.03 285);
   --foreground: oklch(0.96 0.008 285);
   --card: oklch(0.18 0.025 285);
@@ -129,6 +141,21 @@
   --sidebar-accent-foreground: oklch(0.96 0.008 285);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.68 0.22 293);
+
+  /* Design system tokens — dark */
+  --card-2: #1f1a30;
+  --fg-soft: #cfc9e2;
+  --border-strong: #352d4f;
+  --success-bg: #0f2e22;
+  --success-fg: #6ee7b7;
+  --success-line: #34d399;
+  --amber-bg: #34250c;
+  --amber-fg: #fcd34d;
+  --amber-line: #fbbf24;
+  --pending-line: #3a3352;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 26px -10px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-violet: 0 16px 36px -14px rgba(0, 0, 0, 0.7);
 }
 
 @layer base {
@@ -142,5 +169,10 @@
   }
   html {
     @apply font-sans;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.02em;
   }
 }

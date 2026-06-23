@@ -18,7 +18,8 @@ export async function signInWithCredentials(
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: "Correo o contraseña incorrectos." };
   } catch (e) {
-    return { error: `Error de conexión: ${e instanceof Error ? e.message : String(e)}` };
+    console.error("[auth] signIn failed", e);
+    return { error: "Error de conexión. Intentá de nuevo más tarde." };
   }
 
   redirect(destination);

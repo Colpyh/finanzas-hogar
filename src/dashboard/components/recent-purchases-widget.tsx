@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { ChevronRight } from "lucide-react";
-import { OwnerTag } from "./owner-tag";
 import type { RecentPurchase } from "@/dashboard/types";
 
 type Props = {
@@ -15,50 +13,56 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString("es-419", { day: "numeric", month: "short" });
 }
 
-export function RecentPurchasesWidget({ purchases, currentUserId = "", memberNames = {} }: Props) {
+export function RecentPurchasesWidget({ purchases }: Props) {
   return (
-    <div className="rounded-2xl bg-card border border-border shadow-sm p-4 space-y-3">
+    <div
+      className="rounded-[20px] bg-card border border-border p-4 flex flex-col gap-[13px]"
+      style={{ boxShadow: "var(--shadow-md)" }}
+    >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Compras recientes</h2>
-        <Link
-          href="/compras"
-          className="text-xs text-primary font-medium hover:underline"
-        >
-          Ver todas
+        <span className="flex items-center gap-[7px] text-[12px] font-bold uppercase tracking-[0.3px] text-muted-foreground">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary">
+            <circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/>
+            <path d="M2 3h3l2.5 13h11l2-9H6"/>
+          </svg>
+          Últimas compras
+        </span>
+        <Link href="/compras" className="text-[11px] font-semibold text-primary">
+          Ver todas ›
         </Link>
       </div>
 
       {purchases.length === 0 ? (
         <p className="text-sm text-muted-foreground py-2">Sin compras este mes</p>
       ) : (
-        <ul className="divide-y divide-border -mx-4">
+        <div>
           {purchases.map((purchase) => (
-            <li key={purchase.id}>
-              <Link
-                href={`/gastos/${purchase.id}`}
-                className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{purchase.description}</p>
+            <div
+              key={purchase.id}
+              className="flex items-center justify-between gap-[10px] py-[10px] border-b border-border last:border-0 last:pb-0"
+            >
+              <div className="flex items-center gap-[11px] min-w-0">
+                <div
+                  className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[15px] flex-shrink-0"
+                  style={{ background: "var(--muted)" }}
+                >
+                  🛒
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-semibold truncate">{purchase.description}</div>
                   {purchase.expenseDate && (
-                    <p className="text-xs text-muted-foreground">
+                    <div className="text-[11px] text-muted-foreground mt-[1px]">
                       {formatDate(purchase.expenseDate)}
-                    </p>
+                    </div>
                   )}
                 </div>
-                <OwnerTag
-                  responsibleId={purchase.responsibleId}
-                  currentUserId={currentUserId}
-                  memberNames={memberNames}
-                />
-                <span className="text-sm font-medium text-foreground shrink-0">
-                  {formatCurrency(purchase.amount)}
-                </span>
-                <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-              </Link>
-            </li>
+              </div>
+              <div className="text-[16px] font-extrabold num flex-shrink-0">
+                {formatCurrency(purchase.amount)}
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

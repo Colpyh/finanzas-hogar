@@ -36,8 +36,11 @@ export async function GET(req: NextRequest) {
   const mYear = mParts[0] ?? new Date().getFullYear();
   const mMonth = mParts[1] ?? new Date().getMonth() + 1;
   const lastDay = new Date(mYear, mMonth, 0).toISOString().slice(0, 10);
-  const dateFrom = searchParams.get("from") ?? month;
-  const dateTo = searchParams.get("to") ?? lastDay;
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  const fromParam = searchParams.get("from") ?? "";
+  const toParam = searchParams.get("to") ?? "";
+  const dateFrom = dateRegex.test(fromParam) ? fromParam : month;
+  const dateTo = dateRegex.test(toParam) ? toParam : lastDay;
 
   const rows = await getExpenses(household.id, {
     type: typeFilter,

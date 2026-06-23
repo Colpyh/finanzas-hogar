@@ -1,5 +1,4 @@
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CreditCard } from "lucide-react";
 import type { CardPaymentDue } from "@/tarjetas/queries";
 
 type Props = {
@@ -9,61 +8,67 @@ type Props = {
 
 function formatShortDate(dateStr: string): string {
   const [, mm, dd] = dateStr.split("-");
-  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
   return `${parseInt(dd!)} ${months[parseInt(mm!) - 1]}`;
 }
 
 export function CardPaymentsWidget({ payments, month }: Props) {
   if (payments.length === 0) return null;
 
-  const monthYear = month.slice(0, 7);
-  const [y, m] = monthYear.split("-").map(Number);
+  const [y, m] = month.slice(0, 7).split("-").map(Number);
 
   return (
-    <div className="rounded-2xl bg-card border border-border shadow-sm p-4 space-y-3">
-      <h2 className="text-sm font-semibold text-foreground">Pagos de tarjetas</h2>
+    <div
+      className="rounded-[20px] bg-card border border-border p-4 flex flex-col gap-[13px]"
+      style={{ boxShadow: "var(--shadow-md)" }}
+    >
+      <span className="flex items-center gap-[7px] text-[12px] font-bold uppercase tracking-[0.3px] text-muted-foreground">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary">
+          <rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/>
+        </svg>
+        Pagos de tarjetas
+      </span>
 
-      <ul className="space-y-3">
+      <div className="flex flex-col gap-[13px]">
         {payments.map((p) => {
           const dueDateStr = `${y}-${String(m).padStart(2, "0")}-${String(p.paymentDueDay).padStart(2, "0")}`;
+          const chipColor = p.cardColor ?? "#6366f1";
 
           return (
-            <li key={p.cardId} className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: p.cardColor + "20" }}
-                  >
-                    <CreditCard size={12} style={{ color: p.cardColor }} />
-                  </div>
-                  <span className="text-sm font-medium text-foreground">
-                    {p.cardName}
-                    {p.cardLastFour && (
-                      <span className="text-muted-foreground font-normal"> ···· {p.cardLastFour}</span>
-                    )}
-                  </span>
-                </div>
-                <span className="text-sm font-semibold text-foreground tabular-nums">
-                  {formatCurrency(p.amount)}
-                </span>
+            <div key={p.cardId} className="flex items-center gap-3 py-1">
+              <div
+                className="w-[42px] h-[30px] rounded-[7px] flex items-end p-1 flex-shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${chipColor}dd, ${chipColor}99)`,
+                  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3)",
+                }}
+              >
+                <span
+                  className="w-[9px] h-[6px] rounded-[2px] block"
+                  style={{ background: "rgba(255,255,255,0.55)" }}
+                />
               </div>
 
-              <div className="flex items-center justify-between pl-8 text-xs text-muted-foreground">
-                <span>
-                  {formatShortDate(p.billingStart)} – {formatShortDate(p.billingEnd)}
-                </span>
-                <span>
-                  Vence{" "}
-                  <span className="font-medium text-foreground">
-                    {formatShortDate(dueDateStr)}
-                  </span>
-                </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13.5px] font-semibold">
+                  {p.cardName}
+                  {p.cardLastFour && (
+                    <span className="text-[12px] font-normal text-muted-foreground num"> ···· {p.cardLastFour}</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  {formatShortDate(p.billingStart)} – {formatShortDate(p.billingEnd)} · Vence{" "}
+                  <span className="font-semibold text-foreground">{formatShortDate(dueDateStr)}</span>
+                </div>
               </div>
-            </li>
+
+              <div className="text-[20px] font-extrabold num flex-shrink-0">
+                {formatCurrency(p.amount)}
+              </div>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }

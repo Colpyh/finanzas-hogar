@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { discardPendingExpense } from "@/email-inbound/actions";
-import type { PendingExpense } from "@/shared/lib/db/schema";
+import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Props = {
-  item: PendingExpense | null;
+  item: PendingExpenseRow | null;
   open: boolean;
   onClose: () => void;
 };

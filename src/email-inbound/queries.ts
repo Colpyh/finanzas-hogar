@@ -1,14 +1,16 @@
 import "server-only";
 import { db } from "@/shared/lib/db";
 import { pendingExpense } from "@/shared/lib/db/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, getTableColumns } from "drizzle-orm";
 
 export async function listPendingByHousehold(
   householdId: string,
   opts?: { limit?: number; offset?: number }
 ) {
+  const { rawPayload, ...cols } = getTableColumns(pendingExpense);
+  void rawPayload; // excluded — too large and not needed in the UI
   return db
-    .select()
+    .select(cols)
     .from(pendingExpense)
     .where(
       and(

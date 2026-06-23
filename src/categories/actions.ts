@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { db } from "@/shared/lib/db";
 import { category, expense } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
@@ -7,7 +8,14 @@ import { revalidatePath } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 
-type CategoryInput = { name: string; icon?: string; color?: string; monthlyBudget?: number };
+const categorySchema = z.object({
+  name: z.string().min(1).max(50),
+  icon: z.string().max(10).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
+  monthlyBudget: z.number().finite().positive().optional().nullable(),
+});
+
+type CategoryInput = z.input<typeof categorySchema>;
 
 export async function createCategory(rawData: CategoryInput): Promise<{ error?: string }> {
   try {
@@ -15,15 +23,16 @@ export async function createCategory(rawData: CategoryInput): Promise<{ error?: 
     const household = await getUserHousehold(user.id);
     if (!household) return { error: "No tienes un hogar activo" };
 
-    const name = rawData.name?.trim();
-    if (!name) return { error: "El nombre es obligatorio" };
+    const parsed = categorySchema.safeParse(rawData);
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    const data = parsed.data;
 
     await db.insert(category).values({
       householdId: household.id,
-      name,
-      icon: rawData.icon?.trim() || null,
-      color: rawData.color?.trim() || null,
-      monthlyBudget: rawData.monthlyBudget != null ? String(rawData.monthlyBudget) : null,
+      name: data.name.trim(),
+      icon: data.icon?.trim() || null,
+      color: data.color ?? null,
+      monthlyBudget: data.monthlyBudget != null ? String(data.monthlyBudget) : null,
     });
 
     revalidatePath("/ajustes");
@@ -42,16 +51,17 @@ export async function updateCategory(
     const household = await getUserHousehold(user.id);
     if (!household) return { error: "Sin hogar activo" };
 
-    const name = rawData.name?.trim();
-    if (!name) return { error: "El nombre es obligatorio" };
+    const parsed = categorySchema.safeParse(rawData);
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    const data = parsed.data;
 
     await db
       .update(category)
       .set({
-        name,
-        icon: rawData.icon?.trim() || null,
-        color: rawData.color?.trim() || null,
-        monthlyBudget: rawData.monthlyBudget != null ? String(rawData.monthlyBudget) : null,
+        name: data.name.trim(),
+        icon: data.icon?.trim() || null,
+        color: data.color ?? null,
+        monthlyBudget: data.monthlyBudget != null ? String(data.monthlyBudget) : null,
       })
       .where(and(eq(category.id, id), eq(category.householdId, household.id)));
 
