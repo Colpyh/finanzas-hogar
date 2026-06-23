@@ -77,96 +77,129 @@ export default async function ResumenPage({ searchParams }: Props) {
     // Sin sesión — datos de ejemplo
   }
 
+  // Derived stats from annual data
+  const mostExpensiveMonth = annualData.length > 0
+    ? annualData.reduce((m, d) => d.expenses > m.expenses ? d : m)
+    : null;
+  const avgMonthly = annualData.length > 0
+    ? Math.round(annualData.reduce((sum, d) => sum + d.expenses, 0) / annualData.length)
+    : 0;
+
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 max-w-5xl mx-auto pb-8">
-      <div className="pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">Resumen</h1>
-        <p className="text-sm text-muted-foreground capitalize">{formatMonthLabel(month)}</p>
+    <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8 space-y-4">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1
+            className="text-[23px] font-semibold text-foreground"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Resumen anual
+          </h1>
+          <p className="text-[13px] text-muted-foreground mt-[3px]">Últimos 12 meses</p>
+        </div>
+        <MonthPickerNav month={month} />
       </div>
 
-      <MonthPickerNav month={month} />
+      {/* Annual chart card */}
+      {annualData.length > 0 && (
+        <div
+          className="bg-card border border-border rounded-[20px] p-[18px_14px_14px]"
+          style={{ boxShadow: "var(--shadow-sm)" }}
+        >
+          <AnnualChart data={annualData} />
+        </div>
+      )}
 
-      {summary.grandTotal === 0 ? (
+      {/* Stat cards: mes más caro + promedio */}
+      {mostExpensiveMonth && (
+        <div className="flex gap-[11px]">
+          <div
+            className="flex-1 rounded-[18px] p-[15px]"
+            style={{ background: "linear-gradient(140deg,#8b46f0,#6d28d9)", boxShadow: "0 10px 26px rgba(109,40,217,.32)" }}
+          >
+            <p className="text-[11.5px] font-medium" style={{ color: "rgba(255,255,255,.82)" }}>Mes más caro</p>
+            <p className="text-[17px] font-extrabold text-white mt-[3px]">{mostExpensiveMonth.label}</p>
+            <p className="text-[14px] font-bold num mt-[1px]" style={{ color: "rgba(255,255,255,.92)" }}>
+              {formatCurrency(mostExpensiveMonth.expenses)}
+            </p>
+          </div>
+          <div
+            className="flex-1 bg-card border border-border rounded-[18px] p-[15px]"
+            style={{ boxShadow: "var(--shadow-sm)" }}
+          >
+            <p className="text-[11.5px] font-medium text-muted-foreground">Promedio mensual</p>
+            <p className="text-[17px] font-extrabold text-foreground mt-[3px] num">
+              {formatCurrency(avgMonthly)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Por categoría */}
+      {summary.byCategory.length > 0 && (
+        <div>
+          <h2
+            className="text-[16px] font-extrabold text-foreground mb-3"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Por categoría
+          </h2>
+          <CategoryChart categories={summary.byCategory} />
+        </div>
+      )}
+
+      {/* Presupuesto mensual */}
+      {(() => {
+        const withBudget = summary.byCategory.filter((c) => c.budget !== null);
+        if (withBudget.length === 0) return null;
+        return (
+          <div
+            className="bg-card border border-border rounded-[20px] p-4 space-y-4"
+            style={{ boxShadow: "var(--shadow-sm)" }}
+          >
+            <h2 className="text-[14px] font-bold text-foreground">Presupuesto mensual</h2>
+            <div className="space-y-4">
+              {withBudget.map((c) => (
+                <BudgetProgress
+                  key={c.categoryId}
+                  categoryName={c.categoryName}
+                  spent={c.total}
+                  budget={c.budget!}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Cuotas activas */}
+      {burden.installments.length > 0 && (
+        <div
+          className="bg-card border border-border rounded-[20px] p-4"
+          style={{ boxShadow: "var(--shadow-sm)" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[14px] font-bold text-foreground">Cuotas activas</h2>
+            <span className="text-[12px] text-muted-foreground num">{formatCurrency(burden.monthlyLockIn)}/mes</span>
+          </div>
+          <ul className="space-y-2.5">
+            {burden.installments.map((item) => (
+              <li key={item.id} className="flex items-center justify-between text-sm">
+                <span className="text-foreground truncate flex-1 mr-2">{item.description}</span>
+                <span className="text-muted-foreground shrink-0 text-[12px]">
+                  {item.remaining} cuota{item.remaining !== 1 ? "s" : ""} restante{item.remaining !== 1 ? "s" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {summary.grandTotal === 0 && annualData.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">Sin gastos registrados para este mes</p>
         </div>
-      ) : (
-        <>
-          {/* Totales rápidos */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-card border border-border p-4">
-              <p className="text-xs text-muted-foreground mb-1">Total del mes</p>
-              <p className="text-lg font-bold text-foreground">{formatCurrency(summary.grandTotal)}</p>
-            </div>
-            <div className="rounded-2xl bg-card border border-border p-4">
-              <p className="text-xs text-muted-foreground mb-1">Cuotas bloqueadas</p>
-              <p className="text-lg font-bold text-foreground">{formatCurrency(burden.monthlyLockIn)}</p>
-            </div>
-          </div>
-
-          {/* Por categoría */}
-          <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-            <h2 className="text-sm font-semibold">Por categoría</h2>
-            <CategoryChart categories={summary.byCategory} />
-          </div>
-
-          {/* Presupuesto mensual */}
-          {(() => {
-            const withBudget = summary.byCategory.filter((c) => c.budget !== null);
-            if (withBudget.length === 0) return null;
-            return (
-              <div className="rounded-2xl bg-card border border-border p-4 space-y-4">
-                <h2 className="text-sm font-semibold">Presupuesto mensual</h2>
-                <div className="space-y-4">
-                  {withBudget.map((c) => (
-                    <BudgetProgress
-                      key={c.categoryId}
-                      categoryName={c.categoryName}
-                      spent={c.total}
-                      budget={c.budget!}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Fijos vs Variables */}
-          <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-            <h2 className="text-sm font-semibold">Distribución</h2>
-            <FixedVariableBreakdown breakdown={breakdown} />
-          </div>
-
-          {/* Vista anual */}
-          {annualData.length > 0 && (
-            <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-              <h2 className="text-sm font-semibold">Últimos 12 meses</h2>
-              <AnnualChart data={annualData} />
-            </div>
-          )}
-
-          {/* Cuotas activas */}
-          {burden.installments.length > 0 && (
-            <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold">Cuotas activas</h2>
-                <span className="text-xs text-muted-foreground">
-                  {formatCurrency(burden.monthlyLockIn)}/mes
-                </span>
-              </div>
-              <ul className="space-y-2.5">
-                {burden.installments.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between text-sm">
-                    <span className="text-foreground truncate flex-1 mr-2">{item.description}</span>
-                    <span className="text-muted-foreground shrink-0">
-                      {item.remaining} cuota{item.remaining !== 1 ? "s" : ""} restante{item.remaining !== 1 ? "s" : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </>
       )}
     </div>
   );
