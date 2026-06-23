@@ -10,8 +10,7 @@ import { AddMemberModal } from "@/household/components/add-member-modal";
 import { CardManager } from "@/tarjetas/components/card-manager";
 import { CategoryManager } from "@/categories/components/category-manager";
 import { SignOutButton } from "@/auth/components/sign-out-button";
-import { Button } from "@/components/ui/button";
-import { Users, Home, Palette, CreditCard, Bug, ShieldAlert, Tag } from "lucide-react";
+import { Bug, ShieldAlert } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { PushNotificationToggle } from "@/shared/components/push-notification-toggle";
 import { BugReportForm } from "@/bug-report/components/bug-report-form";
@@ -78,91 +77,92 @@ export default async function AjustesPage() {
     // Sin sesión — datos de ejemplo
   }
 
-  return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 max-w-5xl mx-auto pb-8">
-      <div className="pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">Ajustes</h1>
-      </div>
+  function SectionLabel({ children }: { children: React.ReactNode }) {
+    return (
+      <p className="text-[11.5px] font-bold text-muted-foreground uppercase mb-[9px]" style={{ letterSpacing: "0.04em" }}>
+        {children}
+      </p>
+    );
+  }
 
-      {/* Hogar */}
-      <div className="rounded-2xl bg-card border border-border p-4 space-y-2">
-        <div className="flex items-center gap-2 text-muted-foreground mb-1">
-          <Home size={15} />
-          <span className="text-xs font-medium uppercase tracking-wide">Tu hogar</span>
-        </div>
-        <p className="text-base font-semibold text-foreground">{householdName}</p>
-        <p className="text-sm text-muted-foreground">
+  const cardStyle = {
+    boxShadow: "var(--shadow-sm)",
+  };
+
+  return (
+    <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8 space-y-4">
+      <h1
+        className="text-[23px] font-semibold text-foreground mb-2"
+        style={{ letterSpacing: "-0.02em" }}
+      >
+        Ajustes
+      </h1>
+
+      {/* Nombre del hogar */}
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <SectionLabel>Nombre del hogar</SectionLabel>
+        <p className="text-[15px] font-bold text-foreground">{householdName}</p>
+        <p className="text-[12px] text-muted-foreground mt-0.5">
           {members.length} miembro{members.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {/* Miembros */}
-      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Users size={15} />
-          <span className="text-xs font-medium uppercase tracking-wide">Miembros</span>
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <div className="flex items-center justify-between mb-[11px]">
+          <SectionLabel>Miembros</SectionLabel>
+          {isOwner && <AddMemberModal />}
         </div>
         <MemberList members={members} isOwner={isOwner} />
-        {isOwner && <AddMemberModal />}
       </div>
 
       {/* Tarjetas */}
-      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <CreditCard size={15} />
-          <span className="text-xs font-medium uppercase tracking-wide">Tarjetas de pago</span>
-        </div>
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <SectionLabel>Tarjetas</SectionLabel>
         <CardManager cards={cards} />
       </div>
 
       {/* Categorías */}
-      <section className="rounded-2xl bg-card border border-border p-4 space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Tag size={15} />
-          <span className="text-xs font-medium uppercase tracking-wide">Categorías</span>
-        </div>
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <SectionLabel>Categorías</SectionLabel>
         <CategoryManager categories={categories} householdId={householdId} />
-      </section>
+      </div>
 
       {/* Notificaciones */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Notificaciones</h2>
-        <div className="rounded-xl border bg-card p-4">
-          <p className="text-sm mb-3">Recibí alertas cuando se detecte un nuevo gasto desde tu email.</p>
-          <PushNotificationToggle />
-        </div>
-      </section>
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <SectionLabel>Notificaciones push</SectionLabel>
+        <p className="text-[13px] text-muted-foreground mb-3 leading-snug">
+          Recibí alertas cuando se detecte un nuevo gasto desde tu email.
+        </p>
+        <PushNotificationToggle />
+      </div>
 
       {/* Apariencia */}
-      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Palette size={15} />
-          <span className="text-xs font-medium uppercase tracking-wide">Apariencia</span>
-        </div>
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <SectionLabel>Apariencia</SectionLabel>
         <ThemeToggle />
       </div>
 
-      {/* Reportar problema */}
-      <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Bug size={15} />
-          <span className="text-xs font-medium uppercase tracking-wide">Soporte</span>
+      {/* Soporte */}
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <div className="flex items-center gap-2 mb-3">
+          <Bug size={14} className="text-muted-foreground" />
+          <SectionLabel>Soporte</SectionLabel>
         </div>
         <BugReportForm />
       </div>
 
-      {/* Panel admin — solo visible para el administrador */}
+      {/* Panel admin */}
       {isAdmin && (
-        <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <ShieldAlert size={15} />
-            <span className="text-xs font-medium uppercase tracking-wide">Reportes de usuarios</span>
+        <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldAlert size={14} className="text-muted-foreground" />
+            <SectionLabel>Reportes de usuarios</SectionLabel>
           </div>
           <BugReportPanel reports={bugReports} />
         </div>
       )}
 
-      {/* Cerrar sesión */}
       <SignOutButton />
     </div>
   );
