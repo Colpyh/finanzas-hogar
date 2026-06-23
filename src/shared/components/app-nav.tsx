@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useHousehold } from "@/shared/hooks/use-household";
 import {
   LayoutDashboard,
   Receipt,
@@ -12,6 +14,8 @@ import {
   Settings,
   Inbox,
   Menu,
+  Moon,
+  Sun,
 } from "lucide-react";
 import {
   Sheet,
@@ -21,7 +25,7 @@ import {
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/gastos-fijos", label: "Gastos fijos", icon: Receipt },
+  { href: "/gastos-fijos", label: "Fijos", icon: Receipt },
   { href: "/compras", label: "Compras", icon: ShoppingCart },
   { href: "/resumen", label: "Resumen", icon: BarChart2 },
   { href: "/gastos-pendientes", label: "Pendientes", icon: Inbox },
@@ -30,6 +34,7 @@ const NAV_ITEMS = [
 
 type Props = {
   pendingCount?: number;
+  userEmail?: string;
 };
 
 function NavLinks({
@@ -78,7 +83,54 @@ function NavLinks({
   );
 }
 
-export function AppNav({ pendingCount = 0 }: Props) {
+function DarkModeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
+  return (
+    <button
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+    >
+      {isDark ? <Sun size={17} /> : <Moon size={17} />}
+      <span className="flex-1 text-left">Modo oscuro</span>
+      <span
+        className={cn(
+          "relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0",
+          isDark ? "bg-primary" : "bg-muted-foreground/30"
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200",
+            isDark ? "translate-x-4" : "translate-x-0.5"
+          )}
+        />
+      </span>
+    </button>
+  );
+}
+
+function UserFooter({ userEmail }: { userEmail?: string }) {
+  const household = useHousehold();
+  const initial = (userEmail ?? household.name).charAt(0).toUpperCase();
+
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2.5">
+      <span className="shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+        {initial}
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-foreground truncate">
+          {userEmail ? userEmail.split("@")[0] : "Usuario"}
+        </p>
+        <p className="text-[10px] text-muted-foreground truncate">{household.name}</p>
+      </div>
+    </div>
+  );
+}
+
+export function AppNav({ pendingCount = 0, userEmail }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -95,9 +147,19 @@ export function AppNav({ pendingCount = 0 }: Props) {
             Finanzas Hogar
           </span>
         </div>
+
         <nav className="flex-1 py-3 overflow-y-auto">
           <NavLinks pathname={pathname} pendingCount={pendingCount} />
         </nav>
+
+        <div className="shrink-0 border-t border-border pb-2">
+          <div className="px-3 pt-2">
+            <DarkModeToggle />
+          </div>
+          <div className="mt-1 border-t border-border pt-1">
+            <UserFooter userEmail={userEmail} />
+          </div>
+        </div>
       </aside>
 
       {/* Mobile top header */}
@@ -106,19 +168,27 @@ export function AppNav({ pendingCount = 0 }: Props) {
           <SheetTrigger className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
             <Menu size={20} />
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0" showCloseButton={false}>
+          <SheetContent side="left" className="w-64 p-0 flex flex-col" showCloseButton={false}>
             <div className="flex items-center h-14 px-5 border-b border-border shrink-0">
               <span className="font-semibold text-sm tracking-tight text-foreground">
                 Finanzas Hogar
               </span>
             </div>
-            <nav className="py-3">
+            <nav className="flex-1 py-3 overflow-y-auto">
               <NavLinks
                 pathname={pathname}
                 pendingCount={pendingCount}
                 onNavigate={() => setOpen(false)}
               />
             </nav>
+            <div className="shrink-0 border-t border-border pb-2">
+              <div className="px-3 pt-2">
+                <DarkModeToggle />
+              </div>
+              <div className="mt-1 border-t border-border pt-1">
+                <UserFooter userEmail={userEmail} />
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
         <span className="font-semibold text-sm text-foreground">

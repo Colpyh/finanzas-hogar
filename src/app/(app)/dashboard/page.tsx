@@ -142,12 +142,12 @@ export default async function DashboardPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="p-4 space-y-4 max-w-lg mx-auto pb-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between mb-5 md:mb-6">
         <div>
-          <p className="text-[12px] font-medium text-muted-foreground">Buen día 👋</p>
-          <h1 className="text-[23px] font-extrabold text-foreground tracking-tight leading-tight">{householdName}</h1>
+          <p className="text-xs font-medium text-muted-foreground">Buen día 👋</p>
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight leading-tight">{householdName}</h1>
         </div>
         <div className="flex items-center gap-1">
           <WhatsappShareButton
@@ -164,14 +164,34 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
       </div>
 
+      {/* Summary card — full width */}
       <AnimatedWidgets>
         <MonthlySummaryCard summary={summary} month={month} />
-        <CardPaymentsWidget payments={cardPayments} month={month} />
-        <BudgetAlertsWidget categories={budgets} />
-        <FixedExpensesWidget bills={bills} currentUserId={currentUserId} memberNames={memberNames} />
-        <InstallmentsWidget installments={installments} currentUserId={currentUserId} memberNames={memberNames} />
-        <RecentPurchasesWidget purchases={purchases} currentUserId={currentUserId} memberNames={memberNames} />
       </AnimatedWidgets>
+
+      {/* Main grid: top alerts + 2-column widget layout */}
+      <div className="mt-4 space-y-4">
+        {/* Full-width alerts */}
+        <AnimatedWidgets>
+          {cardPayments.length > 0 && (
+            <CardPaymentsWidget payments={cardPayments} month={month} />
+          )}
+          {budgets.some((b) => b.percentage >= 80) && (
+            <BudgetAlertsWidget categories={budgets} />
+          )}
+        </AnimatedWidgets>
+
+        {/* Two-column grid on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <AnimatedWidgets>
+            <FixedExpensesWidget bills={bills} currentUserId={currentUserId} memberNames={memberNames} />
+            <InstallmentsWidget installments={installments} currentUserId={currentUserId} memberNames={memberNames} />
+          </AnimatedWidgets>
+          <AnimatedWidgets>
+            <RecentPurchasesWidget purchases={purchases} currentUserId={currentUserId} memberNames={memberNames} />
+          </AnimatedWidgets>
+        </div>
+      </div>
 
       <QuickAddFab />
     </div>

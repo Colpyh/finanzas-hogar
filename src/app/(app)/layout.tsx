@@ -53,7 +53,12 @@ export default async function AppLayout({
   const pendingCount = await getPendingCount(result.household.id).catch(() => 0);
 
   return (
-    <AppProviders household={result.household} userId={result.user.id} pendingCount={pendingCount}>
+    <AppProviders
+      household={result.household}
+      userId={result.user.id}
+      userEmail={result.user.email ?? undefined}
+      pendingCount={pendingCount}
+    >
       {children}
     </AppProviders>
   );
