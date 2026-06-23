@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft, CheckCircle2, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -8,9 +6,7 @@ import { getPendingBalances } from "@/balances/queries";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam, currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { EmptyState } from "@/shared/components/empty-state";
 import { SettleButton } from "@/balances/components/settle-button";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Balances" };
 
@@ -37,109 +33,134 @@ export default async function BalancesPage({ searchParams }: Props) {
   );
 
   const isCurrentMonth = month === currentPeriodMonth();
+  const totalNet = balances.reduce((sum, b) => sum + b.net, 0);
+  const netIsPositive = totalNet >= 0;
+
+  // Flat list of all items with their balance context
+  const allItems = balances.flatMap((b) =>
+    b.items.map((item) => ({
+      ...item,
+      memberName: b.memberName,
+      isOwed: b.net > 0,
+    }))
+  );
+
+  // Payer avatar color — deterministic from name
+  function avatarGradient(name: string): string {
+    const palettes = [
+      "linear-gradient(135deg,#8b46f0,#6d28d9)",
+      "linear-gradient(135deg,#0ea5e9,#0369a1)",
+      "linear-gradient(135deg,#22c55e,#15803d)",
+      "linear-gradient(135deg,#f59e0b,#d97706)",
+    ];
+    const idx = name.charCodeAt(0) % palettes.length;
+    return palettes[idx] ?? palettes[0]!;
+  }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-5 max-w-5xl mx-auto pb-8">
-      <div className="flex items-center justify-between pt-2">
-        <div className="flex items-center gap-2">
-          <Link href="/gastos-fijos" className="text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronLeft size={20} />
-          </Link>
-          <h1 className="text-2xl font-bold tracking-tight">Balances</h1>
-        </div>
+    <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8 space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1
+          className="text-[23px] font-semibold text-foreground"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          Balances
+        </h1>
         <MonthSelector month={month} />
       </div>
-      {!isCurrentMonth && (
-        <p className="text-xs text-muted-foreground">Historial — los gastos saldados no aparecen</p>
-      )}
 
       {balances.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-8 flex flex-col items-center gap-3 text-center">
-          <CheckCircle2 size={36} className="text-emerald-500" />
-          <p className="font-semibold text-foreground">Todo saldado</p>
-          <p className="text-sm text-muted-foreground">
-            {isCurrentMonth
-              ? "No hay deudas pendientes este mes."
-              : "No hubo deudas pendientes en este período."}
+        /* Empty state */
+        <div className="flex flex-col items-center justify-center py-[60px] px-5 text-center">
+          <span className="text-[46px]">⚖️</span>
+          <p className="text-[16px] font-extrabold text-foreground mt-3" style={{ letterSpacing: "-0.01em" }}>
+            Todo saldado
+          </p>
+          <p className="text-[13px] text-muted-foreground mt-1">
+            {isCurrentMonth ? "No hay deudas pendientes este mes." : "No hubo deudas pendientes en este período."}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {balances.map((balance) => {
-            const isOwed = balance.net > 0;
-            return (
-              <div key={balance.memberId} className="rounded-2xl border border-border bg-card overflow-hidden">
-                {/* Header */}
-                <div className={cn(
-                  "flex items-center justify-between px-5 py-4",
-                  isOwed ? "bg-emerald-500/8" : "bg-amber-500/8"
-                )}>
-                  <div className="flex items-center gap-2.5">
-                    <div className={cn(
-                      "rounded-full p-1.5",
-                      isOwed ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
-                    )}>
-                      {isOwed
-                        ? <ArrowDownLeft size={16} />
-                        : <ArrowUpRight size={16} />
-                      }
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground leading-none mb-0.5">
-                        {isOwed ? `${balance.memberName} te debe` : `Le debés a ${balance.memberName}`}
-                      </p>
-                      <p className={cn(
-                        "text-lg font-bold leading-none",
-                        isOwed ? "text-emerald-600" : "text-amber-600"
-                      )}>
-                        {formatCurrency(Math.abs(balance.net))}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {balance.items.length} {balance.items.length === 1 ? "gasto" : "gastos"}
-                  </span>
-                </div>
+        <>
+          {/* Net card */}
+          <div
+            className="rounded-[22px] p-[22px] text-center"
+            style={{
+              background: netIsPositive
+                ? "linear-gradient(140deg,#22c55e,#15803d)"
+                : "linear-gradient(140deg,#f59e0b,#d97706)",
+              boxShadow: netIsPositive
+                ? "0 14px 34px rgba(21,128,61,.35)"
+                : "0 14px 34px rgba(217,119,6,.35)",
+            }}
+          >
+            <p className="text-[13px] font-medium" style={{ color: "rgba(255,255,255,.85)" }}>
+              {netIsPositive
+                ? `${balances[0]?.memberName} te debe`
+                : `Debes a ${balances[0]?.memberName}`}
+            </p>
+            <p
+              className="text-[36px] font-semibold text-white mt-1 num"
+              style={{ letterSpacing: "-0.01em" }}
+            >
+              {formatCurrency(Math.abs(totalNet))}
+            </p>
+          </div>
 
-                {/* Expense breakdown */}
-                <div className="divide-y divide-border">
-                  {balance.items.map((item) => (
-                    <div key={item.expenseId} className="flex items-center justify-between px-5 py-3 gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-sm font-medium text-foreground">{item.description}</p>
-                          {item.type === "installment" && (
-                            <span className="inline-flex items-center rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
-                              cuota
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {item.type === "installment" ? "Cuota" : "Total"} {formatCurrency(item.totalAmount)} · tu parte {formatCurrency(item.shareAmount)}
-                        </p>
+          {/* Movements */}
+          <div>
+            <h2
+              className="text-[14px] font-extrabold text-foreground mb-3"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Movimientos del mes
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[11px] items-start">
+              {allItems.map((item) => {
+                const payerName = item.payerId === user.id
+                  ? "Tú"
+                  : memberMap.get(item.payerId) ?? "Otro";
+                const dirLabel = item.isOwed ? `Pagó ${payerName}` : `Pagó ${payerName}`;
+                const amtColor = item.isOwed ? "#22c55e" : "#f59e0b";
+                const initial = payerName.charAt(0).toUpperCase();
+                return (
+                  <div
+                    key={item.expenseId}
+                    className="bg-card border border-border rounded-[18px] p-[14px_15px]"
+                    style={{ boxShadow: "var(--shadow-sm)" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white font-extrabold text-[14px] flex-shrink-0"
+                        style={{ background: avatarGradient(payerName) }}
+                      >
+                        {initial}
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className={cn(
-                          "text-sm font-semibold",
-                          isOwed ? "text-emerald-600" : "text-amber-600"
-                        )}>
-                          {formatCurrency(item.shareAmount)}
-                        </span>
-                        <SettleButton
-                          expenseId={item.expenseId}
-                          description={item.description}
-                          shareAmount={item.shareAmount}
-                          periodMonth={month}
-                          iAmCreditor={item.payerId === user.id}
-                        />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-bold text-foreground truncate">{item.description}</p>
+                        <p className="text-[12px] text-muted-foreground mt-[2px]">{dirLabel}</p>
                       </div>
+                      <span
+                        className="text-[14.5px] font-extrabold shrink-0 num"
+                        style={{ color: amtColor }}
+                      >
+                        {formatCurrency(item.shareAmount)}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    <SettleButton
+                      expenseId={item.expenseId}
+                      description={item.description}
+                      shareAmount={item.shareAmount}
+                      periodMonth={month}
+                      iAmCreditor={item.payerId === user.id}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
