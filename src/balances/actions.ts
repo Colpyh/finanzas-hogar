@@ -3,7 +3,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -67,6 +67,7 @@ export async function settleBalanceItem(
     throw err;
   }
 
+  updateTag(household.id);
   revalidatePath("/balances");
   revalidatePath("/gastos-fijos");
   revalidatePath("/compras");

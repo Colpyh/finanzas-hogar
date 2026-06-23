@@ -3,10 +3,13 @@ import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, inArray } from "drizzle-orm";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import type { InferSelectModel } from "drizzle-orm";
+import { cacheTag } from "next/cache";
 
 export type FixedExpensePayment = InferSelectModel<typeof fixedExpensePayment>;
 
 export async function getActiveFixedExpenses(householdId: string) {
+  'use cache'
+  cacheTag(householdId)
   return db
     .select()
     .from(expense)
@@ -47,6 +50,8 @@ export async function getPaymentsForCurrentMonth(expenseId: string) {
 
 /** Trae todos los pagos del mes para todos los gastos fijos activos del hogar en una sola query. */
 export async function getAllFixedPaymentsForPeriod(householdId: string, periodMonth: string) {
+  'use cache'
+  cacheTag(householdId)
   return db
     .select({ payment: fixedExpensePayment })
     .from(fixedExpensePayment)

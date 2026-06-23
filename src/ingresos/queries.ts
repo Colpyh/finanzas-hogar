@@ -1,6 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { income } from "@/shared/lib/db/schema";
 import { eq, and, lte } from "drizzle-orm";
+import { cacheTag } from "next/cache";
 
 /**
  * Returns income rows for a given month:
@@ -11,6 +12,8 @@ import { eq, and, lte } from "drizzle-orm";
  * Entering a new salary for a later month replaces it going forward.
  */
 export async function getMonthlyIncome(householdId: string, periodMonth: string) {
+  'use cache'
+  cacheTag(householdId)
   const allRows = await db
     .select()
     .from(income)

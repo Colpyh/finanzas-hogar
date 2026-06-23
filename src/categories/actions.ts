@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/shared/lib/db";
 import { category, expense } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 
@@ -35,6 +35,7 @@ export async function createCategory(rawData: CategoryInput): Promise<{ error?: 
       monthlyBudget: data.monthlyBudget != null ? String(data.monthlyBudget) : null,
     });
 
+    updateTag(household.id);
     revalidatePath("/ajustes");
     return {};
   } catch (err) {
@@ -65,6 +66,7 @@ export async function updateCategory(
       })
       .where(and(eq(category.id, id), eq(category.householdId, household.id)));
 
+    updateTag(household.id);
     revalidatePath("/ajustes");
     return {};
   } catch (err) {
@@ -92,6 +94,7 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
       .delete(category)
       .where(and(eq(category.id, id), eq(category.householdId, household.id)));
 
+    updateTag(household.id);
     revalidatePath("/ajustes");
     return {};
   } catch (err) {

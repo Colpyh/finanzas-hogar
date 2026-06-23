@@ -3,7 +3,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -31,6 +31,7 @@ export async function createPurchase(rawData: unknown) {
     })
     .returning();
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/dashboard");
 }
@@ -63,6 +64,7 @@ export async function createInstallment(rawData: unknown) {
     })
     .returning();
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/dashboard");
 }
@@ -95,6 +97,7 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
     .set({ installmentsPaid: paid + 1 })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/dashboard");
   return {};
@@ -138,6 +141,7 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
     throw err;
   }
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/balances");
   revalidatePath("/dashboard");
@@ -182,6 +186,7 @@ export async function registerInstallmentShare(expenseId: string): Promise<{ err
     throw err;
   }
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/balances");
   revalidatePath("/dashboard");
@@ -201,6 +206,7 @@ export async function updateExpense(expenseId: string, rawData: unknown) {
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .returning();
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
   revalidatePath("/dashboard");
@@ -238,6 +244,7 @@ export async function updateInstallment(
     })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/balances");
   revalidatePath("/dashboard");
@@ -262,6 +269,7 @@ export async function updateExpenseCard(
 
   await db.update(expense).set({ cardId }).where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
   return {};
@@ -286,6 +294,7 @@ export async function deleteExpense(expenseId: string): Promise<{ error?: string
     .set({ deletedAt: new Date() })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
+  updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/dashboard");
   return {};

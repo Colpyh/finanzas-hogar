@@ -3,7 +3,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -36,6 +36,7 @@ export async function createFixedExpense(rawData: unknown) {
     })
     .returning();
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
 }
@@ -79,6 +80,7 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
     throw err;
   }
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -107,6 +109,7 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
     return { error: "No se pudo actualizar el pago" };
   }
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -130,6 +133,7 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<void>
     .set({ isActive: !current.isActive })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
 }
@@ -147,6 +151,7 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .returning();
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   return updated;
 }
@@ -192,6 +197,7 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
     throw err;
   }
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -215,6 +221,7 @@ export async function unmarkMyPayment(expenseId: string, month?: string): Promis
       )
     );
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -242,6 +249,7 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
       )
     );
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -257,6 +265,7 @@ export async function deleteFixedExpense(expenseId: string): Promise<void> {
     .set({ deletedAt: new Date() })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
+  updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
 }

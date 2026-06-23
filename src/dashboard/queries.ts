@@ -1,6 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte, gte, lt, desc, inArray } from "drizzle-orm";
+import { cacheTag } from "next/cache";
 import { getMonthlyIncomeTotal, getMyMonthlyIncomeTotal } from "@/ingresos/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
@@ -29,6 +30,8 @@ export async function getDashboardSummary(
   userId: string,
   month: string
 ): Promise<DashboardSummary> {
+  'use cache'
+  cacheTag(householdId)
   // fixedTotal: sum of amounts of active fixed expenses
   const fixedRows = await db
     .select({ amount: expense.amount, responsibleId: expense.responsibleId, isShared: expense.isShared })
@@ -138,6 +141,8 @@ export async function getFixedExpenseStatusThisMonth(
   householdId: string,
   month: string
 ): Promise<FixedBillWithStatus[]> {
+  'use cache'
+  cacheTag(householdId)
   const [expenses, payments] = await Promise.all([
     getActiveFixedExpenses(householdId),
     getAllFixedPaymentsForPeriod(householdId, month),
@@ -159,6 +164,8 @@ export async function getActiveInstallments(
   householdId: string,
   month: string
 ): Promise<ActiveInstallment[]> {
+  'use cache'
+  cacheTag(householdId)
   const rows = await db
     .select({
       id: expense.id,
@@ -197,6 +204,8 @@ export async function getRecentPurchases(
   month: string,
   limit = 5
 ): Promise<RecentPurchase[]> {
+  'use cache'
+  cacheTag(householdId)
   // Fetch a 3-month window to cover billing period attribution
   // (a purchase from prev-prev month can belong to this month's bill)
   const y = parseInt(month.slice(0, 4));
