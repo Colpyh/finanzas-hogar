@@ -5,8 +5,6 @@ import { parseBciEmail } from "@/email-inbound/parser";
 import { postmarkInboundSchema } from "@/email-inbound/webhook/postmark";
 import { sendPushToHousehold } from "@/shared/lib/push";
 
-export const runtime = "nodejs"; // needs node:crypto
-
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ householdId: string }> }
