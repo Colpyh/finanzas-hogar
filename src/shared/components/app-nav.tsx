@@ -90,20 +90,23 @@ function DarkModeToggle() {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      className="flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors w-full"
+      style={{ paddingLeft: 12, paddingRight: 12 }}
     >
-      {isDark ? <Sun size={17} /> : <Moon size={17} />}
-      <span className="flex-1 text-left">Modo oscuro</span>
+      <span className="shrink-0 w-[17px] flex items-center justify-center">
+        {isDark ? <Sun size={17} /> : <Moon size={17} />}
+      </span>
+      <span className="flex-1 text-left min-w-0">Modo oscuro</span>
       <span
         className={cn(
-          "relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0",
+          "relative inline-flex shrink-0 w-9 h-5 rounded-full transition-colors duration-200",
           isDark ? "bg-primary" : "bg-muted-foreground/30"
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200",
-            isDark ? "translate-x-4" : "translate-x-0.5"
+            "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200",
+            isDark ? "translate-x-4" : "translate-x-0"
           )}
         />
       </span>
@@ -152,11 +155,11 @@ export function AppNav({ pendingCount = 0, userEmail }: Props) {
           <NavLinks pathname={pathname} pendingCount={pendingCount} />
         </nav>
 
-        <div className="shrink-0 border-t border-border pb-2">
-          <div className="px-3 pt-2">
+        <div className="shrink-0 border-t border-border overflow-hidden">
+          <div className="px-3 pt-2 pb-1">
             <DarkModeToggle />
           </div>
-          <div className="mt-1 border-t border-border pt-1">
+          <div className="border-t border-border">
             <UserFooter userEmail={userEmail} />
           </div>
         </div>
@@ -181,11 +184,11 @@ export function AppNav({ pendingCount = 0, userEmail }: Props) {
                 onNavigate={() => setOpen(false)}
               />
             </nav>
-            <div className="shrink-0 border-t border-border pb-2">
-              <div className="px-3 pt-2">
+            <div className="shrink-0 border-t border-border overflow-hidden">
+              <div className="px-3 pt-2 pb-1">
                 <DarkModeToggle />
               </div>
-              <div className="mt-1 border-t border-border pt-1">
+              <div className="border-t border-border">
                 <UserFooter userEmail={userEmail} />
               </div>
             </div>
