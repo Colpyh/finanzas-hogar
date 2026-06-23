@@ -128,10 +128,14 @@ export default async function GastosFijosPage({ searchParams }: Props) {
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 max-w-5xl mx-auto pb-8">
       <div className="flex items-center justify-between pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">Gastos Fijos</h1>
+        <h1 className="text-[22px] font-bold tracking-tight" style={{ letterSpacing: "-0.3px" }}>Gastos Fijos</h1>
         <div className="flex items-center gap-2">
           <MonthSelector month={month} />
-          <Link href="/gastos-fijos/nuevo" className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>
+          <Link
+            href="/gastos-fijos/nuevo"
+            className={cn(buttonVariants({ size: "sm" }), "gap-1.5 border-0 text-white")}
+            style={{ background: "linear-gradient(135deg,#8b46f0,#6d28d9)" }}
+          >
             <Plus size={15} />
             Nuevo
           </Link>

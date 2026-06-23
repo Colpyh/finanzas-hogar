@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
-import { toggleFixedExpenseActive, upgradeToPaid, markPaidForOther, unmarkOtherPayment, unmarkMyPayment } from "@/gastos-fijos/actions";
+import { upgradeToPaid, markPaidForOther, unmarkOtherPayment, unmarkMyPayment } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CheckCircle2, Clock, PiggyBank, Pencil, Users, HelpCircle } from "lucide-react";
+import { Pencil, Users } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 type Props = {
   expense: {
@@ -30,6 +30,42 @@ type Props = {
   periodMonth: string;
 };
 
+function ActionBtn({
+  onClick,
+  variant = "default",
+  title,
+  disabled,
+  children,
+}: {
+  onClick: () => void;
+  variant?: "default" | "primary" | "success" | "amber";
+  title?: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  const cls = {
+    default: "border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground bg-transparent",
+    primary: "bg-primary border-primary text-white hover:opacity-90",
+    success: "bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200",
+    amber: "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100",
+  }[variant];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={cn(
+        "w-8 h-8 rounded-[8px] border flex items-center justify-center text-[13px] font-semibold cursor-pointer transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed",
+        cls
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function FixedExpenseCard({
   expense,
   isPaidThisMonth,
@@ -40,13 +76,11 @@ export function FixedExpenseCard({
   periodMonth,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [confirmToggleOpen, setConfirmToggleOpen] = useState(false);
   const [confirmUpgradeOpen, setConfirmUpgradeOpen] = useState(false);
-  const [toggling, startToggle] = useTransition();
-  const [upgrading, startUpgrade] = useTransition();
   const [confirmMarkBothOpen, setConfirmMarkBothOpen] = useState(false);
   const [confirmUnmarkOpen, setConfirmUnmarkOpen] = useState(false);
   const [confirmUnmarkMineOpen, setConfirmUnmarkMineOpen] = useState(false);
+  const [upgrading, startUpgrade] = useTransition();
   const [markingBoth, startMarkBoth] = useTransition();
   const [unmarking, startUnmark] = useTransition();
   const [unmarkingMine, startUnmarkMine] = useTransition();
@@ -108,211 +142,170 @@ export function FixedExpenseCard({
     });
   }
 
-  function handleToggle() {
-    startToggle(async () => {
-      await toggleFixedExpenseActive(expense.id);
-      setConfirmToggleOpen(false);
-    });
-  }
-
-  // ── Icon ──────────────────────────────────────────────
   const isVariable = expense.type === "variable";
-  let icon: React.ReactNode;
-  if (isSettled || (!expense.isShared && isPaidThisMonth)) {
-    icon = <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />;
+  const isFullyPaid = isSettled || (!expense.isShared && isPaidThisMonth);
+
+  const stripeColor = isFullyPaid
+    ? "var(--success-line)"
+    : currentUserStatus === "reserved"
+      ? "var(--amber-line)"
+      : "var(--pending-line)";
+
+  // ── Status tag ────────────────────────────────────────
+  let statusTag: React.ReactNode;
+  if (isFullyPaid) {
+    statusTag = (
+      <span className="inline-flex items-center gap-[3px] text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-emerald-100 text-emerald-700">
+        ✓ Pagado
+      </span>
+    );
   } else if (isPaidThisMonth) {
-    // Pagado pero no saldado internamente
-    icon = <CheckCircle2 size={18} className="text-amber-500 shrink-0" />;
+    statusTag = (
+      <span className="inline-flex items-center gap-[3px] text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-amber-100 text-amber-700">
+        ⚖️ Pago parcial
+      </span>
+    );
   } else if (currentUserStatus === "reserved") {
-    icon = <PiggyBank size={18} className="text-violet-500 shrink-0" />;
-  } else if (isVariable && currentUserStatus === "none") {
-    icon = <HelpCircle size={18} className="text-amber-400 shrink-0" />;
+    statusTag = (
+      <span className="inline-flex items-center gap-[3px] text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-amber-100 text-amber-700">
+        🐷 En chanchito
+      </span>
+    );
+  } else if (isVariable) {
+    statusTag = (
+      <span className="inline-flex items-center gap-[3px] text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-primary/10 text-primary">
+        Varía cada mes
+      </span>
+    );
   } else {
-    icon = <Clock size={18} className="text-amber-500 shrink-0" />;
+    statusTag = (
+      <span className="inline-flex items-center gap-[3px] text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-muted text-muted-foreground">
+        Sin pagar
+      </span>
+    );
   }
 
-  // ── Button logic ──────────────────────────────────────
-  let primaryButton: React.ReactNode;
+  // ── Compact action buttons ────────────────────────────
+  let actionButtons: React.ReactNode;
 
-  // Variable expenses with no payment yet — prompt user to enter the actual amount
   if (isVariable && currentUserStatus === "none" && !isPaidThisMonth) {
-    primaryButton = (
-      <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)} className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50">
-        Ingresar monto y pagar
-      </Button>
+    actionButtons = (
+      <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Ingresar monto y pagar">
+        ✓
+      </ActionBtn>
     );
   } else if (!expense.isShared) {
     if (currentUserStatus === "paid") {
-      primaryButton = (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setConfirmUnmarkMineOpen(true)}
-          className="flex-1 text-emerald-600 hover:text-amber-600 hover:bg-amber-50"
-        >
-          Pagado ✓ · Deshacer
-        </Button>
+      actionButtons = (
+        <ActionBtn onClick={() => setConfirmUnmarkMineOpen(true)} variant="success" title="Pagado — click para deshacer">
+          ✓
+        </ActionBtn>
       );
     } else if (currentUserStatus === "reserved") {
-      primaryButton = (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setConfirmUpgradeOpen(true)}
-          className="flex-1 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
-        >
-          <PiggyBank size={13} />
-          En chanchito · Confirmar pago
-        </Button>
+      actionButtons = (
+        <ActionBtn onClick={() => setConfirmUpgradeOpen(true)} variant="amber" title="Confirmar pago definitivo" disabled={upgrading}>
+          ✓
+        </ActionBtn>
       );
     } else {
-      primaryButton = (
-        <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)} className="flex-1">
-          Marcar como pagado
-        </Button>
+      actionButtons = (
+        <>
+          <ActionBtn onClick={() => setDialogOpen(true)} title="Reservar en chanchito">🕐</ActionBtn>
+          <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Marcar como pagado">✓</ActionBtn>
+        </>
       );
     }
   } else {
     if (isSettled) {
-      primaryButton = (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setConfirmUnmarkOpen(true)}
-          className="flex-1 text-emerald-600 hover:text-amber-600 hover:bg-amber-50"
-        >
-          Saldado ✓ · Editar
-        </Button>
+      actionButtons = (
+        <ActionBtn onClick={() => setConfirmUnmarkOpen(true)} variant="success" title="Saldado — click para editar" disabled={unmarking}>
+          ✓
+        </ActionBtn>
       );
     } else if (isPaidThisMonth && currentUserStatus === "paid") {
-      primaryButton = (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setConfirmMarkBothOpen(true)}
-          className="flex-1 gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
-        >
-          <Users size={13} />
-          Marcar saldado por ambos
-        </Button>
+      actionButtons = (
+        <>
+          <ActionBtn onClick={() => setConfirmUnmarkMineOpen(true)} variant="amber" title="Deshacer mi pago" disabled={unmarkingMine}>↩</ActionBtn>
+          <ActionBtn onClick={() => setConfirmMarkBothOpen(true)} variant="amber" title="Marcar saldado por ambos" disabled={markingBoth}>
+            <Users size={13} />
+          </ActionBtn>
+        </>
       );
     } else if (isPaidThisMonth && currentUserStatus === "none") {
-      // El otro pagó, yo debo saldar mi parte
-      primaryButton = (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setDialogOpen(true)}
-          className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-50"
-        >
-          Pagado por {paidByName ?? "otro"} · Saldar mi parte
-        </Button>
+      actionButtons = (
+        <ActionBtn onClick={() => setDialogOpen(true)} variant="amber" title={`Pagado por ${paidByName ?? "otro"} — saldar mi parte`}>
+          ✓
+        </ActionBtn>
       );
     } else if (currentUserStatus === "reserved") {
-      primaryButton = (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setConfirmUpgradeOpen(true)}
-          className="flex-1 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
-        >
-          <PiggyBank size={13} />
-          En chanchito · Confirmar pago
-        </Button>
+      actionButtons = (
+        <ActionBtn onClick={() => setConfirmUpgradeOpen(true)} variant="amber" title="Confirmar pago definitivo" disabled={upgrading}>
+          ✓
+        </ActionBtn>
       );
     } else {
-      // Nadie ha pagado aún
-      primaryButton = (
-        <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)} className="flex-1">
-          Registrar pago
-        </Button>
+      actionButtons = (
+        <>
+          <ActionBtn onClick={() => setDialogOpen(true)} title="Reservar en chanchito">🕐</ActionBtn>
+          <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Registrar pago">✓</ActionBtn>
+        </>
       );
     }
   }
 
-  const stripeColor =
-    isSettled || isPaidThisMonth
-      ? "var(--success-line)"
-      : currentUserStatus === "reserved"
-        ? "var(--amber-line)"
-        : "var(--pending-line)";
-
   return (
     <>
       <div
-        className="bg-card border border-border rounded-[20px] p-4 space-y-3 relative overflow-hidden"
-        style={{ boxShadow: "var(--shadow-md)" }}
+        className={cn(
+          "relative flex items-start gap-3 px-4 py-[14px] border-b border-border last:border-b-0 transition-opacity",
+          isFullyPaid && "opacity-60"
+        )}
       >
-        <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-[20px]" style={{ background: stripeColor }} />
-        <div className="flex items-start justify-between gap-2 pl-3">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            {icon}
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <p className="font-medium text-sm text-foreground truncate">
-                  {expense.description}
-                </p>
-                {expense.isShared && (
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary shrink-0">
-                    Compartido
-                  </span>
-                )}
-                {currentUserStatus === "reserved" && (
-                  <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 shrink-0">
-                    🐷 Chanchito
-                  </span>
-                )}
-                {expense.responsibleName && (
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary/80 shrink-0">
-                    Paga: {expense.responsibleName}
-                  </span>
-                )}
-              </div>
-              {expense.categoryName && (
-                <p className="text-xs text-muted-foreground">{expense.categoryName}</p>
-              )}
-            </div>
-          </div>
-          <div className="text-right shrink-0 flex flex-col items-end gap-1">
-            <p className="text-[16px] font-extrabold num text-foreground">
-              {isVariable
-                ? <span className="text-amber-500 text-sm font-semibold">Variable</span>
+        {/* Left stripe */}
+        <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-[2px]" style={{ background: stripeColor }} />
+
+        {/* Body */}
+        <div className="flex-1 min-w-0 pl-[6px]">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="font-semibold text-[14px] text-foreground truncate">{expense.description}</span>
+            <span className={cn(
+              "text-[14px] font-bold num shrink-0",
+              !isFullyPaid && !isPaidThisMonth ? "text-muted-foreground" : "text-foreground"
+            )}>
+              {isVariable && currentUserStatus === "none" && !isPaidThisMonth
+                ? "—"
                 : formatCurrency(parseFloat(expense.amount))}
-            </p>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 mt-[5px] flex-wrap">
+            {statusTag}
             {expense.recurrenceDay && (
-              <p className="text-xs text-muted-foreground">día {expense.recurrenceDay}</p>
+              <span className="text-[11px] text-muted-foreground">día {expense.recurrenceDay}</span>
             )}
-            <Link
-              href={`/gastos-fijos/${expense.id}`}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Editar gasto fijo"
-            >
-              <Pencil size={13} />
-            </Link>
+            {expense.isShared && (
+              <span className="text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-primary/10 text-primary">
+                Compartido
+              </span>
+            )}
+            {expense.responsibleName && (
+              <span className="text-[10px] font-medium px-[7px] py-[2px] rounded-full bg-primary/10 text-primary/80">
+                Paga: {expense.responsibleName}
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="flex gap-2 pl-3">
-          {primaryButton}
-          {expense.isShared && currentUserStatus === "paid" && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-amber-600 hover:bg-amber-50"
-              disabled={unmarkingMine}
-              onClick={() => setConfirmUnmarkMineOpen(true)}
-            >
-              Deshacer
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            onClick={() => setConfirmToggleOpen(true)}
+        {/* Action buttons */}
+        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+          {actionButtons}
+          <Link
+            href={`/gastos-fijos/${expense.id}`}
+            title="Editar"
+            className="w-8 h-8 rounded-[8px] border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors shrink-0"
           >
-            {expense.isActive ? "Desactivar" : "Activar"}
-          </Button>
+            <Pencil size={13} />
+          </Link>
         </div>
       </div>
 
@@ -322,21 +315,6 @@ export function FixedExpenseCard({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         periodMonth={periodMonth}
-      />
-
-      <ConfirmDialog
-        open={confirmToggleOpen}
-        onOpenChange={setConfirmToggleOpen}
-        title={expense.isActive ? "¿Desactivar gasto?" : "¿Activar gasto?"}
-        description={
-          expense.isActive
-            ? `"${expense.description}" dejará de aparecer en el resumen mensual.`
-            : `"${expense.description}" volverá a incluirse en el resumen mensual.`
-        }
-        confirmText={expense.isActive ? "Desactivar" : "Activar"}
-        variant={expense.isActive ? "destructive" : "default"}
-        loading={toggling}
-        onConfirm={handleToggle}
       />
 
       <ConfirmDialog
