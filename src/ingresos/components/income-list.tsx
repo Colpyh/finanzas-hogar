@@ -5,7 +5,7 @@ import { deleteIncome } from "@/ingresos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { useState } from "react";
-import { Trash2, Wallet, TrendingUp, RefreshCw } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 type IncomeRow = {
   id: string;
@@ -30,30 +30,21 @@ function IncomeItem({ row }: { row: IncomeRow }) {
 
   return (
     <>
-      <div className="flex items-center gap-3 py-3">
-        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center">
-          {row.type === "salary" ? (
-            <Wallet size={16} className="text-emerald-500" />
-          ) : (
-            <TrendingUp size={16} className="text-emerald-500" />
-          )}
+      <div className="flex items-center gap-3 px-4 py-[13px] border-b border-border last:border-b-0">
+        <div
+          className="w-9 h-9 rounded-[11px] flex items-center justify-center text-[17px] flex-shrink-0"
+          style={{ background: "rgba(34,197,94,0.13)" }}
+        >
+          {row.type === "salary" ? "💰" : "💸"}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-sm font-medium text-foreground truncate">{row.description}</p>
-            {row.type === "salary" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
-                <RefreshCw size={9} />
-                Mensual
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {row.type === "salary" ? "Sueldo" : "Ingreso puntual"}
+          <p className="text-[14px] font-bold text-foreground truncate">{row.description}</p>
+          <p className="text-[11.5px] text-muted-foreground mt-[1px]">
+            {row.type === "salary" ? "Salario mensual" : "Ingreso puntual"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+        <div className="flex items-center gap-2 shrink-0">
+          <p className="text-[14px] font-extrabold num" style={{ color: "#16a34a" }}>
             +{formatCurrency(Number(row.amount))}
           </p>
           <button
@@ -62,7 +53,7 @@ function IncomeItem({ row }: { row: IncomeRow }) {
             className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             aria-label="Eliminar ingreso"
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
           </button>
         </div>
       </div>
@@ -95,7 +86,10 @@ export function IncomeList({ rows }: Props) {
   }
 
   return (
-    <div className="divide-y divide-border">
+    <div
+      className="bg-card border border-border rounded-[18px] overflow-hidden"
+      style={{ boxShadow: "var(--shadow-sm)" }}
+    >
       {rows.map((row) => (
         <IncomeItem key={row.id} row={row} />
       ))}
