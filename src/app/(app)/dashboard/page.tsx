@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -19,6 +20,7 @@ import { BudgetAlertsWidget } from "@/dashboard/components/budget-alerts-widget"
 import { CardPaymentsWidget } from "@/dashboard/components/card-payments-widget";
 import { QuickAddFab } from "@/dashboard/components/quick-add-fab";
 import { WhatsappShareButton } from "@/dashboard/components/whatsapp-share-button";
+import { ViewTabs } from "@/dashboard/components/view-tabs";
 import { AnimatedWidgets } from "@/shared/components/animated-widgets";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
@@ -35,7 +37,7 @@ import type { MemberBalance } from "@/balances/queries";
 export const metadata: Metadata = { title: "Inicio" };
 
 type Props = {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; view?: string }>;
 };
 
 // Mock data — visible solo cuando no hay sesión activa (preview local)
@@ -95,6 +97,7 @@ const MOCK_CARD_PAYMENTS: CardPaymentDue[] = [
 export default async function DashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const month = parseMonthParam(params.month);
+  const view = params.view === "personal" ? "personal" : "group";
 
   let summary = MOCK_SUMMARY;
   let bills = MOCK_BILLS;
@@ -141,37 +144,61 @@ export default async function DashboardPage({ searchParams }: Props) {
     // Sin sesión — se muestran datos de ejemplo
   }
 
+  // Personal mode: only show expenses where the current user is responsible
+  const visibleBills = view === "personal"
+    ? bills.filter((b) => b.responsibleId === currentUserId)
+    : bills;
+  const visibleInstallments = view === "personal"
+    ? installments.filter((i) => i.responsibleId === currentUserId)
+    : installments;
+  const visiblePurchases = view === "personal"
+    ? purchases.filter((p) => p.responsibleId === currentUserId)
+    : purchases;
+
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 md:mb-6">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Buen día 👋</p>
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight leading-tight">{householdName}</h1>
+      <div
+        className="border-b border-border pb-4 mb-5"
+        style={{ background: "var(--card)" }}
+      >
+        <div className="flex items-start justify-between mb-[13px]">
+          <div>
+            <p className="text-[13.5px] font-medium text-muted-foreground">Buen día 👋</p>
+            <h1
+              className="text-[22px] font-bold text-foreground leading-tight mt-0.5"
+              style={{ letterSpacing: "-0.01em" }}
+            >
+              {householdName}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <WhatsappShareButton
+              month={month}
+              householdName={householdName}
+              summary={summary}
+              bills={bills}
+              installments={installments}
+              purchases={purchases}
+              balances={balances}
+              memberNames={memberNames}
+            />
+            <MonthSelector month={month} />
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <WhatsappShareButton
-            month={month}
-            householdName={householdName}
-            summary={summary}
-            bills={bills}
-            installments={installments}
-            purchases={purchases}
-            balances={balances}
-            memberNames={memberNames}
-          />
-          <MonthSelector month={month} />
-        </div>
+        {/* Group / Personal tabs */}
+        <Suspense>
+          <ViewTabs view={view} />
+        </Suspense>
       </div>
 
       {/* Summary card — full width */}
       <AnimatedWidgets>
-        <MonthlySummaryCard summary={summary} month={month} />
+        <MonthlySummaryCard summary={summary} month={month} view={view} />
       </AnimatedWidgets>
 
-      {/* Main grid: top alerts + 2-column widget layout */}
+      {/* Main grid */}
       <div className="mt-4 space-y-4">
-        {/* Full-width alerts */}
         <AnimatedWidgets>
           {cardPayments.length > 0 && (
             <CardPaymentsWidget payments={cardPayments} month={month} />
@@ -181,14 +208,13 @@ export default async function DashboardPage({ searchParams }: Props) {
           )}
         </AnimatedWidgets>
 
-        {/* Two-column grid on desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <AnimatedWidgets>
-            <FixedExpensesWidget bills={bills} currentUserId={currentUserId} memberNames={memberNames} />
-            <InstallmentsWidget installments={installments} currentUserId={currentUserId} memberNames={memberNames} />
+            <FixedExpensesWidget bills={visibleBills} currentUserId={currentUserId} memberNames={memberNames} />
+            <InstallmentsWidget installments={visibleInstallments} currentUserId={currentUserId} memberNames={memberNames} />
           </AnimatedWidgets>
           <AnimatedWidgets>
-            <RecentPurchasesWidget purchases={purchases} currentUserId={currentUserId} memberNames={memberNames} />
+            <RecentPurchasesWidget purchases={visiblePurchases} currentUserId={currentUserId} memberNames={memberNames} />
           </AnimatedWidgets>
         </div>
       </div>

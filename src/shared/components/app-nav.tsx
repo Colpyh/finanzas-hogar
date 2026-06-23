@@ -1,35 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useHousehold } from "@/shared/hooks/use-household";
-import {
-  LayoutDashboard,
-  Receipt,
-  ShoppingCart,
-  BarChart2,
-  Settings,
-  Inbox,
-  Menu,
-  Moon,
-  Sun,
-} from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/gastos-fijos", label: "Fijos", icon: Receipt },
-  { href: "/compras", label: "Compras", icon: ShoppingCart },
-  { href: "/resumen", label: "Resumen", icon: BarChart2 },
-  { href: "/gastos-pendientes", label: "Pendientes", icon: Inbox },
-  { href: "/ajustes", label: "Ajustes", icon: Settings },
+const PRIMARY_NAV = [
+  { href: "/dashboard",     label: "Casa",       icon: "🏠" },
+  { href: "/gastos-fijos",  label: "Fijos",      icon: "🧾" },
+  { href: "/compras",       label: "Compras",    icon: "🛒" },
+  { href: "/resumen",       label: "Resumen",    icon: "📊" },
+  { href: "/ajustes",       label: "Ajustes",    icon: "⚙️" },
+];
+
+const SECONDARY_NAV = [
+  { href: "/gastos-pendientes", label: "Pendientes", icon: "📥", badge: true },
+  { href: "/balances",          label: "Balances",   icon: "⚖️", badge: false },
+  { href: "/ingresos",          label: "Ingresos",   icon: "💰", badge: false },
 ];
 
 type Props = {
@@ -37,97 +28,151 @@ type Props = {
   userEmail?: string;
 };
 
-function NavLinks({
+function NavItem({
+  href,
+  label,
+  icon,
+  isActive,
+  badge,
+  pendingCount,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  isActive: boolean;
+  badge?: boolean;
+  pendingCount?: number;
+  onClick?: () => void;
+}) {
+  const showBadge = badge && (pendingCount ?? 0) > 0;
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 px-3 py-[10px] rounded-xl text-sm font-semibold transition-all duration-150 w-full",
+        isActive
+          ? "text-primary"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
+      )}
+      style={
+        isActive
+          ? {
+              background: "rgba(124,58,237,0.08)",
+              boxShadow: "inset 2.5px 0 0 #7c3aed",
+            }
+          : undefined
+      }
+    >
+      <span className="text-[17px] leading-none shrink-0">{icon}</span>
+      <span className="flex-1">{label}</span>
+      {showBadge && (
+        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-[10px] font-bold text-white flex items-center justify-center">
+          {(pendingCount ?? 0) > 99 ? "99+" : pendingCount}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function SidebarContent({
   pathname,
   pendingCount = 0,
+  userEmail,
   onNavigate,
 }: {
   pathname: string;
   pendingCount?: number;
+  userEmail?: string;
   onNavigate?: () => void;
 }) {
-  return (
-    <ul className="flex flex-col gap-0.5 px-3">
-      {NAV_ITEMS.map((item) => {
-        const Icon = item.icon;
-        const isActive = pathname.startsWith(item.href);
-        const showBadge =
-          item.href === "/gastos-pendientes" && pendingCount > 0;
-
-        return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <span className="relative shrink-0">
-                <Icon size={17} strokeWidth={isActive ? 2.5 : 1.75} />
-                {showBadge && (
-                  <span className="absolute -top-1 -right-1.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-destructive text-[8px] font-bold text-white flex items-center justify-center">
-                    {pendingCount > 99 ? "99+" : pendingCount}
-                  </span>
-                )}
-              </span>
-              {item.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function DarkModeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-
-  return (
-    <button
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors w-full"
-      style={{ paddingLeft: 12, paddingRight: 12 }}
-    >
-      <span className="shrink-0 w-[17px] flex items-center justify-center">
-        {isDark ? <Sun size={17} /> : <Moon size={17} />}
-      </span>
-      <span className="flex-1 text-left min-w-0">Modo oscuro</span>
-      <span
-        className={cn(
-          "relative inline-flex shrink-0 w-9 h-5 rounded-full transition-colors duration-200",
-          isDark ? "bg-primary" : "bg-muted-foreground/30"
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200",
-            isDark ? "translate-x-4" : "translate-x-0"
-          )}
-        />
-      </span>
-    </button>
-  );
-}
-
-function UserFooter({ userEmail }: { userEmail?: string }) {
   const household = useHousehold();
   const initial = (userEmail ?? household.name).charAt(0).toUpperCase();
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5">
-      <span className="shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-        {initial}
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-foreground truncate">
-          {userEmail ? userEmail.split("@")[0] : "Usuario"}
-        </p>
-        <p className="text-[10px] text-muted-foreground truncate">{household.name}</p>
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-5 h-14 border-b border-border shrink-0">
+        <div
+          className="w-[34px] h-[34px] rounded-xl flex items-center justify-center text-[17px] shrink-0"
+          style={{ background: "linear-gradient(135deg,#8b46f0,#6d28d9)" }}
+        >
+          💜
+        </div>
+        <span className="font-extrabold text-[15px] tracking-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
+          Finanzas Hogar
+        </span>
+      </div>
+
+      {/* Primary nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-3 flex flex-col gap-0.5">
+        {PRIMARY_NAV.map((item) => (
+          <NavItem
+            key={item.href}
+            {...item}
+            isActive={pathname.startsWith(item.href)}
+            onClick={onNavigate}
+          />
+        ))}
+
+        <div className="my-2 h-px bg-border mx-1" />
+
+        {SECONDARY_NAV.map((item) => (
+          <NavItem
+            key={item.href}
+            {...item}
+            isActive={pathname.startsWith(item.href)}
+            pendingCount={pendingCount}
+            onClick={onNavigate}
+          />
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="shrink-0 border-t border-border overflow-hidden">
+        {/* Dark mode toggle */}
+        <button
+          onClick={() => setTheme(isDark ? "light" : "dark")}
+          className="flex items-center gap-3 py-[10px] rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors w-full"
+          style={{ paddingLeft: 12, paddingRight: 12, margin: "8px 12px", width: "calc(100% - 24px)" }}
+        >
+          <span className="shrink-0 w-[17px] flex items-center justify-center">
+            {isDark ? "☀️" : "🌙"}
+          </span>
+          <span className="flex-1 text-left">Modo oscuro</span>
+          <span
+            className={cn(
+              "relative inline-flex shrink-0 w-9 h-5 rounded-full transition-colors duration-200",
+              isDark ? "bg-primary" : "bg-muted-foreground/30"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200",
+                isDark ? "translate-x-4" : "translate-x-0"
+              )}
+            />
+          </span>
+        </button>
+
+        {/* User info */}
+        <div className="flex items-center gap-2.5 px-4 py-3 border-t border-border">
+          <span
+            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-primary-foreground text-sm font-bold"
+            style={{ background: "linear-gradient(135deg,#8b46f0,#6d28d9)" }}
+          >
+            {initial}
+          </span>
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-foreground truncate" style={{ letterSpacing: "-0.01em" }}>
+              {userEmail ? userEmail.split("@")[0] : "Usuario"}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">{household.name}</p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -138,63 +183,35 @@ export function AppNav({ pendingCount = 0, userEmail }: Props) {
   const [open, setOpen] = useState(false);
 
   const currentLabel =
-    NAV_ITEMS.find((i) => pathname.startsWith(i.href))?.label ??
-    "Finanzas Hogar";
+    [...PRIMARY_NAV, ...SECONDARY_NAV].find((i) => pathname.startsWith(i.href))?.label ?? "Inicio";
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-56 flex-col bg-card border-r border-border">
-        <div className="flex items-center h-14 px-5 border-b border-border shrink-0">
-          <span className="font-semibold text-sm tracking-tight text-foreground">
-            Finanzas Hogar
-          </span>
-        </div>
-
-        <nav className="flex-1 py-3 overflow-y-auto">
-          <NavLinks pathname={pathname} pendingCount={pendingCount} />
-        </nav>
-
-        <div className="shrink-0 border-t border-border overflow-hidden">
-          <div className="px-3 pt-2 pb-1">
-            <DarkModeToggle />
-          </div>
-          <div className="border-t border-border">
-            <UserFooter userEmail={userEmail} />
-          </div>
-        </div>
+      {/* Desktop sidebar — 252px */}
+      <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-[252px] bg-card border-r border-border flex-col">
+        <SidebarContent
+          pathname={pathname}
+          pendingCount={pendingCount}
+          userEmail={userEmail}
+        />
       </aside>
 
       {/* Mobile top header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-card border-b border-border flex items-center px-3 gap-2">
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <SheetTrigger className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
             <Menu size={20} />
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0 flex flex-col" showCloseButton={false}>
-            <div className="flex items-center h-14 px-5 border-b border-border shrink-0">
-              <span className="font-semibold text-sm tracking-tight text-foreground">
-                Finanzas Hogar
-              </span>
-            </div>
-            <nav className="flex-1 py-3 overflow-y-auto">
-              <NavLinks
-                pathname={pathname}
-                pendingCount={pendingCount}
-                onNavigate={() => setOpen(false)}
-              />
-            </nav>
-            <div className="shrink-0 border-t border-border overflow-hidden">
-              <div className="px-3 pt-2 pb-1">
-                <DarkModeToggle />
-              </div>
-              <div className="border-t border-border">
-                <UserFooter userEmail={userEmail} />
-              </div>
-            </div>
+          <SheetContent side="left" className="w-[252px] p-0" showCloseButton={false}>
+            <SidebarContent
+              pathname={pathname}
+              pendingCount={pendingCount}
+              userEmail={userEmail}
+              onNavigate={() => setOpen(false)}
+            />
           </SheetContent>
         </Sheet>
-        <span className="font-semibold text-sm text-foreground">
+        <span className="font-bold text-sm text-foreground" style={{ letterSpacing: "-0.01em" }}>
           {currentLabel}
         </span>
       </header>

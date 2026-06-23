@@ -18,7 +18,7 @@ export function AppProviders({ household, userId, userEmail, pendingCount = 0, c
       <UserThemeSync userId={userId} />
       <div className="flex min-h-screen">
         <AppNav pendingCount={pendingCount} userEmail={userEmail} />
-        <main className="flex-1 pt-14 md:pt-0 md:pl-56">{children}</main>
+        <main className="flex-1 pt-14 md:pt-0 md:pl-[252px]">{children}</main>
       </div>
     </HouseholdContext.Provider>
   );
