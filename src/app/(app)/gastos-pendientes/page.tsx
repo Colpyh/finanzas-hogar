@@ -56,8 +56,17 @@ export default async function GastosPendientesPage({
   const totalPages = Math.ceil(count / PAGE_SIZE);
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 pb-8 pt-6 max-w-5xl mx-auto">
-      <h1 className="text-xl font-semibold mb-6">Gastos Pendientes</h1>
+    <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8">
+      <h1
+        className="text-[23px] font-semibold text-foreground"
+        style={{ letterSpacing: "-0.02em" }}
+      >
+        Gastos pendientes
+      </h1>
+      <p className="text-[13px] text-muted-foreground mt-1 leading-snug">
+        Detectados desde tus correos del{" "}
+        <strong className="text-primary">BCI</strong>. Confirma para clasificarlos.
+      </p>
       <PendingExpenseList items={items} categories={categories} />
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-3 mt-4">

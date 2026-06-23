@@ -1,8 +1,6 @@
 "use client";
 
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CreditCard, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Props = {
@@ -17,52 +15,53 @@ function formatDate(dateStr: string): string {
 }
 
 export function PendingExpenseCard({ item, onConfirm, onDiscard }: Props) {
-  const amount =
-    item.parsedAmount !== null ? Number(item.parsedAmount) : null;
+  const amount = item.parsedAmount !== null ? Number(item.parsedAmount) : null;
 
   return (
-    <div className="flex items-start gap-3 bg-card border border-border shadow-sm rounded-2xl px-4 py-3.5">
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm text-foreground truncate">
-          {item.parsedMerchant ?? "—"}
-        </p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {item.parsedDate && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar size={12} />
-              {formatDate(item.parsedDate)}
-            </span>
-          )}
-          {item.parsedCardLast4 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <CreditCard size={12} />
-              ****{item.parsedCardLast4}
-            </span>
-          )}
+    <div
+      className="bg-card border border-border rounded-[18px] p-[15px]"
+      style={{ boxShadow: "var(--shadow-sm)" }}
+    >
+      {/* Header row */}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-11 h-11 rounded-[13px] flex items-center justify-center text-[20px] flex-shrink-0"
+          style={{ background: "rgba(124,58,237,0.10)" }}
+        >
+          🏪
         </div>
-      </div>
-      <div className="flex flex-col items-end gap-2 shrink-0">
-        <span className="font-semibold text-sm text-foreground">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-[15px] text-foreground truncate">
+            {item.parsedMerchant ?? "—"}
+          </p>
+          <p className="text-[12px] text-muted-foreground mt-[2px]">
+            {item.parsedDate ? formatDate(item.parsedDate) : ""}
+            {item.parsedDate && item.parsedCardLast4 ? " · " : ""}
+            {item.parsedCardLast4 ? `BCI ••${item.parsedCardLast4}` : ""}
+          </p>
+        </div>
+        <span className="text-[16px] font-extrabold text-foreground shrink-0 num">
           {amount !== null ? formatCurrency(amount) : "—"}
         </span>
-        <div className="flex gap-1.5">
-          <Button
-            size="sm"
-            variant="default"
-            className="h-7 px-3 text-xs"
-            onClick={() => onConfirm(item)}
-          >
-            Confirmar
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 px-3 text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
-            onClick={() => onDiscard(item)}
-          >
-            Descartar
-          </Button>
-        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-[9px] mt-[13px]">
+        <button
+          type="button"
+          onClick={() => onConfirm(item)}
+          className="flex-1 text-[13px] font-bold text-white py-[10px] rounded-[11px] cursor-pointer transition-opacity hover:opacity-90"
+          style={{ background: "linear-gradient(135deg,#8b46f0,#6d28d9)", border: "none" }}
+        >
+          Confirmar
+        </button>
+        <button
+          type="button"
+          onClick={() => onDiscard(item)}
+          className="text-[13px] font-bold text-muted-foreground px-4 py-[10px] rounded-[11px] border border-border bg-card cursor-pointer hover:bg-muted/60 transition-colors"
+        >
+          Descartar
+        </button>
       </div>
     </div>
   );
