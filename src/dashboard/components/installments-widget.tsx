@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import { formatCurrency } from "@/shared/components/currency-display";
 import type { ActiveInstallment } from "@/dashboard/types";
+
+const INITIAL_VISIBLE = 4;
 
 type Props = {
   installments: ActiveInstallment[];
@@ -8,7 +13,10 @@ type Props = {
 };
 
 export function InstallmentsWidget({ installments }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const totalMonthly = installments.reduce((s, i) => s + i.amount, 0);
+  const visible = expanded ? installments : installments.slice(0, INITIAL_VISIBLE);
+  const hidden = installments.length - INITIAL_VISIBLE;
 
   return (
     <div
@@ -33,7 +41,7 @@ export function InstallmentsWidget({ installments }: Props) {
         <p className="text-sm text-muted-foreground py-2">Sin cuotas activas</p>
       ) : (
         <div className="flex flex-col gap-[6px]">
-          {installments.map((item) => {
+          {visible.map((item) => {
             const progress = Math.round((item.installmentsPaid / item.installmentsTotal) * 100);
             return (
               <div key={item.id} className="flex items-center gap-3 py-[7px]">
@@ -59,6 +67,20 @@ export function InstallmentsWidget({ installments }: Props) {
             );
           })}
         </div>
+      )}
+
+      {installments.length > INITIAL_VISIBLE && (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="w-full text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors py-1 flex items-center justify-center gap-1"
+        >
+          {expanded ? (
+            <>Ver menos <span className="text-[10px]">↑</span></>
+          ) : (
+            <>Ver {hidden} más <span className="text-[10px]">↓</span></>
+          )}
+        </button>
       )}
     </div>
   );

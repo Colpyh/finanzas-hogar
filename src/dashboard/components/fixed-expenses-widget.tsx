@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import { formatCurrency } from "@/shared/components/currency-display";
 import type { FixedBillWithStatus } from "@/dashboard/types";
+
+const INITIAL_VISIBLE = 4;
 
 type Props = {
   bills: FixedBillWithStatus[];
@@ -8,8 +13,10 @@ type Props = {
 };
 
 export function FixedExpensesWidget({ bills }: Props) {
-  // currentUserId and memberNames kept for API compatibility
+  const [expanded, setExpanded] = useState(false);
   const paid = bills.filter((b) => b.paid).length;
+  const visible = expanded ? bills : bills.slice(0, INITIAL_VISIBLE);
+  const hidden = bills.length - INITIAL_VISIBLE;
 
   return (
     <div
@@ -44,7 +51,7 @@ export function FixedExpensesWidget({ bills }: Props) {
         <p className="text-sm text-muted-foreground py-2">Sin gastos fijos registrados</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {bills.map((bill) => (
+          {visible.map((bill) => (
             <li
               key={bill.id}
               className="flex items-center gap-[11px] py-[9px] pr-[10px] pl-2 rounded-xl border relative overflow-hidden"
@@ -92,6 +99,20 @@ export function FixedExpensesWidget({ bills }: Props) {
             </li>
           ))}
         </ul>
+      )}
+
+      {bills.length > INITIAL_VISIBLE && (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="w-full text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors py-1 flex items-center justify-center gap-1"
+        >
+          {expanded ? (
+            <>Ver menos <span className="text-[10px]">↑</span></>
+          ) : (
+            <>Ver {hidden} más <span className="text-[10px]">↓</span></>
+          )}
+        </button>
       )}
     </div>
   );
