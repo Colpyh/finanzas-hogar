@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { useHousehold } from "@/shared/hooks/use-household";
 import { TrendingUp, LogOut } from "lucide-react";
 import { signOut } from "@/auth/actions";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 
 const PRIMARY_NAV = [
   { href: "/dashboard",     label: "Casa",       icon: "🏠" },
@@ -90,6 +92,8 @@ function SidebarContent({
   const isDark = resolvedTheme === "dark";
   const household = useHousehold();
   const initial = (userEmail ?? household.name).charAt(0).toUpperCase();
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   return (
     <div className="flex flex-col h-full">
@@ -173,13 +177,24 @@ function SidebarContent({
           </div>
           <button
             type="button"
-            onClick={() => signOut()}
+            onClick={() => setSignOutOpen(true)}
             title="Cerrar sesión"
             className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           >
             <LogOut size={15} />
           </button>
         </div>
+
+        <ConfirmDialog
+          open={signOutOpen}
+          onOpenChange={setSignOutOpen}
+          title="¿Cerrar sesión?"
+          description="Tendrás que volver a iniciar sesión para acceder a la app."
+          confirmText="Sí, cerrar sesión"
+          variant="destructive"
+          loading={pending}
+          onConfirm={() => startTransition(async () => { await signOut(); })}
+        />
       </div>
     </div>
   );
