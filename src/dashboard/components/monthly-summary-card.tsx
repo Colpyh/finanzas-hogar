@@ -5,6 +5,7 @@ type Props = {
   summary: DashboardSummary;
   month?: string;
   view?: "group" | "personal";
+  sparkData?: number[];
 };
 
 const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -21,18 +22,13 @@ function getPeriodLabel(month?: string): string {
 // Noise texture as inline SVG data URL (pure CSS, zero deps)
 const NOISE_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
 
-// Generate sparkline bar heights deterministically from spending data
-function getSparkBars(grandTotal: number, fixedTotal: number): number[] {
-  const base = grandTotal || 100000;
-  // 7 bars: a plausible curve anchored to real data
-  const raw = [0.55, 0.72, 0.48, 0.83, 0.65, 0.91, 1.0].map((f) =>
-    Math.round(f * (base / base) * 28 + 8)
-  );
-  const _ = fixedTotal; // keep reference for future real data
-  return raw;
+function getSparkBars(sparkData?: number[]): number[] {
+  if (!sparkData || sparkData.length === 0) return Array(7).fill(4);
+  const max = Math.max(...sparkData, 1);
+  return sparkData.map((v) => 4 + Math.round((v / max) * 24));
 }
 
-export function MonthlySummaryCard({ summary, month, view = "group" }: Props) {
+export function MonthlySummaryCard({ summary, month, view = "group", sparkData }: Props) {
   const isPersonal = view === "personal";
   const total = isPersonal ? summary.myShareTotal : summary.grandTotal;
   const fixedAmt = isPersonal ? summary.myShareFixed : summary.fixedTotal;
@@ -47,7 +43,7 @@ export function MonthlySummaryCard({ summary, month, view = "group" }: Props) {
   const formatted = formatCurrency(total);
   const [, totalNum] = formatted.split("$");
 
-  const sparkBars = getSparkBars(summary.grandTotal, summary.fixedTotal);
+  const sparkBars = getSparkBars(sparkData);
 
   return (
     <div

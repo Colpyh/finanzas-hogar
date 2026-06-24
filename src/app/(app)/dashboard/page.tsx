@@ -12,6 +12,7 @@ import {
 import { getCategoryBudgetStatus } from "@/categories/queries";
 import { getCardPaymentsDue } from "@/tarjetas/queries";
 import type { CardPaymentDue } from "@/tarjetas/queries";
+import { getAnnualSummary } from "@/resumen/annual-queries";
 import { MonthlySummaryCard } from "@/dashboard/components/monthly-summary-card";
 import { FixedExpensesWidget } from "@/dashboard/components/fixed-expenses-widget";
 import { InstallmentsWidget } from "@/dashboard/components/installments-widget";
@@ -109,6 +110,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   let householdName = "Hogar Demo";
   let currentUserId = "";
   let memberNames: Record<string, string> = {};
+  let sparkData: number[] = [];
 
   try {
     const user = await getUser();
@@ -118,7 +120,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       currentUserId = user.id;
       const members = await getHouseholdMembers(household.id);
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Otro"]));
-      const [sumData, billsData, installData, purchaseData, balanceData, budgetData, cardPaymentData] = await Promise.all([
+      const [sumData, billsData, installData, purchaseData, balanceData, budgetData, cardPaymentData, annualData] = await Promise.all([
         getDashboardSummary(household.id, user.id, month),
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
@@ -126,6 +128,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         getPendingBalances(household.id, month, members.length, memberMap, user.id),
         getCategoryBudgetStatus(household.id, month),
         getCardPaymentsDue(household.id, month),
+        getAnnualSummary(household.id),
       ]);
       summary = sumData;
       bills = billsData;
@@ -134,6 +137,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       balances = balanceData;
       budgets = budgetData;
       cardPayments = cardPaymentData;
+      sparkData = annualData.slice(-7).map((d) => d.expenses);
       memberNames = Object.fromEntries(
         members
           .filter((m) => m.userId !== user.id)
@@ -194,7 +198,7 @@ export default async function DashboardPage({ searchParams }: Props) {
 
       {/* Summary card — full width */}
       <AnimatedWidgets>
-        <MonthlySummaryCard summary={summary} month={month} view={view} />
+        <MonthlySummaryCard summary={summary} month={month} view={view} sparkData={sparkData} />
       </AnimatedWidgets>
 
       {/* Main grid */}

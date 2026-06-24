@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInWithCredentials, signInWithGoogle } from "@/auth/actions";
@@ -85,33 +84,44 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
   }
 
   return (
-    <div className="w-full max-w-sm space-y-8">
+    <div className="relative w-full max-w-sm space-y-8">
+      {/* Decorador visual de fondo */}
+      <div
+        className="pointer-events-none absolute -top-16 -right-16 w-[300px] h-[300px] rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.55 0.24 293 / 0.05) 0%, transparent 70%)",
+        }}
+      />
+
       {/* Logo + branding */}
       <div className="text-center space-y-3">
         <div className="flex justify-center">
-          <div className="w-[72px] h-[72px] rounded-[22px] bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/40">
+          <div
+            className="w-[72px] h-[72px] rounded-[22px] bg-primary flex items-center justify-center text-primary-foreground"
+            style={{ boxShadow: "var(--shadow-violet)" }}
+          >
             <HomeIcon />
           </div>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">
+          <h1
+            className="text-[23px] font-semibold text-foreground"
+            style={{ letterSpacing: "-0.02em" }}
+          >
             Finanzas Hogar
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Control de gastos para tu familia
+          <p className="text-[13px] text-muted-foreground mt-1">
+            Tu control financiero compartido
           </p>
         </div>
       </div>
 
       {/* Card del form */}
-      <div className="bg-card rounded-2xl shadow-sm border border-border p-6 space-y-5">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold text-foreground">Iniciar sesión</h2>
-          <p className="text-sm text-muted-foreground">
-            Ingresa tus credenciales para continuar
-          </p>
-        </div>
-
+      <div
+        className="bg-card border border-border rounded-[20px] p-6 space-y-5"
+        style={{ boxShadow: "var(--shadow-md)" }}
+      >
         <button
           type="button"
           onClick={handleGoogle}
@@ -124,13 +134,16 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
 
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground">o</span>
+          <span className="text-[11px] text-muted-foreground">o</span>
           <div className="flex-1 h-px bg-border" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-sm font-medium">
+            <Label
+              htmlFor="email"
+              className="text-[11.5px] font-bold text-muted-foreground uppercase tracking-wide"
+            >
               Correo electrónico
             </Label>
             <Input
@@ -148,12 +161,15 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm font-medium">
+              <Label
+                htmlFor="password"
+                className="text-[11.5px] font-bold text-muted-foreground uppercase tracking-wide"
+              >
                 Contraseña
               </Label>
               <Link
                 href="/auth/reset-password"
-                className="text-xs text-primary hover:underline"
+                className="text-[13px] text-primary hover:underline"
               >
                 ¿Olvidaste tu contraseña?
               </Link>
@@ -183,23 +199,23 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
           </div>
 
           {error && (
-            <p className="text-sm text-destructive bg-destructive/8 rounded-lg px-3 py-2">
+            <p className="text-[13px] text-destructive bg-destructive/10 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
 
-          <Button
+          <button
             type="submit"
-            className="w-full h-11 font-medium shadow-sm shadow-primary/20"
             disabled={loading || googleLoading}
+            className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-semibold text-sm transition-opacity disabled:opacity-50 hover:opacity-90"
           >
             {loading ? "Ingresando..." : "Ingresar"}
-          </Button>
+          </button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-[13px] text-muted-foreground">
           ¿No tienes cuenta?{" "}
-          <Link href="/auth/register" className="text-primary font-medium hover:underline">
+          <Link href="/auth/register" className="text-[13px] text-primary hover:underline">
             Regístrate
           </Link>
         </p>

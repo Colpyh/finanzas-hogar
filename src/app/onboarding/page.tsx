@@ -30,9 +30,14 @@ export default async function OnboardingPage({ searchParams }: Props) {
     if (!invite) {
       return (
         <OnboardingShell>
-          <p className="text-sm text-destructive">
-            Este enlace de invitación no es válido o ya expiró.
-          </p>
+          <div className="space-y-1">
+            <p className="text-[20px] font-semibold text-foreground" style={{ letterSpacing: "-0.02em" }}>
+              Enlace inválido
+            </p>
+            <p className="text-[13px] text-destructive">
+              Este enlace de invitación no es válido o ya expiró.
+            </p>
+          </div>
         </OnboardingShell>
       );
     }
@@ -57,13 +62,27 @@ export default async function OnboardingPage({ searchParams }: Props) {
 
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold">Configurar hogar</h1>
-            <p className="text-muted-foreground text-sm">
-              Creá tu hogar o unite a uno existente
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative">
+      {/* Gradient decorator */}
+      <div
+        className="pointer-events-none fixed inset-0 overflow-hidden"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 to-transparent" />
+      </div>
+
+      <div className="relative w-full max-w-sm space-y-5">
+        {/* Header */}
+        <div className="flex items-start justify-between px-1">
+          <div className="space-y-0.5">
+            <h1
+              className="text-[23px] font-semibold text-foreground"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Finanzas Hogar
+            </h1>
+            <p className="text-[13px] text-muted-foreground">
+              Configurá tu espacio compartido
             </p>
           </div>
           <form action={signOut}>
@@ -76,7 +95,14 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
             </button>
           </form>
         </div>
-        {children}
+
+        {/* Card */}
+        <div
+          className="w-full bg-card border border-border rounded-[20px] p-6"
+          style={{ boxShadow: "var(--shadow-md)" }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
