@@ -6,6 +6,7 @@ import {
   numeric,
   date,
   check,
+  index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { household } from "./household";
@@ -34,5 +35,6 @@ export const income = pgTable(
   },
   (table) => [
     check("chk_income_type", sql`type IN ('salary', 'other')`),
+    index("idx_income_household_period").on(table.householdId, table.periodMonth),
   ]
 );

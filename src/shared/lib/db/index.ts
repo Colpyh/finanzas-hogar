@@ -37,7 +37,17 @@ function getDb(): DbClient {
     );
   }
 
-  const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+  // Serverless-tuned pool. On Vercel each warm instance keeps its own pool, so
+  // we cap connections low and recycle aggressively to avoid exhausting the
+  // Supabase pooler. Pair this with the transaction-mode pooler (port 6543) in
+  // DATABASE_URL for best results.
+  const pool = new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 5_000,
+  });
   cached = drizzle(pool, { schema });
   return cached;
 }

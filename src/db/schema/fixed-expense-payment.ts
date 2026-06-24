@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, date, unique, check } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric, date, unique, check, index } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { expense } from "./expense";
 import { household } from "./household";
@@ -26,5 +26,7 @@ export const fixedExpensePayment = pgTable(
   (table) => [
     unique("uq_expense_period_user").on(table.expenseId, table.periodMonth, table.paidBy),
     check("chk_payment_status", sql`status IN ('reserved', 'paid')`),
+    index("idx_fep_household_period").on(table.householdId, table.periodMonth),
+    index("idx_fep_expense_period").on(table.expenseId, table.periodMonth),
   ]
 );

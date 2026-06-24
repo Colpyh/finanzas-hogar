@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, unique, index } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 export const household = pgTable("household", {
@@ -24,7 +24,11 @@ export const householdMember = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [unique("uq_household_user").on(table.householdId, table.userId)]
+  (table) => [
+    unique("uq_household_user").on(table.householdId, table.userId),
+    index("idx_household_member_user").on(table.userId),
+    index("idx_household_member_household").on(table.householdId),
+  ]
 );
 
 export const householdInvite = pgTable("household_invite", {

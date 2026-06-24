@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { household, householdMember, householdInvite } from "@/shared/lib/db/schema";
 import { eq, count } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { createHouseholdSchema, redeemInviteSchema } from "./types";
 import { validateInviteRedemption } from "./invite-validation";
@@ -118,6 +119,7 @@ export async function redeemInvite(rawData: unknown): Promise<{ error?: string }
       .where(eq(householdInvite.token, token));
   });
 
+  updateTag(invite.householdId);
   redirect("/dashboard");
   return {};
 }

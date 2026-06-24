@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { db } from "@/shared/lib/db";
 import { household, householdInvite, householdMember } from "@/shared/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
@@ -113,6 +113,7 @@ export async function addMemberByEmail(
     displayName,
   });
 
+  updateTag(userHousehold.id);
   revalidatePath("/ajustes");
   return {};
 }
@@ -134,5 +135,6 @@ export async function removeMember(memberId: string) {
 
   await db.delete(householdMember).where(and(eq(householdMember.id, memberId), eq(householdMember.householdId, userHousehold.id)));
 
+  updateTag(userHousehold.id);
   revalidatePath("/ajustes");
 }

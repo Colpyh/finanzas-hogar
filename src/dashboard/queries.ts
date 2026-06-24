@@ -32,18 +32,58 @@ export async function getDashboardSummary(
 ): Promise<DashboardSummary> {
   'use cache'
   cacheTag(householdId)
-  // fixedTotal: sum of amounts of active fixed expenses
-  const fixedRows = await db
-    .select({ amount: expense.amount, responsibleId: expense.responsibleId, isShared: expense.isShared })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        inArray(expense.type, ["fixed", "variable"]),
-        eq(expense.isActive, true),
-        isNull(expense.deletedAt)
-      )
-    );
+  // These three SELECTs over `expense` are independent (none uses another's
+  // result in its WHERE/input), so run them in parallel to cut latency.
+  const monthPrefix = month.slice(0, 7);
+  const [fixedRows, allInstallments, allOneTime] = await Promise.all([
+    // fixedTotal: sum of amounts of active fixed expenses
+    db
+      .select({ amount: expense.amount, responsibleId: expense.responsibleId, isShared: expense.isShared })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.householdId, householdId),
+          inArray(expense.type, ["fixed", "variable"]),
+          eq(expense.isActive, true),
+          isNull(expense.deletedAt)
+        )
+      ),
+    // installmentsTotal: sum of active installment amounts for this month
+    db
+      .select({
+        installmentAmount: expense.installmentAmount,
+        installmentsPaid: expense.installmentsPaid,
+        installmentsTotal: expense.installmentsTotal,
+        responsibleId: expense.responsibleId,
+      })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.householdId, householdId),
+          eq(expense.type, "installment"),
+          isNull(expense.deletedAt),
+          lte(expense.startMonth, month)
+        )
+      ),
+    // oneTimeTotal: sum of one_time expenses for this period_month,
+    // applying billing attribution for card purchases (closingDay shifts month).
+    db
+      .select({
+        amount: expense.amount,
+        expenseDate: expense.expenseDate,
+        responsibleId: expense.responsibleId,
+        closingDay: card.closingDay,
+      })
+      .from(expense)
+      .leftJoin(card, eq(expense.cardId, card.id))
+      .where(
+        and(
+          eq(expense.householdId, householdId),
+          eq(expense.type, "one_time"),
+          isNull(expense.deletedAt)
+        )
+      ),
+  ]);
 
   const fixedTotal = fixedRows.reduce((acc, row) => acc + Number(row.amount ?? 0), 0);
   const myShareFixed = fixedRows.reduce((acc, row) => {
@@ -52,24 +92,6 @@ export async function getDashboardSummary(
     if (row.isShared) return acc + amount / 2;
     return acc + myShare(amount, row.responsibleId, userId);
   }, 0);
-
-  // installmentsTotal: sum of active installment amounts for this month
-  const allInstallments = await db
-    .select({
-      installmentAmount: expense.installmentAmount,
-      installmentsPaid: expense.installmentsPaid,
-      installmentsTotal: expense.installmentsTotal,
-      responsibleId: expense.responsibleId,
-    })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "installment"),
-        isNull(expense.deletedAt),
-        lte(expense.startMonth, month)
-      )
-    );
 
   const activeInstallments = allInstallments.filter(
     (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
@@ -82,26 +104,6 @@ export async function getDashboardSummary(
     (acc, row) => acc + myShare(Number(row.installmentAmount ?? 0), row.responsibleId, userId),
     0
   );
-
-  // oneTimeTotal: sum of one_time expenses for this period_month,
-  // applying billing attribution for card purchases (closingDay shifts month).
-  const monthPrefix = month.slice(0, 7);
-  const allOneTime = await db
-    .select({
-      amount: expense.amount,
-      expenseDate: expense.expenseDate,
-      responsibleId: expense.responsibleId,
-      closingDay: card.closingDay,
-    })
-    .from(expense)
-    .leftJoin(card, eq(expense.cardId, card.id))
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "one_time"),
-        isNull(expense.deletedAt)
-      )
-    );
 
   const thisMonthOneTime = allOneTime.filter((row) => {
     if (!row.expenseDate) return false;
