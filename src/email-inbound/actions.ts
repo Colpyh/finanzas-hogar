@@ -99,4 +99,5 @@ export async function discardPendingExpense(
 
   updateTag(household.id);
   revalidatePath("/gastos-pendientes");
+  revalidatePath("/dashboard");
 }

@@ -272,6 +272,7 @@ export async function updateExpenseCard(
   updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
+  revalidatePath("/dashboard");
   return {};
 }
 

@@ -59,8 +59,17 @@ export function EditFixedExpenseForm({ expense, cards = [] }: Props) {
 
   function handleDelete() {
     startDeleteTransition(async () => {
-      await deleteFixedExpense(expense.id);
-      router.push("/gastos-fijos");
+      try {
+        const result = await deleteFixedExpense(expense.id);
+        if (result?.error) {
+          setError(result.error);
+        } else {
+          router.push("/gastos-fijos");
+        }
+      } catch {
+        setError("Error al eliminar el gasto. Intentá de nuevo.");
+      }
+      setDeleteOpen(false);
     });
   }
 

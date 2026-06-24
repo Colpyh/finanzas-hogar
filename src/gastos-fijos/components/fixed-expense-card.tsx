@@ -120,7 +120,10 @@ export function FixedExpenseCard({
   function handleUnmarkMine() {
     startUnmarkMine(async () => {
       try {
-        await unmarkMyPayment(expense.id, periodMonth);
+        const result = await unmarkMyPayment(expense.id, periodMonth);
+        if (result?.error) {
+          toast.error(result.error);
+        }
       } catch {
         toast.error("Error al deshacer el pago. Intentá de nuevo.");
       }

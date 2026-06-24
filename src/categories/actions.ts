@@ -56,7 +56,7 @@ export async function updateCategory(
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
     const data = parsed.data;
 
-    await db
+    const result = await db
       .update(category)
       .set({
         name: data.name.trim(),
@@ -64,7 +64,10 @@ export async function updateCategory(
         color: data.color ?? null,
         monthlyBudget: data.monthlyBudget != null ? String(data.monthlyBudget) : null,
       })
-      .where(and(eq(category.id, id), eq(category.householdId, household.id)));
+      .where(and(eq(category.id, id), eq(category.householdId, household.id)))
+      .returning({ id: category.id });
+
+    if (result.length === 0) return { error: "Categoría no encontrada" };
 
     updateTag(household.id);
     revalidatePath("/ajustes");
@@ -83,16 +86,19 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
     const usages = await db
       .select({ id: expense.id })
       .from(expense)
-      .where(and(eq(expense.categoryId, id), isNull(expense.deletedAt)))
+      .where(and(eq(expense.categoryId, id), eq(expense.householdId, household.id), isNull(expense.deletedAt)))
       .limit(1);
 
     if (usages.length > 0) {
       return { error: "Esta categoría está en uso y no puede eliminarse" };
     }
 
-    await db
+    const result = await db
       .delete(category)
-      .where(and(eq(category.id, id), eq(category.householdId, household.id)));
+      .where(and(eq(category.id, id), eq(category.householdId, household.id)))
+      .returning({ id: category.id });
+
+    if (result.length === 0) return { error: "Categoría no encontrada" };
 
     updateTag(household.id);
     revalidatePath("/ajustes");

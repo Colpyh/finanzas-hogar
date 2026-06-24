@@ -28,13 +28,13 @@ export default async function GastoFijoDetailPage({ params }: Props) {
   const [exp] = await db
     .select()
     .from(expense)
-    .where(and(eq(expense.id, id), isNull(expense.deletedAt)))
+    .where(and(eq(expense.id, id), eq(expense.householdId, household.id), isNull(expense.deletedAt)))
     .limit(1);
 
-  if (!exp || exp.householdId !== household.id) notFound();
+  if (!exp) notFound();
 
   const [payments, rawCards, usageMap] = await Promise.all([
-    getFixedExpensePayments(id),
+    getFixedExpensePayments(id, household.id),
     getHouseholdCards(household.id),
     getCardUsageSummary(household.id, currentPeriodMonth()),
   ]);

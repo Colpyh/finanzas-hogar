@@ -93,8 +93,9 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
 
   const periodMonth = month ?? currentPeriodMonth();
 
+  let updated: { id: string }[];
   try {
-    await db
+    updated = await db
       .update(fixedExpensePayment)
       .set({ status: "paid", paidAt: new Date() })
       .where(
@@ -104,9 +105,14 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
           eq(fixedExpensePayment.periodMonth, periodMonth),
           eq(fixedExpensePayment.paidBy, user.id)
         )
-      );
+      )
+      .returning({ id: fixedExpensePayment.id });
   } catch {
     return { error: "No se pudo actualizar el pago" };
+  }
+
+  if (updated.length === 0) {
+    return { error: "No se encontró el pago para confirmar" };
   }
 
   updateTag(household.id);
@@ -115,7 +121,7 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
   return {};
 }
 
-export async function toggleFixedExpenseActive(expenseId: string): Promise<void> {
+export async function toggleFixedExpenseActive(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
@@ -126,16 +132,20 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<void>
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
 
-  if (!current) throw new Error("Expense not found");
+  if (!current) return { error: "Gasto no encontrado" };
 
-  await db
+  const result = await db
     .update(expense)
     .set({ isActive: !current.isActive })
-    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .returning({ id: expense.id });
+
+  if (result.length === 0) return { error: "Gasto no encontrado" };
 
   updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
+  return {};
 }
 
 export async function updateFixedExpense(expenseId: string, rawData: unknown) {
@@ -149,10 +159,13 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
     .update(expense)
     .set(data)
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
-    .returning();
+    .returning({ id: expense.id });
+
+  if (!updated) throw new Error("Gasto no encontrado");
 
   updateTag(household.id);
   revalidatePath("/gastos-fijos");
+  revalidatePath("/dashboard");
   return updated;
 }
 
@@ -210,7 +223,7 @@ export async function unmarkMyPayment(expenseId: string, month?: string): Promis
 
   const periodMonth = month ?? currentPeriodMonth();
 
-  await db
+  const deleted = await db
     .delete(fixedExpensePayment)
     .where(
       and(
@@ -219,7 +232,10 @@ export async function unmarkMyPayment(expenseId: string, month?: string): Promis
         eq(fixedExpensePayment.periodMonth, periodMonth),
         eq(fixedExpensePayment.paidBy, user.id)
       )
-    );
+    )
+    .returning({ id: fixedExpensePayment.id });
+
+  if (deleted.length === 0) return { error: "No se encontró el pago" };
 
   updateTag(household.id);
   revalidatePath("/gastos-fijos");
@@ -238,7 +254,7 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
 
   const periodMonth = month ?? currentPeriodMonth();
 
-  await db
+  const deleted = await db
     .delete(fixedExpensePayment)
     .where(
       and(
@@ -247,7 +263,10 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
         eq(fixedExpensePayment.periodMonth, periodMonth),
         eq(fixedExpensePayment.paidBy, otherMember.userId)
       )
-    );
+    )
+    .returning({ id: fixedExpensePayment.id });
+
+  if (deleted.length === 0) return { error: "No se encontró el pago" };
 
   updateTag(household.id);
   revalidatePath("/gastos-fijos");
@@ -255,17 +274,21 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
   return {};
 }
 
-export async function deleteFixedExpense(expenseId: string): Promise<void> {
+export async function deleteFixedExpense(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
 
-  await db
+  const result = await db
     .update(expense)
     .set({ deletedAt: new Date() })
-    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .returning({ id: expense.id });
+
+  if (result.length === 0) return { error: "Gasto no encontrado" };
 
   updateTag(household.id);
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
+  return {};
 }
