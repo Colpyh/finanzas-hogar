@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useHousehold } from "@/shared/hooks/use-household";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, LogOut } from "lucide-react";
+import { signOut } from "@/auth/actions";
 
 const PRIMARY_NAV = [
   { href: "/dashboard",     label: "Casa",       icon: "🏠" },
@@ -164,12 +165,20 @@ function SidebarContent({
           >
             {initial}
           </span>
-          <div className="min-w-0">
+          <div className="flex-1 min-w-0">
             <p className="text-[13px] font-bold text-foreground truncate" style={{ letterSpacing: "-0.01em" }}>
               {userEmail ? userEmail.split("@")[0] : "Usuario"}
             </p>
             <p className="text-[11px] text-muted-foreground truncate">{household.name}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            title="Cerrar sesión"
+            className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut size={15} />
+          </button>
         </div>
       </div>
     </div>
