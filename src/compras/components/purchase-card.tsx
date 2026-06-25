@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { formatCurrency } from "@/shared/components/currency-display";
+import { MarkPaidButton } from "./mark-paid-button";
+import { cn } from "@/lib/utils";
 
 type Props = {
   expense: {
@@ -9,10 +11,12 @@ type Props = {
     expenseDate: string | null;
     categoryName?: string;
     responsibleName?: string | null;
+    cardId?: string | null;
     cardName?: string | null;
     cardColor?: string | null;
     cardLastFour?: string | null;
     isPrivate?: boolean;
+    paidAt?: string | null;
   };
 };
 
@@ -22,10 +26,17 @@ function formatDate(dateStr: string): string {
 }
 
 export function PurchaseCard({ expense }: Props) {
+  // Sin tarjeta = pagada al instante (efectivo/débito). Con tarjeta = pendiente
+  // hasta que se marque (paid_at).
+  const isPaid = !expense.cardId || expense.paidAt != null;
+
   return (
     <Link
       href={`/gastos/${expense.id}`}
-      className="flex items-center gap-3 px-4 py-[14px] border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
+      className={cn(
+        "flex items-center gap-3 px-4 py-[14px] border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer",
+        isPaid && "opacity-60"
+      )}
     >
       <div
         className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[18px] flex-shrink-0"
@@ -64,10 +75,34 @@ export function PurchaseCard({ expense }: Props) {
           {expense.responsibleName && (
             <span className="text-[11px] font-medium text-primary/80">Paga: {expense.responsibleName}</span>
           )}
+          {/* Estado de pago */}
+          {isPaid ? (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] font-bold px-[7px] py-[2px] rounded-full"
+              style={{ background: "var(--success-bg)", color: "var(--success-fg)" }}
+            >
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                <path d="M5 12l5 5L20 6" />
+              </svg>
+              Pagado
+            </span>
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-[7px] py-[2px] rounded-full bg-amber-500/12 text-amber-600 dark:text-amber-400">
+                ⏳ Pendiente
+              </span>
+              <MarkPaidButton expenseId={expense.id} />
+            </>
+          )}
         </div>
       </div>
 
-      <span className="text-[14.5px] font-extrabold text-foreground shrink-0 num">
+      <span
+        className={cn(
+          "text-[14.5px] font-extrabold shrink-0 num",
+          isPaid ? "text-muted-foreground" : "text-foreground"
+        )}
+      >
         {formatCurrency(parseFloat(expense.amount))}
       </span>
     </Link>

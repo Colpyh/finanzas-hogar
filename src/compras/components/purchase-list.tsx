@@ -15,9 +15,11 @@ type Expense = {
   installmentsTotal: number | null;
   categoryName?: string;
   responsibleName?: string | null;
+  cardId?: string | null;
   cardName?: string | null;
   cardColor?: string | null;
   cardLastFour?: string | null;
+  paidAt?: string | null;
   isShared?: boolean;
   currentUserStatus?: "none" | "reserved" | "paid";
   isPaidThisMonth?: boolean;

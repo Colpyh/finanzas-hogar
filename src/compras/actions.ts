@@ -276,6 +276,32 @@ export async function updateExpenseCard(
   return {};
 }
 
+/** Marca/desmarca una compra puntual (one_time) como pagada. Toggle de paid_at. */
+export async function toggleExpensePaid(expenseId: string): Promise<{ error?: string }> {
+  const user = await getUser();
+  const household = await getUserHousehold(user.id);
+  if (!household) return { error: "No tenés un hogar activo" };
+
+  const [exp] = await db
+    .select({ paidAt: expense.paidAt })
+    .from(expense)
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .limit(1);
+  if (!exp) return { error: "Compra no encontrada" };
+
+  const result = await db
+    .update(expense)
+    .set({ paidAt: exp.paidAt ? null : new Date() })
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .returning({ id: expense.id });
+  if (result.length === 0) return { error: "No se pudo actualizar la compra" };
+
+  updateTag(household.id);
+  revalidatePath("/compras");
+  revalidatePath("/dashboard");
+  return {};
+}
+
 export async function deleteExpense(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);

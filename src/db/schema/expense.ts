@@ -48,6 +48,7 @@ export const expense = pgTable(
 
     // One-time fields
     expenseDate: date("expense_date", { mode: "string" }), // date of purchase
+    paidAt: timestamp("paid_at", { withTimezone: true }), // one_time con tarjeta: cuándo se marcó pagada (null = pendiente)
 
     // Card reference (optional — which card was used for this expense)
     cardId: uuid("card_id"),
