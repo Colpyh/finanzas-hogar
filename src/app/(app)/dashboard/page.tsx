@@ -21,10 +21,11 @@ import { BudgetAlertsWidget } from "@/dashboard/components/budget-alerts-widget"
 import { CardPaymentsWidget } from "@/dashboard/components/card-payments-widget";
 import { QuickAddFab } from "@/dashboard/components/quick-add-fab";
 import { WhatsappShareButton } from "@/dashboard/components/whatsapp-share-button";
+import { buildWhatsappText } from "@/dashboard/whatsapp-message";
 import { ViewTabs } from "@/dashboard/components/view-tabs";
 import { AnimatedWidgets } from "@/shared/components/animated-widgets";
 import { MonthSelector } from "@/shared/components/month-selector";
-import { parseMonthParam } from "@/shared/lib/db/helpers";
+import { parseMonthParam, currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { getPendingBalances } from "@/balances/queries";
 import type {
   DashboardSummary,
@@ -128,7 +129,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         getPendingBalances(household.id, month, members.length, memberMap, user.id),
         getCategoryBudgetStatus(household.id, month),
         getCardPaymentsDue(household.id, month),
-        getAnnualSummary(household.id),
+        getAnnualSummary(household.id, currentPeriodMonth()),
       ]);
       summary = sumData;
       bills = billsData;
@@ -159,6 +160,10 @@ export default async function DashboardPage({ searchParams }: Props) {
     ? purchases.filter((p) => p.responsibleId === currentUserId)
     : purchases;
 
+  // Built on the server so the share button receives a single string instead of
+  // re-serializing all dashboard data into the client payload.
+  const whatsappText = buildWhatsappText(month, householdName, summary, bills, installments, purchases, balances, memberNames);
+
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
       {/* Header */}
@@ -177,16 +182,7 @@ export default async function DashboardPage({ searchParams }: Props) {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <WhatsappShareButton
-              month={month}
-              householdName={householdName}
-              summary={summary}
-              bills={bills}
-              installments={installments}
-              purchases={purchases}
-              balances={balances}
-              memberNames={memberNames}
-            />
+            <WhatsappShareButton text={whatsappText} />
             <MonthSelector month={month} />
           </div>
         </div>

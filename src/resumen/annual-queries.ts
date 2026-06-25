@@ -1,4 +1,5 @@
 import { db } from "@/shared/lib/db";
+import { cacheTag } from "next/cache";
 import { expense, income, card } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte } from "drizzle-orm";
 import { elapsedMonths } from "./month-utils";
@@ -11,11 +12,15 @@ export type MonthlyDataPoint = {
   income: number;
 };
 
-function last12Months(): string[] {
+// Builds the 12-month window ending at `anchorMonth` ('YYYY-MM-01'). The anchor
+// is passed in (not computed with `new Date()` here) so this stays usable inside
+// a cached function — the date is resolved by the caller and becomes part of the
+// cache key, keeping the window fresh when the month rolls over.
+function last12Months(anchorMonth: string): string[] {
   const months: string[] = [];
-  const now = new Date();
+  const [ay, am] = anchorMonth.split("-").map(Number);
   for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const d = new Date(ay!, am! - 1 - i, 1);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     months.push(`${y}-${m}-01`);
@@ -30,8 +35,14 @@ function toLabel(monthStr: string): string {
   return SHORT_MONTHS[mIdx] ?? monthStr.slice(5, 7);
 }
 
-export async function getAnnualSummary(householdId: string): Promise<MonthlyDataPoint[]> {
-  const months = last12Months();
+export async function getAnnualSummary(
+  householdId: string,
+  anchorMonth: string
+): Promise<MonthlyDataPoint[]> {
+  "use cache";
+  cacheTag(householdId);
+
+  const months = last12Months(anchorMonth);
   const oldest = months[0]!;
   const newest = months[months.length - 1]!;
   const newestPrefix = newest.slice(0, 7);

@@ -1,25 +1,22 @@
-"use client";
-
 import React from "react";
-import { motion } from "motion/react";
 
+/**
+ * Staggered entrance for dashboard widgets.
+ *
+ * Pure CSS animation (see `.widget-enter` in globals.css) — no JS animation
+ * library. This is a Server Component, so it ships zero client JS and adds no
+ * hydration cost; the stagger is driven by an inline `animation-delay` per item.
+ * Mirrors the previous framer-motion effect (fade + 18px slide-up,
+ * cubic-bezier(0.23, 1, 0.32, 1), 0.4s, 0.07s stagger).
+ */
 export function AnimatedWidgets({ children }: { children: React.ReactNode }) {
   const items = React.Children.toArray(children);
   return (
     <>
       {items.map((child, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            delay: i * 0.07,
-            duration: 0.4,
-            ease: [0.23, 1, 0.32, 1],
-          }}
-        >
+        <div key={i} className="widget-enter" style={{ animationDelay: `${i * 0.07}s` }}>
           {child}
-        </motion.div>
+        </div>
       ))}
     </>
   );

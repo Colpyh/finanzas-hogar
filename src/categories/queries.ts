@@ -1,4 +1,5 @@
 import { db } from "@/shared/lib/db";
+import { cacheTag } from "next/cache";
 import { category, expense, card } from "@/shared/lib/db/schema";
 import { or, isNull, isNotNull, eq, and, asc, inArray, lte } from "drizzle-orm";
 import type { CategoryBudgetStatus } from "@/dashboard/types";
@@ -16,6 +17,9 @@ export async function getCategoryBudgetStatus(
   householdId: string,
   month: string
 ): Promise<CategoryBudgetStatus[]> {
+  "use cache";
+  cacheTag(householdId);
+
   const monthPrefix = month.slice(0, 7);
 
   const budgetCategories = await db

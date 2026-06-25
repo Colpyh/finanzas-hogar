@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
+import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { currentMonth, monthToDate, formatMonthLabel } from "@/resumen/month-utils";
 import {
   getMonthlySummary,
@@ -70,7 +71,7 @@ export default async function ResumenPage({ searchParams }: Props) {
         getMonthlySummary(household.id, monthDb),
         getFixedVsVariableBreakdown(household.id, monthDb),
         getInstallmentBurden(household.id, monthDb),
-        getAnnualSummary(household.id),
+        getAnnualSummary(household.id, currentPeriodMonth()),
       ]);
     }
   } catch {
