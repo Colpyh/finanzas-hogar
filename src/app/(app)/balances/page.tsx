@@ -141,12 +141,17 @@ export default async function BalancesPage({ searchParams }: Props) {
                         <p className="text-[14px] font-bold text-foreground truncate">{item.description}</p>
                         <p className="text-[12px] text-muted-foreground mt-[2px]">{dirLabel}</p>
                       </div>
-                      <span
-                        className="text-[14.5px] font-extrabold shrink-0 num"
-                        style={{ color: amtColor }}
-                      >
-                        {formatCurrency(item.shareAmount)}
-                      </span>
+                      <div className="flex flex-col items-end shrink-0">
+                        <span
+                          className="text-[14.5px] font-extrabold num"
+                          style={{ color: amtColor }}
+                        >
+                          {formatCurrency(item.shareAmount)}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground num mt-[1px]">
+                          de {formatCurrency(item.totalAmount)}
+                        </span>
+                      </div>
                     </div>
                     <SettleButton
                       expenseId={item.expenseId}

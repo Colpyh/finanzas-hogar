@@ -94,7 +94,7 @@ export function MonthlySummaryCard({ summary, month, view = "group", sparkData }
         {/* Big number */}
         <div
           className="num leading-none mt-0.5"
-          style={{ fontSize: 48, fontWeight: 600, color: "#fff", letterSpacing: "-0.02em" }}
+          style={{ fontSize: 48, fontWeight: 600, color: "#4dff91", letterSpacing: "-0.02em", textShadow: "0 0 16px rgba(77,255,145,0.5)" }}
         >
           <span style={{ fontSize: 26, fontWeight: 500, opacity: 0.8, verticalAlign: "top", marginTop: 6, display: "inline-block" }}>$</span>
           {totalNum}

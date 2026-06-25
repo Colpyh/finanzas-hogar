@@ -205,14 +205,14 @@ export default async function ComprasPage({ searchParams }: Props) {
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <h1
           className="text-[23px] font-semibold text-foreground"
           style={{ letterSpacing: "-0.02em" }}
         >
           Tarjeta
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <MonthSelector month={month} />
           {isAuthenticated && (
             <a

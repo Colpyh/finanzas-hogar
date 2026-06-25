@@ -292,14 +292,20 @@ function AddCategoryForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+const INITIAL_VISIBLE = 5;
+
 export function CategoryManager({ categories, householdId }: Props) {
   const [showForm, setShowForm] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const visible = expanded ? categories : categories.slice(0, INITIAL_VISIBLE);
+  const hidden = categories.length - INITIAL_VISIBLE;
 
   return (
     <div className="space-y-0">
       {categories.length > 0 ? (
         <div className="divide-y divide-border">
-          {categories.map((cat) => (
+          {visible.map((cat) => (
             <CategoryItem key={cat.id} cat={cat} householdId={householdId} />
           ))}
         </div>
@@ -309,6 +315,18 @@ export function CategoryManager({ categories, householdId }: Props) {
             No hay categorías registradas.
           </p>
         )
+      )}
+      {categories.length > INITIAL_VISIBLE && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors py-2 flex items-center justify-center gap-1"
+        >
+          {expanded ? (
+            <>Ver menos <span className="text-[10px]">↑</span></>
+          ) : (
+            <>Ver todas ({categories.length}) <span className="text-[10px]">↓</span></>
+          )}
+        </button>
       )}
       {showForm ? (
         <AddCategoryForm onClose={() => setShowForm(false)} />

@@ -35,10 +35,10 @@ export async function getDashboardSummary(
   // These three SELECTs over `expense` are independent (none uses another's
   // result in its WHERE/input), so run them in parallel to cut latency.
   const monthPrefix = month.slice(0, 7);
-  const [fixedRows, allInstallments, allOneTime] = await Promise.all([
+  const [fixedRows, allInstallments, allOneTime, monthPayments] = await Promise.all([
     // fixedTotal: sum of amounts of active fixed expenses
     db
-      .select({ amount: expense.amount, responsibleId: expense.responsibleId, isShared: expense.isShared })
+      .select({ id: expense.id, amount: expense.amount, type: expense.type, responsibleId: expense.responsibleId, isShared: expense.isShared })
       .from(expense)
       .where(
         and(
@@ -83,11 +83,26 @@ export async function getDashboardSummary(
           isNull(expense.deletedAt)
         )
       ),
+    getAllFixedPaymentsForPeriod(householdId, month),
   ]);
 
-  const fixedTotal = fixedRows.reduce((acc, row) => acc + Number(row.amount ?? 0), 0);
+  // Para los gastos VARIABLES, el monto del mes vive en los pagos registrados
+  // (fixed_expense_payment.amount), no en expense.amount (que suele ser 0). Sin
+  // esto, los variables (luz, agua) se contaban como $0 en el total del mes.
+  const paidByExpense = new Map<string, number>();
+  for (const { payment } of monthPayments) {
+    if (payment.status !== "paid") continue;
+    paidByExpense.set(
+      payment.expenseId,
+      (paidByExpense.get(payment.expenseId) ?? 0) + Number(payment.amount ?? 0)
+    );
+  }
+  const rowAmount = (row: typeof fixedRows[number]) =>
+    row.type === "variable" ? (paidByExpense.get(row.id) ?? 0) : Number(row.amount ?? 0);
+
+  const fixedTotal = fixedRows.reduce((acc, row) => acc + rowAmount(row), 0);
   const myShareFixed = fixedRows.reduce((acc, row) => {
-    const amount = Number(row.amount ?? 0);
+    const amount = rowAmount(row);
     // Shared expense: cost is always split 50/50 regardless of who physically pays
     if (row.isShared) return acc + amount / 2;
     return acc + myShare(amount, row.responsibleId, userId);

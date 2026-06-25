@@ -90,19 +90,25 @@ export default async function GastosFijosPage({ searchParams }: Props) {
           ? (memberMap.get(otherPaidPayment.paidBy) ?? null)
           : null;
         const isVariable = e.type === "variable";
-        const totalAmount = parseFloat(e.amount ?? "0");
+        // Para variables, el monto real del mes viene de los pagos registrados este
+        // mes (fixed_expense_payment.amount), no del default e.amount (suele ser 0).
+        const variableMonthTotal = payments.reduce((s, p) => s + parseFloat(p.amount ?? "0"), 0);
+        const monthAmount = isVariable && payments.length > 0
+          ? variableMonthTotal.toFixed(2)
+          : (e.amount ?? "0");
+        const totalAmount = parseFloat(monthAmount);
         let myShareAmount: string;
         if (isVariable && currentUserStatus === "none" && !isPaidThisMonth) {
           myShareAmount = "0";
         } else if (isShared && memberCount > 1) {
           myShareAmount = (totalAmount / memberCount).toFixed(2);
         } else {
-          myShareAmount = e.amount ?? "0";
+          myShareAmount = monthAmount;
         }
         return {
           id: e.id,
           description: e.description,
-          amount: e.amount ?? "0",
+          amount: monthAmount,
           type: e.type,
           recurrenceDay: e.recurrenceDay,
           isActive: e.isActive,
