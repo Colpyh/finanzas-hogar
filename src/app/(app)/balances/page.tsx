@@ -3,19 +3,12 @@ import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { getPendingBalances } from "@/balances/queries";
-import { MonthSelector } from "@/shared/components/month-selector";
-import { parseMonthParam, currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { SettleButton } from "@/balances/components/settle-button";
 
 export const metadata: Metadata = { title: "Balances" };
 
-type Props = { searchParams: Promise<{ month?: string }> };
-
-export default async function BalancesPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const month = parseMonthParam(params.month);
-
+export default async function BalancesPage() {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) return null;
@@ -26,13 +19,11 @@ export default async function BalancesPage({ searchParams }: Props) {
 
   const balances = await getPendingBalances(
     household.id,
-    month,
     memberCount,
     memberMap,
     user.id
   );
 
-  const isCurrentMonth = month === currentPeriodMonth();
   const totalNet = balances.reduce((sum, b) => sum + b.net, 0);
   const netIsPositive = totalNet >= 0;
 
@@ -60,14 +51,14 @@ export default async function BalancesPage({ searchParams }: Props) {
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div>
         <h1
           className="text-[23px] font-semibold text-foreground"
           style={{ letterSpacing: "-0.02em" }}
         >
           Balances
         </h1>
-        <MonthSelector month={month} />
+        <p className="text-[13px] text-muted-foreground mt-0.5">Deuda acumulada pendiente</p>
       </div>
 
       {balances.length === 0 ? (
@@ -78,7 +69,7 @@ export default async function BalancesPage({ searchParams }: Props) {
             Todo saldado
           </p>
           <p className="text-[13px] text-muted-foreground mt-1">
-            {isCurrentMonth ? "No hay deudas pendientes este mes." : "No hubo deudas pendientes en este período."}
+            No hay deudas pendientes.
           </p>
         </div>
       ) : (
@@ -114,14 +105,15 @@ export default async function BalancesPage({ searchParams }: Props) {
               className="text-[14px] font-extrabold text-foreground mb-3"
               style={{ letterSpacing: "-0.02em" }}
             >
-              Movimientos del mes
+              Movimientos pendientes
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-[11px] items-start">
               {allItems.map((item) => {
                 const payerName = item.payerId === user.id
                   ? "Tú"
                   : memberMap.get(item.payerId) ?? "Otro";
-                const dirLabel = item.isOwed ? `Pagó ${payerName}` : `Pagó ${payerName}`;
+                const monthLabel = new Date(item.periodMonth + "T00:00:00").toLocaleDateString("es-CL", { month: "short", year: "numeric" });
+                const dirLabel = `Pagó ${payerName} · ${monthLabel}`;
                 const amtColor = item.isOwed ? "#22c55e" : "#f59e0b";
                 const initial = payerName.charAt(0).toUpperCase();
                 return (
@@ -157,7 +149,7 @@ export default async function BalancesPage({ searchParams }: Props) {
                       expenseId={item.expenseId}
                       description={item.description}
                       shareAmount={item.shareAmount}
-                      periodMonth={month}
+                      periodMonth={item.periodMonth}
                       iAmCreditor={item.payerId === user.id}
                     />
                   </div>

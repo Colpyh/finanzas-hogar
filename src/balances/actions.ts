@@ -41,10 +41,26 @@ export async function settleBalanceItem(
     .limit(1);
   if (!exp) return { error: "Gasto no encontrado" };
 
-  const monthlyAmount =
-    exp.type === "installment"
-      ? parseFloat(exp.installmentAmount ?? "0")
-      : parseFloat(exp.amount ?? "0");
+  let monthlyAmount: number;
+  if (exp.type === "installment") {
+    monthlyAmount = parseFloat(exp.installmentAmount ?? "0");
+  } else if (exp.type === "variable") {
+    // El monto real del variable ese mes vive en el pago ya registrado, no en exp.amount (=0).
+    const [paid] = await db
+      .select({ amount: fixedExpensePayment.amount })
+      .from(fixedExpensePayment)
+      .where(
+        and(
+          eq(fixedExpensePayment.expenseId, expenseId),
+          eq(fixedExpensePayment.periodMonth, periodMonth),
+          eq(fixedExpensePayment.status, "paid")
+        )
+      )
+      .limit(1);
+    monthlyAmount = parseFloat(paid?.amount ?? exp.amount ?? "0");
+  } else {
+    monthlyAmount = parseFloat(exp.amount ?? "0");
+  }
   const shareAmount = (monthlyAmount / members.length).toFixed(2);
 
   // Si ya pagué → el que falta es el otro. Si no pagué → el que falta soy yo.

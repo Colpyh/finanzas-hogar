@@ -10,6 +10,8 @@ export type BalanceItem = {
   shareAmount: number;
   payerId: string;
   debtorId: string;
+  /** Mes ('YYYY-MM-01') de esta deuda puntual — usado para saldarla. */
+  periodMonth: string;
 };
 
 export type MemberBalance = {
@@ -21,12 +23,19 @@ export type MemberBalance = {
 };
 
 /**
- * Returns pending balances for a household in a given period.
- * A balance exists when a shared expense has one payer but not all members settled.
+ * Returns the ACCUMULATED pending balances for a household across ALL months.
+ *
+ * A debt exists, per shared expense and per month, when one member paid that
+ * month but the other(s) haven't settled their share. We sum those debts over
+ * every month (not just the current one), so the balance reflects the full
+ * outstanding amount the other member owes — and persists even after the card /
+ * installments are fully paid, until each share is actually settled.
+ *
+ * Settling is still per-item (per expense+month) via `settleBalanceItem`, which
+ * records the debtor's payment for that month, removing that item from the sum.
  */
 export async function getPendingBalances(
   householdId: string,
-  periodMonth: string,
   memberCount: number,
   memberMap: Map<string, string>,
   currentUserId: string
@@ -44,6 +53,7 @@ export async function getPendingBalances(
 
   if (expenses.length === 0) return [];
 
+  // All payments for shared expenses, across every month (no period filter).
   const allPayments = await db
     .select()
     .from(fixedExpensePayment)
@@ -52,75 +62,87 @@ export async function getPendingBalances(
       and(
         eq(expense.householdId, householdId),
         eq(expense.isShared, true),
-        isNull(expense.deletedAt),
-        eq(fixedExpensePayment.periodMonth, periodMonth)
+        isNull(expense.deletedAt)
       )
     );
 
-  // Group payments by expense
-  const paymentsByExpense = new Map<string, typeof allPayments[number]["fixed_expense_payment"][]>();
+  // Group payments by expense, then by month.
+  const byExpenseMonth = new Map<string, Map<string, typeof allPayments[number]["fixed_expense_payment"][]>>();
   for (const row of allPayments) {
-    const list = paymentsByExpense.get(row.fixed_expense_payment.expenseId) ?? [];
-    list.push(row.fixed_expense_payment);
-    paymentsByExpense.set(row.fixed_expense_payment.expenseId, list);
+    const p = row.fixed_expense_payment;
+    let monthMap = byExpenseMonth.get(p.expenseId);
+    if (!monthMap) {
+      monthMap = new Map();
+      byExpenseMonth.set(p.expenseId, monthMap);
+    }
+    const list = monthMap.get(p.periodMonth) ?? [];
+    list.push(p);
+    monthMap.set(p.periodMonth, list);
   }
 
-  // Compute per-member balance
+  const expenseById = new Map(expenses.map((e) => [e.id, e]));
   const balanceMap = new Map<string, MemberBalance>();
 
-  for (const exp of expenses) {
-    const payments = paymentsByExpense.get(exp.id) ?? [];
-    const paidPayments = payments.filter((p) => p.status === "paid");
-    const paidCount = paidPayments.length;
+  for (const [expenseId, monthMap] of byExpenseMonth) {
+    const exp = expenseById.get(expenseId);
+    if (!exp) continue;
 
-    // Only show when exactly one person paid (debt exists)
-    if (paidCount === 0 || paidCount >= memberCount) continue;
+    for (const [month, payments] of monthMap) {
+      const paidPayments = payments.filter((p) => p.status === "paid");
+      const paidCount = paidPayments.length;
 
-    const payer = paidPayments[0];
-    if (!payer) continue;
+      // Debt for this month exists only when someone paid but not everyone settled.
+      if (paidCount === 0 || paidCount >= memberCount) continue;
 
-    // Para cuotas usar el monto mensual; para variables usar el monto real pagado ese período
-    const totalAmount = exp.type === "installment"
-      ? parseFloat(exp.installmentAmount ?? "0")
-      : exp.type === "variable"
-        ? parseFloat(payer.amount ?? "0")
-        : parseFloat(exp.amount ?? "0");
-    const shareAmount = totalAmount / memberCount;
+      const payer = paidPayments[0];
+      if (!payer) continue;
 
-    // Find members who haven't paid
-    const paidByIds = new Set(paidPayments.map((p) => p.paidBy));
-    for (const [memberId] of memberMap) {
-      if (paidByIds.has(memberId)) continue;
+      // Cuotas: monto mensual de la cuota. Variables: el monto real pagado ese mes. Fijos: el monto fijo.
+      const totalAmount =
+        exp.type === "installment"
+          ? parseFloat(exp.installmentAmount ?? "0")
+          : exp.type === "variable"
+            ? parseFloat(payer.amount ?? "0")
+            : parseFloat(exp.amount ?? "0");
+      const shareAmount = totalAmount / memberCount;
 
-      // memberId owes payer.paidBy shareAmount
-      const debtorId = memberId;
-      const payerId = payer.paidBy;
+      const paidByIds = new Set(paidPayments.map((p) => p.paidBy));
+      for (const [memberId] of memberMap) {
+        if (paidByIds.has(memberId)) continue;
 
-      // Determine which "other" member to group by (from current user's perspective)
-      const otherMemberId = currentUserId === payerId ? debtorId : payerId;
+        const debtorId = memberId;
+        const payerId = payer.paidBy;
+        const otherMemberId = currentUserId === payerId ? debtorId : payerId;
 
-      if (!balanceMap.has(otherMemberId)) {
-        balanceMap.set(otherMemberId, {
-          memberId: otherMemberId,
-          memberName: memberMap.get(otherMemberId) ?? otherMemberId,
-          net: 0,
-          items: [],
+        if (!balanceMap.has(otherMemberId)) {
+          balanceMap.set(otherMemberId, {
+            memberId: otherMemberId,
+            memberName: memberMap.get(otherMemberId) ?? otherMemberId,
+            net: 0,
+            items: [],
+          });
+        }
+
+        const balance = balanceMap.get(otherMemberId)!;
+        // Positive net = other owes current user. Negative = current user owes other.
+        balance.net += currentUserId === payerId ? shareAmount : -shareAmount;
+        balance.items.push({
+          expenseId: exp.id,
+          description: exp.description,
+          type: exp.type as "fixed" | "installment",
+          totalAmount,
+          shareAmount,
+          payerId,
+          debtorId,
+          periodMonth: month,
         });
       }
-
-      const balance = balanceMap.get(otherMemberId)!;
-      // Positive net = other owes current user. Negative = current user owes other.
-      balance.net += currentUserId === payerId ? shareAmount : -shareAmount;
-      balance.items.push({
-        expenseId: exp.id,
-        description: exp.description,
-        type: exp.type as "fixed" | "installment",
-        totalAmount,
-        shareAmount,
-        payerId,
-        debtorId,
-      });
     }
+  }
+
+  // Most recent month first within each member's items.
+  for (const b of balanceMap.values()) {
+    b.items.sort((a, c) => c.periodMonth.localeCompare(a.periodMonth));
   }
 
   return Array.from(balanceMap.values()).sort((a, b) => Math.abs(b.net) - Math.abs(a.net));

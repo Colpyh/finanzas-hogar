@@ -126,7 +126,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
         getRecentPurchases(household.id, month, 5),
-        getPendingBalances(household.id, month, members.length, memberMap, user.id),
+        getPendingBalances(household.id, members.length, memberMap, user.id),
         getCategoryBudgetStatus(household.id, month),
         getCardPaymentsDue(household.id, month),
         getAnnualSummary(household.id, currentPeriodMonth()),
