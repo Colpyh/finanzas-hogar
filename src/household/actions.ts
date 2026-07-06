@@ -10,6 +10,9 @@ import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { updateHouseholdSchema } from "./types";
+import { getHouseholdMembers } from "./queries";
+import { getPendingBalances } from "@/balances/queries";
+import { formatCurrency } from "@/shared/components/currency-display";
 
 export async function updateHousehold(rawData: unknown) {
   const user = await getUser();
@@ -132,6 +135,19 @@ export async function removeMember(memberId: string) {
 
   if (!target) throw new Error("Miembro no encontrado");
   if (target.userId === user.id) throw new Error("No puedes eliminarte a ti mismo");
+
+  // No dejar eliminar a alguien con saldo pendiente: getPendingBalances calcula la
+  // deuda a partir de los miembros activos, así que borrar la fila la haría
+  // desaparecer del balance sin haberse saldado realmente.
+  const members = await getHouseholdMembers(userHousehold.id);
+  const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Usuario"]));
+  const balances = await getPendingBalances(userHousehold.id, members.length, memberMap, user.id);
+  const pending = balances.find((b) => b.memberId === target.userId);
+  if (pending && pending.net !== 0) {
+    throw new Error(
+      `No puedes eliminar a este miembro: tiene un saldo pendiente de ${formatCurrency(Math.abs(pending.net))}. Salda las deudas primero.`
+    );
+  }
 
   await db.delete(householdMember).where(and(eq(householdMember.id, memberId), eq(householdMember.householdId, userHousehold.id)));
 

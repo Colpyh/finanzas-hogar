@@ -122,7 +122,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       const members = await getHouseholdMembers(household.id);
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Otro"]));
       const [sumData, billsData, installData, purchaseData, balanceData, budgetData, cardPaymentData, annualData] = await Promise.all([
-        getDashboardSummary(household.id, user.id, month),
+        getDashboardSummary(household.id, user.id, month, members.length),
         getFixedExpenseStatusThisMonth(household.id, month),
         getActiveInstallments(household.id, month),
         getRecentPurchases(household.id, month, 5),

@@ -19,16 +19,17 @@ import type {
   RecentPurchase,
 } from "@/dashboard/types";
 
-function myShare(amount: number, responsibleId: string | null, userId: string): number {
+function myShare(amount: number, responsibleId: string | null, userId: string, memberCount: number): number {
   if (responsibleId === userId) return amount;
-  if (responsibleId === null) return amount / 2;
+  if (responsibleId === null) return amount / memberCount;
   return 0;
 }
 
 export async function getDashboardSummary(
   householdId: string,
   userId: string,
-  month: string
+  month: string,
+  memberCount: number
 ): Promise<DashboardSummary> {
   'use cache'
   cacheTag(householdId)
@@ -103,9 +104,9 @@ export async function getDashboardSummary(
   const fixedTotal = fixedRows.reduce((acc, row) => acc + rowAmount(row), 0);
   const myShareFixed = fixedRows.reduce((acc, row) => {
     const amount = rowAmount(row);
-    // Shared expense: cost is always split 50/50 regardless of who physically pays
-    if (row.isShared) return acc + amount / 2;
-    return acc + myShare(amount, row.responsibleId, userId);
+    // Shared expense: cost is always split evenly regardless of who physically pays
+    if (row.isShared) return acc + amount / memberCount;
+    return acc + myShare(amount, row.responsibleId, userId, memberCount);
   }, 0);
 
   const activeInstallments = allInstallments.filter(
@@ -116,7 +117,7 @@ export async function getDashboardSummary(
     0
   );
   const myShareInstallments = activeInstallments.reduce(
-    (acc, row) => acc + myShare(Number(row.installmentAmount ?? 0), row.responsibleId, userId),
+    (acc, row) => acc + myShare(Number(row.installmentAmount ?? 0), row.responsibleId, userId, memberCount),
     0
   );
 
@@ -132,7 +133,7 @@ export async function getDashboardSummary(
     0
   );
   const myShareOneTime = thisMonthOneTime.reduce(
-    (acc, row) => acc + myShare(Number(row.amount ?? 0), row.responsibleId, userId),
+    (acc, row) => acc + myShare(Number(row.amount ?? 0), row.responsibleId, userId, memberCount),
     0
   );
 
