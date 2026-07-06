@@ -6,7 +6,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: colpyh
-  version: "1.0"
+  version: "1.3"
 ---
 
 ## Stack
@@ -164,11 +164,42 @@ db.select().from(expense).where(
 - `searchParams` y `params` son **Promises** — siempre `await searchParams`
 - `cookies()` y `headers()` son async — `await cookies()`
 - NO `export const runtime = "nodejs"` en Route Handlers con `cacheComponents: true`
+- NO `export const dynamic = "force-dynamic"` con `cacheComponents: true` — ROMPE el build de Turbopack ("not compatible with nextConfig.cacheComponents"). Para forzar ejecución dinámica en un Route Handler usar `await connection()` (importado de `next/server`) al inicio. Rutas que ya leen `cookies()`/`headers()`/body son dinámicas automáticamente
 - `<Suspense fallback={null}>` en root layout — next-themes requiere cookies server-side
 - `use cache` functions NO pueden llamar `cookies()`, `headers()`, `searchParams` directamente
+- `use cache` functions tampoco deben llamar `new Date()`/`Date.now()` internamente (valor quedaría fijo en la caché) — recibir la fecha/mes como parámetro desde el caller (ver `getAnnualSummary(anchorMonth)` en `src/resumen/annual-queries.ts`)
 - Leer docs en `node_modules/next/dist/docs/` antes de usar cualquier API nueva
 
 ---
+
+## Infraestructura y Performance
+
+- **Supabase**: región **sa-east-1 (São Paulo)** — proyecto ref `gnsxfdbuzpklfkrbqtij`. Migrado desde us-east-1 (Virginia) en jun 2026 para reducir latencia (equipo en Chile).
+- **Vercel**: Function Region **gru1 (São Paulo)** — debe coincidir con la región de Supabase. Verificar con header `x-vercel-id` (debe ser `gru1::gru1`, no `gru1::iad1`).
+- **API keys Supabase**: formato nuevo `sb_publishable_...` (anon) y `sb_secret_...` (service_role), NO los JWT legacy `eyJ...`. Soportados por supabase-js ≥2.101 y @supabase/ssr ≥0.10.
+- **Keep-warm**: `src/app/api/health/route.ts` (`connection()` + `SELECT 1`) pingeado por cron externo (cron-job.org) cada 5 min → evita cold starts del free tier serverless.
+- **Índices DB**: las tablas tienen índices `idx_*` por `householdId` + columnas de filtro. Al agregar tablas/queries nuevas, crear índice por `household_id` (+ `deleted_at` para soft-delete).
+- **RLS**: TODAS las tablas public tienen RLS habilitado + policies por hogar (vía función `is_household_member`). Al crear una tabla nueva: habilitar RLS y crear policies, o queda expuesta vía REST API.
+
+### Scripts de DB / migración (node + pg)
+
+- `pg` está en `node_modules` del proyecto (no global) → ejecutar scripts **desde la raíz del proyecto**.
+- `.env.local` puede tener credenciales desactualizadas. Para credenciales que funcionan: `vercel env pull /tmp/.env.x --environment=production`.
+- Para trabajo de migración/DDL (drizzle-kit push, bulk insert) usar **Session pooler (5432)**, NO Transaction pooler (6543, solo para la app serverless).
+- `drizzle-kit push` NO recrea RLS, policies, functions ni triggers — solo tablas/índices/FKs. Migrarlos aparte con `pg_get_functiondef`/`pg_get_triggerdef`/`pg_policies`.
+
+## Modelo de negocio (gotchas críticos)
+
+- **Gastos VARIABLES** (luz, agua): el monto real del mes vive en `fixed_expense_payment.amount`, NUNCA en `expense.amount` (que es 0/default). Cualquier cálculo de total/balance/listado que toque variables DEBE leer el monto de los pagos del período, no de `expense.amount`. (Afectó: `getDashboardSummary`, `gastos-fijos/page`, `balances/queries`, `settleBalanceItem`.)
+- **Balance entre miembros = ACUMULADO** (no mensual). `getPendingBalances(householdId, memberCount, memberMap, currentUserId)` suma la deuda de TODOS los meses no saldados de gastos compartidos; persiste hasta saldar. Cada `BalanceItem` lleva su `periodMonth`. Se salda por item (expense+mes) con `settleBalanceItem`. NO cacheada (depende de `user.id`).
+- **Compras one_time — estado de pago**: columna `expense.paidAt` (nullable). `isPaid = !cardId || paidAt != null` → sin tarjeta = pagada automática; con tarjeta = pendiente hasta `toggleExpensePaid`.
+- **Reparto compartido — MIXTO, no asumir hardcodeado en todos lados**: `myShare()` y el total de compartidos en `dashboard/queries.ts` (líneas ~24 y ~107) SÍ hardcodean `/ 2` — rompe si el hogar crece a 3+. En cambio `getPendingBalances` (balances/queries.ts) ya recibe `memberCount` como parámetro y divide dinámicamente (`totalAmount / memberCount`) desde c572dce. Si el hogar crece, falta corregir dashboard, no balances.
+
+## Patrones de UI
+
+- **Botón interactivo dentro de un `<Link>`**: el handler DEBE hacer `e.preventDefault()` + `e.stopPropagation()` en un client component, sino el click también navega (ej. `mark-paid-button.tsx`).
+- **Listas colapsables**: `INITIAL_VISIBLE` + estado `expanded` + botón "Ver más/todas" (dashboard widgets, categorías en ajustes).
+- **Animaciones de entrada**: CSS puro (`@keyframes` + `animation-delay`), NO librerías de animación. Ver `.widget-enter` en globals.css + `AnimatedWidgets` (server component).
 
 ## Comandos útiles
 
