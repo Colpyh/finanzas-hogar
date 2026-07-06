@@ -15,7 +15,8 @@ const UUID_HOUSEHOLD = "550e8400-e29b-41d4-a716-446655440024";
 // --- Mocks ---
 
 const mockRevalidatePath = jest.fn();
-jest.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath }));
+const mockUpdateTag = jest.fn();
+jest.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath, updateTag: mockUpdateTag }));
 
 jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER, email: "user@test.com" }),

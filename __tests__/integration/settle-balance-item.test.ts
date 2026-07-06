@@ -15,7 +15,8 @@ const PERIOD = "2026-04";
 // --- Mocks ---
 
 const mockRevalidatePath = jest.fn();
-jest.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath }));
+const mockUpdateTag = jest.fn();
+jest.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath, updateTag: mockUpdateTag }));
 
 jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER, email: "user@test.com" }),

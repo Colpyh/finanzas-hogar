@@ -10,9 +10,10 @@ const UUID_EXPENSE = "550e8400-e29b-41d4-a716-446655440003";
 const UUID_USER = "550e8400-e29b-41d4-a716-446655440004";
 const UUID_HOUSEHOLD = "550e8400-e29b-41d4-a716-446655440005";
 
-// Mock revalidatePath
+// Mock revalidatePath / updateTag
 const mockRevalidatePath = jest.fn();
-jest.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath }));
+const mockUpdateTag = jest.fn();
+jest.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath, updateTag: mockUpdateTag }));
 
 // Mock auth
 jest.mock("@/auth/queries", () => ({
