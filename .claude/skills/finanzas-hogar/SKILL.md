@@ -6,7 +6,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: colpyh
-  version: "1.3"
+  version: "1.4"
 ---
 
 ## Stack
@@ -79,6 +79,8 @@ export async function myMutation() {
 - `updateTag` en CADA Server Action que mute datos de expenses, income, categories, balances
 - NO cachear queries con `search` (input del usuario) — cache pollution
 - `revalidatePath` se mantiene junto a `updateTag` (no reemplaza)
+- Query que depende del usuario: separar la parte por-hogar (cacheada) del cálculo por-usuario (post-caché) — ver `getHouseholdDebtItems`/`getPendingBalances`. Args de `'use cache'` deben ser serializables (arrays/objetos planos, NO `Map`)
+- `getUserHousehold` está cacheada con tag `user-household-{userId}` (helper `userHouseholdTag`) + tag del hogar. Toda mutación de membresía (crear hogar, canjear invitación, addMemberByEmail, removeMember) DEBE invalidar ese tag del usuario afectado
 
 ### DISEÑO — Design System
 
@@ -112,6 +114,8 @@ style={{ background: "rgba(124,58,237,0.08)", boxShadow: "inset 2.5px 0 0 #7c3ae
 ```
 
 ### SERVER ACTIONS — Patrón completo
+
+**Regla crítica**: las actions invocadas desde UI devuelven `{ error?: string }`, NUNCA lanzan para errores de negocio. Next.js redacta en producción los mensajes de errores lanzados en Server Actions — un `throw` escala al error boundary de toda la página y el usuario nunca ve el mensaje. El cliente muestra `result.error` con `toast.error()`.
 
 ```ts
 "use server";
@@ -190,14 +194,19 @@ db.select().from(expense).where(
 
 ## Modelo de negocio (gotchas críticos)
 
-- **Gastos VARIABLES** (luz, agua): el monto real del mes vive en `fixed_expense_payment.amount`, NUNCA en `expense.amount` (que es 0/default). Cualquier cálculo de total/balance/listado que toque variables DEBE leer el monto de los pagos del período, no de `expense.amount`. (Afectó: `getDashboardSummary`, `gastos-fijos/page`, `balances/queries`, `settleBalanceItem`.)
-- **Balance entre miembros = ACUMULADO** (no mensual). `getPendingBalances(householdId, memberCount, memberMap, currentUserId)` suma la deuda de TODOS los meses no saldados de gastos compartidos; persiste hasta saldar. Cada `BalanceItem` lleva su `periodMonth`. Se salda por item (expense+mes) con `settleBalanceItem`. NO cacheada (depende de `user.id`).
-- **Compras one_time — estado de pago**: columna `expense.paidAt` (nullable). `isPaid = !cardId || paidAt != null` → sin tarjeta = pagada automática; con tarjeta = pendiente hasta `toggleExpensePaid`.
-- **Reparto compartido — MIXTO, no asumir hardcodeado en todos lados**: `myShare()` y el total de compartidos en `dashboard/queries.ts` (líneas ~24 y ~107) SÍ hardcodean `/ 2` — rompe si el hogar crece a 3+. En cambio `getPendingBalances` (balances/queries.ts) ya recibe `memberCount` como parámetro y divide dinámicamente (`totalAmount / memberCount`) desde c572dce. Si el hogar crece, falta corregir dashboard, no balances.
+- **Gastos VARIABLES** (luz, agua): el monto real del mes vive en `fixed_expense_payment.amount`, NUNCA en `expense.amount` (que es 0/default). Y el monto del mes es el **MÁXIMO de los pagos, no la suma** (`variableMonthAmount` en `src/shared/lib/variable-expense.ts`): la fila de settlement (parte del deudor al saldar) es una fracción de la misma boleta — sumarla infla el total 1.5×.
+- **Balance entre miembros = ACUMULADO** (no mensual). `getPendingBalances(householdId, memberCount, memberMap, currentUserId)` suma la deuda de TODOS los meses no saldados; persiste hasta saldar por item (expense+mes) con `settleBalanceItem`. Internamente los ítems de deuda están cacheados a nivel hogar (`getHouseholdDebtItems`, `cacheTag(householdId)`); solo el signo del neto y la agrupación se calculan por usuario, post-caché.
+- **Guard de deuda pendiente**: `pendingDebtGuard(householdId, userId, expenseId)` (`src/balances/guards.ts`) bloquea `deleteExpense`/`deleteFixedExpense` si el gasto tiene meses sin saldar; `removeMember` tiene el guard equivalente por miembro. El balance solo ve gastos/miembros vivos — borrar sin guard hace desaparecer deuda en silencio.
+- **Cuotas COMPARTIDAS — cierre de mes**: `markAsMonthlyPayer`/`registerInstallmentShare`/`settleBalanceItem` llaman `syncSharedInstallmentCounter` tras un insert de pago exitoso — incrementa `installmentsPaid` (atómico, SQL) cuando todos los miembros registraron su parte del mes. Los incrementos de contador se hacen SIEMPRE con SQL atómico (`coalesce(...) + 1` + condición `< total`), nunca read-modify-write en JS.
+- **Compras one_time — estado de pago**: columna `expense.paidAt` (nullable). `isPaid = !cardId || paidAt != null`. `toggleExpensePaid` valida type=one_time + tarjeta presente + no borrado.
+- **Reparto compartido**: `getPendingBalances` y `getDashboardSummary`/`myShare()` reciben `memberCount` y dividen dinámicamente. OJO: el reparto histórico usa el count ACTUAL — si el hogar crece a 3+, los meses viejos se recalculan retroactivamente (pendiente: persistir reparto por período).
+- **Billing period**: `billingPeriodForMonth` clampea inicio Y fin al largo real del mes (`Math.min(closingDay, últimoDía)`). Sin el clamp del inicio, closingDay=30 + febrero dejaba compras del 1-2 de marzo fuera de todo período.
 
 ## Patrones de UI
 
-- **Botón interactivo dentro de un `<Link>`**: el handler DEBE hacer `e.preventDefault()` + `e.stopPropagation()` en un client component, sino el click también navega (ej. `mark-paid-button.tsx`).
+- **Botón interactivo dentro de un `<Link>`**: el handler DEBE hacer `e.preventDefault()` + `e.stopPropagation()` en un client component, sino el click también navega (ej. `mark-paid-button.tsx`, `repeat-purchase-button.tsx`).
+- **Páginas con datos de ejemplo (mocks)**: usar `getSessionUser()` (`src/auth/queries.ts`) — devuelve null SOLO sin sesión. NUNCA envolver las queries reales en try/catch vacío: un error real debe ir al error boundary, no mostrar cifras falsas como reales.
+- **Moneda**: SIEMPRE `formatCurrency` de `currency-display.tsx` — nada de `toLocaleString` ad-hoc. Default de schema: CLP.
 - **Listas colapsables**: `INITIAL_VISIBLE` + estado `expanded` + botón "Ver más/todas" (dashboard widgets, categorías en ajustes).
 - **Animaciones de entrada**: CSS puro (`@keyframes` + `animation-delay`), NO librerías de animación. Ver `.widget-enter` en globals.css + `AnimatedWidgets` (server component).
 
