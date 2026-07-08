@@ -37,31 +37,74 @@ function formatShortDate(dateStr: string): string {
   return date.toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function LinkedExpenseRow({ expense: e }: { expense: CardLinkedExpense }) {
+  // Cuota terminada: el monto mensual ya no dice nada — mostrar el total pagado.
+  const isFinishedInstallment = e.isCompleted && e.type === "installment";
+  const displayAmount = isFinishedInstallment ? e.amount * e.installmentsTotal : e.amount;
+
+  return (
+    <Link
+      href={`/gastos/${e.id}`}
+      className={`flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted/40 transition-colors ${
+        e.isCompleted ? "opacity-60" : ""
+      }`}
+    >
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-medium text-foreground truncate">{e.description}</p>
+          {e.isCompleted && (
+            <span
+              className="shrink-0 text-[9px] font-bold px-1.5 py-[1px] rounded-full"
+              style={{ background: "var(--success-bg)", color: "var(--success-fg)" }}
+            >
+              ✓ Pagado
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          {expenseTypeLabel(e)}
+          {e.expenseDate && <span> · {formatShortDate(e.expenseDate)}</span>}
+        </p>
+      </div>
+      <span className="text-xs font-semibold num shrink-0 text-foreground">
+        {formatCurrency(displayAmount)}
+        {e.type === "installment" && !e.isCompleted && (
+          <span className="text-muted-foreground font-normal">/mes</span>
+        )}
+      </span>
+    </Link>
+  );
+}
+
 function LinkedExpensesList({ expenses }: { expenses: CardLinkedExpense[] }) {
+  const active = expenses.filter((e) => !e.isCompleted);
+  const completed = expenses.filter((e) => e.isCompleted);
+  // Sin activos, mostrar los finalizados directo (evita un doble toggle).
+  const [showCompleted, setShowCompleted] = useState(active.length === 0);
+
   return (
     <div
       className="ml-11 rounded-xl border border-border overflow-hidden divide-y divide-border"
       style={{ background: "var(--card-2)" }}
     >
-      {expenses.map((e) => (
-        <Link
-          key={e.id}
-          href={`/gastos/${e.id}`}
-          className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted/40 transition-colors"
-        >
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-foreground truncate">{e.description}</p>
-            <p className="text-[11px] text-muted-foreground">
-              {expenseTypeLabel(e)}
-              {e.expenseDate && <span> · {formatShortDate(e.expenseDate)}</span>}
-            </p>
-          </div>
-          <span className="text-xs font-semibold num shrink-0 text-foreground">
-            {formatCurrency(e.amount)}
-            {e.type === "installment" && <span className="text-muted-foreground font-normal">/mes</span>}
-          </span>
-        </Link>
+      {active.map((e) => (
+        <LinkedExpenseRow key={e.id} expense={e} />
       ))}
+      {completed.length > 0 && active.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowCompleted((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          aria-expanded={showCompleted}
+        >
+          <span>Finalizados ({completed.length})</span>
+          <ChevronDown
+            size={12}
+            className={`transition-transform ${showCompleted ? "rotate-180" : ""}`}
+          />
+        </button>
+      )}
+      {showCompleted && completed.map((e) => <LinkedExpenseRow key={e.id} expense={e} />)}
     </div>
   );
 }

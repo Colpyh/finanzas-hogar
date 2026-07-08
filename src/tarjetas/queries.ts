@@ -176,6 +176,8 @@ export type CardLinkedExpense = {
   expenseDate: string | null;
   installmentsPaid: number;
   installmentsTotal: number;
+  /** Cuotas completas o compra one_time ya pagada — sin deuda viva. */
+  isCompleted: boolean;
 };
 
 /**
@@ -198,6 +200,7 @@ export async function getCardLinkedExpenses(householdId: string): Promise<CardLi
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
       expenseDate: expense.expenseDate,
+      paidAt: expense.paidAt,
     })
     .from(expense)
     .where(
@@ -220,5 +223,11 @@ export async function getCardLinkedExpenses(householdId: string): Promise<CardLi
       expenseDate: r.expenseDate ?? null,
       installmentsPaid: r.installmentsPaid ?? 0,
       installmentsTotal: r.installmentsTotal ?? 0,
+      isCompleted:
+        r.type === "installment"
+          ? (r.installmentsTotal ?? 0) > 0 && (r.installmentsPaid ?? 0) >= (r.installmentsTotal ?? 0)
+          : r.type === "one_time"
+            ? r.paidAt != null
+            : false, // fijos/variables son recurrentes — nunca "finalizan"
     }));
 }
