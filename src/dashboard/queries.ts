@@ -90,12 +90,14 @@ export async function getDashboardSummary(
   // Para los gastos VARIABLES, el monto del mes vive en los pagos registrados
   // (fixed_expense_payment.amount), no en expense.amount (que suele ser 0). Sin
   // esto, los variables (luz, agua) se contaban como $0 en el total del mes.
+  // MAX y no suma: la fila de settlement (parte del deudor) es una fracción de
+  // la misma boleta — sumarla inflaría el total 1.5× (ver variableMonthAmount).
   const paidByExpense = new Map<string, number>();
   for (const { payment } of monthPayments) {
     if (payment.status !== "paid") continue;
     paidByExpense.set(
       payment.expenseId,
-      (paidByExpense.get(payment.expenseId) ?? 0) + Number(payment.amount ?? 0)
+      Math.max(paidByExpense.get(payment.expenseId) ?? 0, Number(payment.amount ?? 0))
     );
   }
   const rowAmount = (row: typeof fixedRows[number]) =>

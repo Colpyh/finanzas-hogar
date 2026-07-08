@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getUser } from "@/auth/queries";
+import { getSessionUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { currentMonth, monthToDate, formatMonthLabel } from "@/resumen/month-utils";
@@ -63,8 +63,9 @@ export default async function ResumenPage({ searchParams }: Props) {
   let burden = MOCK_BURDEN;
   let annualData: MonthlyDataPoint[] = [];
 
-  try {
-    const user = await getUser();
+  // Mocks solo sin sesión/hogar; un error real propaga al error boundary.
+  const user = await getSessionUser();
+  if (user) {
     const household = await getUserHousehold(user.id);
     if (household) {
       [summary, breakdown, burden, annualData] = await Promise.all([
@@ -74,8 +75,6 @@ export default async function ResumenPage({ searchParams }: Props) {
         getAnnualSummary(household.id, currentPeriodMonth()),
       ]);
     }
-  } catch {
-    // Sin sesión — datos de ejemplo
   }
 
   // Derived stats from annual data

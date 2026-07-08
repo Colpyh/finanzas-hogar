@@ -7,6 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
+import { pendingDebtGuard } from "@/balances/guards";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { canMarkInstallmentPaid } from "./installment-utils";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
@@ -315,6 +316,11 @@ export async function deleteExpense(expenseId: string): Promise<{ error?: string
 
   if (!row) return { error: "Gasto no encontrado" };
   if (row.createdBy !== user.id) return { error: "No tienes permiso para eliminar este gasto" };
+
+  // Guard: el balance solo considera gastos no borrados — soft-borrar un gasto
+  // compartido con meses sin saldar haría desaparecer esa deuda en silencio.
+  const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+  if (debtError) return { error: debtError };
 
   await db
     .update(expense)

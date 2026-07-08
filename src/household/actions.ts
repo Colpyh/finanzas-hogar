@@ -121,11 +121,14 @@ export async function addMemberByEmail(
   return {};
 }
 
-export async function removeMember(memberId: string) {
+// Devuelve { error } en vez de lanzar: Next.js redacta en producción los
+// mensajes de errores lanzados en Server Actions, así que un throw nunca
+// llega legible al usuario (y escala al error boundary de toda la página).
+export async function removeMember(memberId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) throw new Error("No household");
-  if (userHousehold.role !== "owner") throw new Error("Solo el propietario puede eliminar miembros");
+  if (!userHousehold) return { error: "No tienes un hogar activo" };
+  if (userHousehold.role !== "owner") return { error: "Solo el propietario puede eliminar miembros" };
 
   const [target] = await db
     .select()
@@ -133,8 +136,8 @@ export async function removeMember(memberId: string) {
     .where(and(eq(householdMember.id, memberId), eq(householdMember.householdId, userHousehold.id)))
     .limit(1);
 
-  if (!target) throw new Error("Miembro no encontrado");
-  if (target.userId === user.id) throw new Error("No puedes eliminarte a ti mismo");
+  if (!target) return { error: "Miembro no encontrado" };
+  if (target.userId === user.id) return { error: "No puedes eliminarte a ti mismo" };
 
   // No dejar eliminar a alguien con saldo pendiente: getPendingBalances calcula la
   // deuda a partir de los miembros activos, así que borrar la fila la haría
@@ -144,13 +147,14 @@ export async function removeMember(memberId: string) {
   const balances = await getPendingBalances(userHousehold.id, members.length, memberMap, user.id);
   const pending = balances.find((b) => b.memberId === target.userId);
   if (pending && pending.net !== 0) {
-    throw new Error(
-      `No puedes eliminar a este miembro: tiene un saldo pendiente de ${formatCurrency(Math.abs(pending.net))}. Salda las deudas primero.`
-    );
+    return {
+      error: `No puedes eliminar a este miembro: tiene un saldo pendiente de ${formatCurrency(Math.abs(pending.net))}. Salda las deudas primero.`,
+    };
   }
 
   await db.delete(householdMember).where(and(eq(householdMember.id, memberId), eq(householdMember.householdId, userHousehold.id)));
 
   updateTag(userHousehold.id);
   revalidatePath("/ajustes");
+  return {};
 }

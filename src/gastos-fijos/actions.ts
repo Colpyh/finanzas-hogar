@@ -7,6 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
+import { pendingDebtGuard } from "@/balances/guards";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import {
   createFixedExpenseSchema,
@@ -278,6 +279,11 @@ export async function deleteFixedExpense(expenseId: string): Promise<{ error?: s
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
+
+  // Guard: no soft-borrar un gasto compartido con meses sin saldar (la deuda
+  // desaparecería del balance en silencio).
+  const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+  if (debtError) return { error: debtError };
 
   const result = await db
     .update(expense)

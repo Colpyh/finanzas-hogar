@@ -74,7 +74,9 @@ describe("removeMember", () => {
     jest.clearAllMocks();
   });
 
-  it("throws when caller is not owner", async () => {
+  // La action devuelve { error } (no lanza): los mensajes de errores lanzados
+  // en Server Actions se redactan en producción y el usuario nunca los ve.
+  it("returns error when caller is not owner", async () => {
     const { getUserHousehold } = await import("@/onboarding/queries");
     (getUserHousehold as jest.Mock).mockResolvedValueOnce({
       id: UUID_HOUSEHOLD,
@@ -83,16 +85,16 @@ describe("removeMember", () => {
     });
 
     const { removeMember } = await import("@/household/actions");
-    await expect(removeMember(UUID_MEMBER_ROW)).rejects.toThrow(
-      "Solo el propietario puede eliminar miembros"
-    );
+    const result = await removeMember(UUID_MEMBER_ROW);
+    expect(result.error).toBe("Solo el propietario puede eliminar miembros");
   });
 
-  it("throws when target member not found", async () => {
+  it("returns error when target member not found", async () => {
     mockSelect.mockReturnValueOnce(selectChain([]));
 
     const { removeMember } = await import("@/household/actions");
-    await expect(removeMember(UUID_MEMBER_ROW)).rejects.toThrow("Miembro no encontrado");
+    const result = await removeMember(UUID_MEMBER_ROW);
+    expect(result.error).toBe("Miembro no encontrado");
   });
 
   it("blocks removal when target has a pending balance", async () => {
@@ -102,7 +104,8 @@ describe("removeMember", () => {
     ]);
 
     const { removeMember } = await import("@/household/actions");
-    await expect(removeMember(UUID_MEMBER_ROW)).rejects.toThrow(/saldo pendiente/);
+    const result = await removeMember(UUID_MEMBER_ROW);
+    expect(result.error).toMatch(/saldo pendiente/);
     expect(mockDelete).not.toHaveBeenCalled();
   });
 
@@ -112,8 +115,9 @@ describe("removeMember", () => {
     mockDelete.mockReturnValueOnce(deleteChain());
 
     const { removeMember } = await import("@/household/actions");
-    await removeMember(UUID_MEMBER_ROW);
+    const result = await removeMember(UUID_MEMBER_ROW);
 
+    expect(result).toEqual({});
     expect(mockDelete).toHaveBeenCalled();
     expect(mockUpdateTag).toHaveBeenCalledWith(UUID_HOUSEHOLD);
     expect(mockRevalidatePath).toHaveBeenCalledWith("/ajustes");
@@ -127,8 +131,9 @@ describe("removeMember", () => {
     mockDelete.mockReturnValueOnce(deleteChain());
 
     const { removeMember } = await import("@/household/actions");
-    await removeMember(UUID_MEMBER_ROW);
+    const result = await removeMember(UUID_MEMBER_ROW);
 
+    expect(result).toEqual({});
     expect(mockDelete).toHaveBeenCalled();
   });
 });

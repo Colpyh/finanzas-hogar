@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getUser } from "@/auth/queries";
+import { getSessionUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getExpenses, countExpenses, getSharedInstallmentPaymentsForPeriod } from "@/compras/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -111,8 +111,9 @@ export default async function ComprasPage({ searchParams }: Props) {
     to: params.to,
   };
 
-  try {
-    const user = await getUser();
+  // Mocks solo sin sesión/hogar; un error real propaga al error boundary.
+  const user = await getSessionUser();
+  if (user) {
     const household = await getUserHousehold(user.id);
     if (household) {
       isAuthenticated = true;
@@ -183,8 +184,6 @@ export default async function ComprasPage({ searchParams }: Props) {
         };
       });
     }
-  } catch {
-    // Sin sesión — datos de ejemplo
   }
 
   // Active tab: default to "compras" (one_time) unless installment is explicitly selected

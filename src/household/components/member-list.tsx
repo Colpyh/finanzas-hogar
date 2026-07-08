@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { UserMinus } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +45,11 @@ function MemberRow({ member: m, isOwner }: { member: Member; isOwner: boolean })
 
   function handleConfirm() {
     startTransition(async () => {
-      await removeMember(m.id);
+      const result = await removeMember(m.id);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
       setOpen(false);
     });
   }

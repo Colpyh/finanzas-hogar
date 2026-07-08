@@ -19,3 +19,18 @@ export const getUser = cache(async function getUser() {
 
   return user;
 });
+
+/**
+ * getUser pero devolviendo null sin sesión, en vez de lanzar.
+ * Solo captura UnauthorizedError: un error real de infraestructura DEBE
+ * propagar al error boundary — capturarlo haría que las páginas muestren
+ * datos de ejemplo (falsos) a un usuario logueado.
+ */
+export async function getSessionUser() {
+  try {
+    return await getUser();
+  } catch (err) {
+    if (err instanceof UnauthorizedError) return null;
+    throw err;
+  }
+}

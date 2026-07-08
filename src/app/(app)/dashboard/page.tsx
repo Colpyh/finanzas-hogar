@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getUser } from "@/auth/queries";
+import { getSessionUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import {
@@ -113,40 +113,40 @@ export default async function DashboardPage({ searchParams }: Props) {
   let memberNames: Record<string, string> = {};
   let sparkData: number[] = [];
 
-  try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (household) {
-      householdName = household.name;
-      currentUserId = user.id;
-      const members = await getHouseholdMembers(household.id);
-      const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Otro"]));
-      const [sumData, billsData, installData, purchaseData, balanceData, budgetData, cardPaymentData, annualData] = await Promise.all([
-        getDashboardSummary(household.id, user.id, month, members.length),
-        getFixedExpenseStatusThisMonth(household.id, month),
-        getActiveInstallments(household.id, month),
-        getRecentPurchases(household.id, month, 5),
-        getPendingBalances(household.id, members.length, memberMap, user.id),
-        getCategoryBudgetStatus(household.id, month),
-        getCardPaymentsDue(household.id, month),
-        getAnnualSummary(household.id, currentPeriodMonth()),
-      ]);
-      summary = sumData;
-      bills = billsData;
-      installments = installData;
-      purchases = purchaseData;
-      balances = balanceData;
-      budgets = budgetData;
-      cardPayments = cardPaymentData;
-      sparkData = annualData.slice(-7).map((d) => d.expenses);
-      memberNames = Object.fromEntries(
-        members
-          .filter((m) => m.userId !== user.id)
-          .map((m) => [m.userId, m.displayName ?? "Otro"])
-      );
-    }
-  } catch {
-    // Sin sesión — se muestran datos de ejemplo
+  // Solo la ausencia de sesión u hogar cae a los datos de ejemplo. Un error
+  // real de queries con usuario logueado DEBE propagar al error boundary:
+  // mostrar mocks ahí sería mostrar cifras financieras falsas como reales.
+  const user = await getSessionUser();
+  const household = user ? await getUserHousehold(user.id) : null;
+
+  if (user && household) {
+    householdName = household.name;
+    currentUserId = user.id;
+    const members = await getHouseholdMembers(household.id);
+    const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Otro"]));
+    const [sumData, billsData, installData, purchaseData, balanceData, budgetData, cardPaymentData, annualData] = await Promise.all([
+      getDashboardSummary(household.id, user.id, month, members.length),
+      getFixedExpenseStatusThisMonth(household.id, month),
+      getActiveInstallments(household.id, month),
+      getRecentPurchases(household.id, month, 5),
+      getPendingBalances(household.id, members.length, memberMap, user.id),
+      getCategoryBudgetStatus(household.id, month),
+      getCardPaymentsDue(household.id, month),
+      getAnnualSummary(household.id, currentPeriodMonth()),
+    ]);
+    summary = sumData;
+    bills = billsData;
+    installments = installData;
+    purchases = purchaseData;
+    balances = balanceData;
+    budgets = budgetData;
+    cardPayments = cardPaymentData;
+    sparkData = annualData.slice(-7).map((d) => d.expenses);
+    memberNames = Object.fromEntries(
+      members
+        .filter((m) => m.userId !== user.id)
+        .map((m) => [m.userId, m.displayName ?? "Otro"])
+    );
   }
 
   // Personal mode: only show expenses where the current user is responsible

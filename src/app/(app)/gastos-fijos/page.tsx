@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getUser } from "@/auth/queries";
+import { getSessionUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getActiveFixedExpenses, getAllFixedPaymentsForPeriod } from "@/gastos-fijos/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { FixedExpenseList } from "@/gastos-fijos/components/fixed-expense-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
+import { variableMonthAmount } from "@/shared/lib/variable-expense";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,8 +50,9 @@ export default async function GastosFijosPage({ searchParams }: Props) {
   let memberCount = 1;
   let hasPendingBalances = false;
 
-  try {
-    const user = await getUser();
+  // Mocks solo sin sesión/hogar; un error real propaga al error boundary.
+  const user = await getSessionUser();
+  if (user) {
     const household = await getUserHousehold(user.id);
     if (household) {
       const [dbExpenses, members, allPayments] = await Promise.all([
@@ -92,7 +94,8 @@ export default async function GastosFijosPage({ searchParams }: Props) {
         const isVariable = e.type === "variable";
         // Para variables, el monto real del mes viene de los pagos registrados este
         // mes (fixed_expense_payment.amount), no del default e.amount (suele ser 0).
-        const variableMonthTotal = payments.reduce((s, p) => s + parseFloat(p.amount ?? "0"), 0);
+        // MAX y no suma: la fila de settlement es una fracción de la misma boleta.
+        const variableMonthTotal = variableMonthAmount(payments.map((p) => p.amount));
         const monthAmount = isVariable && payments.length > 0
           ? variableMonthTotal.toFixed(2)
           : (e.amount ?? "0");
@@ -127,8 +130,6 @@ export default async function GastosFijosPage({ searchParams }: Props) {
         (e) => e.isShared && e.isPaidThisMonth && !e.isSettled
       );
     }
-  } catch {
-    // Sin sesión — datos de ejemplo
   }
 
   return (
