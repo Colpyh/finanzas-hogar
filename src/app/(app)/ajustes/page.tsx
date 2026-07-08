@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
-import { getHouseholdCards, getCardUsageSummary, getCardExpenseCounts } from "@/tarjetas/queries";
+import { getHouseholdCards, getCardUsageSummary, getCardLinkedExpenses } from "@/tarjetas/queries";
+import type { CardLinkedExpense } from "@/tarjetas/queries";
 import { getCategories } from "@/categories/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { MemberList } from "@/household/components/member-list";
@@ -27,7 +28,7 @@ const MOCK_MEMBERS = [
 export default async function AjustesPage() {
   let householdName = "Hogar Demo";
   let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
-  let cards: { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; closingDay: number | null; paymentDueDay: number | null; used: number; expenseCount: number }[] = [];
+  let cards: { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; closingDay: number | null; paymentDueDay: number | null; used: number; expenseCount: number; linkedExpenses: CardLinkedExpense[] }[] = [];
   let isOwner = true;
   let isAdmin = false;
   let householdId = "";
@@ -42,14 +43,20 @@ export default async function AjustesPage() {
       householdId = userHousehold.id;
       isOwner = userHousehold.role === "owner";
       const month = currentPeriodMonth();
-      const [dbMembers, dbCards, usageMap, countMap, dbCategories] = await Promise.all([
+      const [dbMembers, dbCards, usageMap, linkedExpenses, dbCategories] = await Promise.all([
         getHouseholdMembers(userHousehold.id),
         getHouseholdCards(userHousehold.id),
         getCardUsageSummary(userHousehold.id, month),
-        getCardExpenseCounts(userHousehold.id),
+        getCardLinkedExpenses(userHousehold.id),
         getCategories(userHousehold.id),
       ]);
       categories = dbCategories;
+      const linkedByCard = new Map<string, CardLinkedExpense[]>();
+      for (const e of linkedExpenses) {
+        const list = linkedByCard.get(e.cardId) ?? [];
+        list.push(e);
+        linkedByCard.set(e.cardId, list);
+      }
       cards = dbCards.map((c) => ({
         id: c.id,
         name: c.name,
@@ -59,7 +66,8 @@ export default async function AjustesPage() {
         closingDay: c.closingDay ?? null,
         paymentDueDay: c.paymentDueDay ?? null,
         used: usageMap.get(c.id) ?? 0,
-        expenseCount: countMap.get(c.id) ?? 0,
+        expenseCount: linkedByCard.get(c.id)?.length ?? 0,
+        linkedExpenses: linkedByCard.get(c.id) ?? [],
       }));
       const currentUserName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null;
       members = dbMembers.map((m) =>

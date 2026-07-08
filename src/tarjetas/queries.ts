@@ -1,7 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { cacheTag } from "next/cache";
 import { card, expense } from "@/shared/lib/db/schema";
-import { eq, and, isNull, isNotNull, gte, lte } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, gte, lte, desc } from "drizzle-orm";
 import { billingPeriodForMonth } from "@/shared/lib/billing";
 
 export type CardPaymentDue = {
@@ -166,13 +166,39 @@ export async function getCardPaymentsDue(
     .sort((a, b) => a.paymentDueDay - b.paymentDueDay);
 }
 
+export type CardLinkedExpense = {
+  id: string;
+  cardId: string;
+  description: string;
+  type: string;
+  /** Cuotas: monto mensual. Resto: monto del gasto. */
+  amount: number;
+  expenseDate: string | null;
+  installmentsPaid: number;
+  installmentsTotal: number;
+};
+
 /**
- * Returns how many non-deleted expenses are linked to each card in the household.
- * Used to warn the user before deleting a card that has linked expenses.
+ * Gastos no borrados vinculados a alguna tarjeta del hogar, más recientes
+ * primero. Alimenta la lista expandible de "gastos vinculados" en Ajustes
+ * y el aviso al eliminar una tarjeta. Devuelve un array plano (agrupar en
+ * el caller): el resultado de 'use cache' debe ser serializable, no Map.
  */
-export async function getCardExpenseCounts(householdId: string): Promise<Map<string, number>> {
+export async function getCardLinkedExpenses(householdId: string): Promise<CardLinkedExpense[]> {
+  'use cache'
+  cacheTag(householdId)
   const rows = await db
-    .select({ cardId: expense.cardId })
+    .select({
+      id: expense.id,
+      cardId: expense.cardId,
+      description: expense.description,
+      type: expense.type,
+      amount: expense.amount,
+      installmentAmount: expense.installmentAmount,
+      installmentsPaid: expense.installmentsPaid,
+      installmentsTotal: expense.installmentsTotal,
+      expenseDate: expense.expenseDate,
+    })
     .from(expense)
     .where(
       and(
@@ -180,12 +206,19 @@ export async function getCardExpenseCounts(householdId: string): Promise<Map<str
         isNull(expense.deletedAt),
         isNotNull(expense.cardId)
       )
-    );
+    )
+    .orderBy(desc(expense.createdAt));
 
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    if (!row.cardId) continue;
-    counts.set(row.cardId, (counts.get(row.cardId) ?? 0) + 1);
-  }
-  return counts;
+  return rows
+    .filter((r) => r.cardId != null)
+    .map((r) => ({
+      id: r.id,
+      cardId: r.cardId!,
+      description: r.description,
+      type: r.type,
+      amount: Number((r.type === "installment" ? r.installmentAmount : r.amount) ?? 0),
+      expenseDate: r.expenseDate ?? null,
+      installmentsPaid: r.installmentsPaid ?? 0,
+      installmentsTotal: r.installmentsTotal ?? 0,
+    }));
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { addCard, deleteCard, updateCard } from "@/tarjetas/actions";
 import { CARD_COLORS } from "@/tarjetas/types";
+import type { CardLinkedExpense } from "@/tarjetas/queries";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { CreditCard, Plus, Trash2, Loader2, Pencil, X } from "lucide-react";
+import { CreditCard, Plus, Trash2, Loader2, Pencil, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +22,49 @@ type CardRow = {
   paymentDueDay: number | null;
   used: number;
   expenseCount: number;
+  linkedExpenses: CardLinkedExpense[];
 };
+
+function expenseTypeLabel(e: CardLinkedExpense): string {
+  if (e.type === "installment") return `Cuota ${e.installmentsPaid}/${e.installmentsTotal}`;
+  if (e.type === "one_time") return "Compra";
+  if (e.type === "variable") return "Variable";
+  return "Gasto fijo";
+}
+
+function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  return date.toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function LinkedExpensesList({ expenses }: { expenses: CardLinkedExpense[] }) {
+  return (
+    <div
+      className="ml-11 rounded-xl border border-border overflow-hidden divide-y divide-border"
+      style={{ background: "var(--card-2)" }}
+    >
+      {expenses.map((e) => (
+        <Link
+          key={e.id}
+          href={`/gastos/${e.id}`}
+          className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted/40 transition-colors"
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-foreground truncate">{e.description}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {expenseTypeLabel(e)}
+              {e.expenseDate && <span> · {formatShortDate(e.expenseDate)}</span>}
+            </p>
+          </div>
+          <span className="text-xs font-semibold num shrink-0 text-foreground">
+            {formatCurrency(e.amount)}
+            {e.type === "installment" && <span className="text-muted-foreground font-normal">/mes</span>}
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 type Props = {
   cards: CardRow[];
@@ -161,6 +205,7 @@ function CardFields({
 function CardItem({ card }: { card: CardRow }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleDelete() {
@@ -194,9 +239,18 @@ function CardItem({ card }: { card: CardRow }) {
               {card.lastFour && <span>•••• {card.lastFour}</span>}
               {card.lastFour && card.expenseCount > 0 && <span> · </span>}
               {card.expenseCount > 0 && (
-                <span>
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors underline-offset-2 hover:underline"
+                  aria-expanded={expanded}
+                >
                   {card.expenseCount} gasto{card.expenseCount !== 1 ? "s" : ""} vinculado{card.expenseCount !== 1 ? "s" : ""}
-                </span>
+                  <ChevronDown
+                    size={12}
+                    className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+                  />
+                </button>
               )}
             </p>
           </div>
@@ -224,6 +278,9 @@ function CardItem({ card }: { card: CardRow }) {
             Usado este mes: <span className="font-medium text-foreground">{formatCurrency(card.used)}</span>
           </p>
         ) : null}
+        {expanded && card.linkedExpenses.length > 0 && (
+          <LinkedExpensesList expenses={card.linkedExpenses} />
+        )}
       </div>
       <ConfirmDialog
         open={confirmOpen}
