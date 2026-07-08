@@ -74,6 +74,7 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
       responsibleId: expense.responsibleId,
       cardId: expense.cardId,
       paidAt: expense.paidAt,
+      cardKind: card.kind,
       cardName: card.name,
       cardColor: card.color,
       cardLastFour: card.lastFour,

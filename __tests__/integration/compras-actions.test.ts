@@ -52,6 +52,7 @@ jest.mock("@/shared/lib/db", () => ({
 function selectChain(rows: unknown[]) {
   return {
     from: jest.fn().mockReturnThis(),
+    leftJoin: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     limit: jest.fn().mockResolvedValue(rows),
   };
@@ -112,6 +113,7 @@ describe("toggleExpensePaid (validation)", () => {
     paidAt: null,
     type: "one_time",
     cardId: "card-1",
+    cardKind: "credit",
   };
 
   it("toggles a one_time expense with card", async () => {
@@ -136,12 +138,23 @@ describe("toggleExpensePaid (validation)", () => {
 
   it("rejects expenses without a card (auto-paid by definition)", async () => {
     mockSelect.mockReturnValueOnce(
-      selectChain([{ ...ONE_TIME_WITH_CARD, cardId: null }])
+      selectChain([{ ...ONE_TIME_WITH_CARD, cardId: null, cardKind: null }])
     );
 
     const { toggleExpensePaid } = await import("@/compras/actions");
     const result = await toggleExpensePaid(UUID_EXPENSE);
     expect(result.error).toMatch(/sin tarjeta/i);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("rejects debit-card expenses (auto-paid, no statement)", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ ...ONE_TIME_WITH_CARD, cardKind: "debit" }])
+    );
+
+    const { toggleExpensePaid } = await import("@/compras/actions");
+    const result = await toggleExpensePaid(UUID_EXPENSE);
+    expect(result.error).toMatch(/débito/i);
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

@@ -19,6 +19,7 @@ const billingDay = z
 export const addCardSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").max(50),
   lastFour: z.string().length(4, "Debe tener 4 dígitos").regex(/^\d+$/, "Solo dígitos").optional().or(z.literal("")),
+  kind: z.enum(["credit", "debit"]).default("credit"),
   color: z.string().regex(/^#[0-9a-f]{6}$/i, "Color inválido").default("#6366f1"),
   creditLimit: z.string().regex(/^\d+(\.\d{1,2})?$/, "Monto inválido").optional().or(z.literal("")),
   closingDay: billingDay,

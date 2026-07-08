@@ -16,6 +16,7 @@ type CardRow = {
   id: string;
   name: string;
   lastFour: string | null;
+  kind: string;
   color: string;
   creditLimit: number | null;
   closingDay: number | null;
@@ -142,6 +143,7 @@ function UsageBar({ used, limit, color }: { used: number; limit: number; color: 
 function CardFields({
   name, setName,
   lastFour, setLastFour,
+  kind, setKind,
   color, setColor,
   creditLimit, setCreditLimit,
   closingDay, setClosingDay,
@@ -149,6 +151,7 @@ function CardFields({
 }: {
   name: string; setName: (v: string) => void;
   lastFour: string; setLastFour: (v: string) => void;
+  kind: "credit" | "debit"; setKind: (v: "credit" | "debit") => void;
   color: string; setColor: (v: string) => void;
   creditLimit: string; setCreditLimit: (v: string) => void;
   closingDay: string; setClosingDay: (v: string) => void;
@@ -165,6 +168,33 @@ function CardFields({
           placeholder="Visa, Mastercard..."
           className="h-10"
         />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Tipo</Label>
+        <div className="flex gap-2">
+          {([
+            { value: "credit", label: "Crédito" },
+            { value: "debit", label: "Débito" },
+          ] as const).map((k) => (
+            <button
+              key={k.value}
+              type="button"
+              onClick={() => setKind(k.value)}
+              className={`flex-1 h-9 rounded-xl border text-sm font-medium transition-colors ${
+                kind === k.value
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+        {kind === "debit" && (
+          <p className="text-xs text-muted-foreground">
+            Las compras con débito quedan pagadas al instante — sin ciclo de facturación.
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -191,36 +221,38 @@ function CardFields({
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="card-closing">Día de cierre</Label>
-          <Input
-            id="card-closing"
-            type="number"
-            min="1"
-            max="28"
-            value={closingDay}
-            onChange={(e) => setClosingDay(e.target.value)}
-            placeholder="Ej: 25"
-            inputMode="numeric"
-            className="h-10"
-          />
+      {kind === "credit" && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="card-closing">Día de cierre</Label>
+            <Input
+              id="card-closing"
+              type="number"
+              min="1"
+              max="28"
+              value={closingDay}
+              onChange={(e) => setClosingDay(e.target.value)}
+              placeholder="Ej: 25"
+              inputMode="numeric"
+              className="h-10"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="card-due">Día de pago</Label>
+            <Input
+              id="card-due"
+              type="number"
+              min="1"
+              max="28"
+              value={paymentDueDay}
+              onChange={(e) => setPaymentDueDay(e.target.value)}
+              placeholder="Ej: 10"
+              inputMode="numeric"
+              className="h-10"
+            />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="card-due">Día de pago</Label>
-          <Input
-            id="card-due"
-            type="number"
-            min="1"
-            max="28"
-            value={paymentDueDay}
-            onChange={(e) => setPaymentDueDay(e.target.value)}
-            placeholder="Ej: 10"
-            inputMode="numeric"
-            className="h-10"
-          />
-        </div>
-      </div>
+      )}
       <div className="space-y-1.5">
         <Label>Color</Label>
         <div className="flex gap-2">
@@ -277,7 +309,14 @@ function CardItem({ card }: { card: CardRow }) {
             <CreditCard size={14} style={{ color: card.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{card.name}</p>
+            <p className="text-sm font-medium text-foreground truncate">
+              {card.name}
+              {card.kind === "debit" && (
+                <span className="ml-1.5 text-[9px] font-bold px-1.5 py-[1px] rounded-full bg-primary/10 text-primary align-middle">
+                  Débito
+                </span>
+              )}
+            </p>
             <p className="text-xs text-muted-foreground">
               {card.lastFour && <span>•••• {card.lastFour}</span>}
               {card.lastFour && card.expenseCount > 0 && <span> · </span>}
@@ -342,6 +381,7 @@ function CardItem({ card }: { card: CardRow }) {
 function EditCardInline({ card, onClose }: { card: CardRow; onClose: () => void }) {
   const [name, setName] = useState(card.name);
   const [lastFour, setLastFour] = useState(card.lastFour ?? "");
+  const [kind, setKind] = useState<"credit" | "debit">(card.kind === "debit" ? "debit" : "credit");
   const [color, setColor] = useState<string>(card.color);
   const [creditLimit, setCreditLimit] = useState(card.creditLimit != null ? String(card.creditLimit) : "");
   const [closingDay, setClosingDay] = useState(card.closingDay != null ? String(card.closingDay) : "");
@@ -356,6 +396,7 @@ function EditCardInline({ card, onClose }: { card: CardRow; onClose: () => void 
       const result = await updateCard(card.id, {
         name,
         lastFour: lastFour || undefined,
+        kind,
         color,
         creditLimit: creditLimit || undefined,
         closingDay: closingDay ? parseInt(closingDay) : undefined,
@@ -385,6 +426,7 @@ function EditCardInline({ card, onClose }: { card: CardRow; onClose: () => void 
       <CardFields
         name={name} setName={setName}
         lastFour={lastFour} setLastFour={setLastFour}
+        kind={kind} setKind={setKind}
         color={color} setColor={setColor}
         creditLimit={creditLimit} setCreditLimit={setCreditLimit}
         closingDay={closingDay} setClosingDay={setClosingDay}
@@ -407,6 +449,7 @@ function EditCardInline({ card, onClose }: { card: CardRow; onClose: () => void 
 function AddCardForm({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [lastFour, setLastFour] = useState("");
+  const [kind, setKind] = useState<"credit" | "debit">("credit");
   const [color, setColor] = useState<string>(CARD_COLORS[0]?.value ?? "#6366f1");
   const [creditLimit, setCreditLimit] = useState("");
   const [closingDay, setClosingDay] = useState("");
@@ -421,6 +464,7 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
       const result = await addCard({
         name,
         lastFour: lastFour || undefined,
+        kind,
         color,
         creditLimit: creditLimit || undefined,
         closingDay: closingDay ? parseInt(closingDay) : undefined,
@@ -439,6 +483,7 @@ function AddCardForm({ onClose }: { onClose: () => void }) {
       <CardFields
         name={name} setName={setName}
         lastFour={lastFour} setLastFour={setLastFour}
+        kind={kind} setKind={setKind}
         color={color} setColor={setColor}
         creditLimit={creditLimit} setCreditLimit={setCreditLimit}
         closingDay={closingDay} setClosingDay={setClosingDay}

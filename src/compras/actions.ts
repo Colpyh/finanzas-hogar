@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/shared/lib/db";
-import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
+import { expense, fixedExpensePayment, card } from "@/shared/lib/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
@@ -293,13 +293,15 @@ export async function toggleExpensePaid(expenseId: string): Promise<{ error?: st
   if (!household) return { error: "No tenés un hogar activo" };
 
   const [exp] = await db
-    .select({ paidAt: expense.paidAt, type: expense.type, cardId: expense.cardId })
+    .select({ paidAt: expense.paidAt, type: expense.type, cardId: expense.cardId, cardKind: card.kind })
     .from(expense)
+    .leftJoin(card, eq(expense.cardId, card.id))
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id), isNull(expense.deletedAt)))
     .limit(1);
   if (!exp) return { error: "Compra no encontrada" };
   if (exp.type !== "one_time") return { error: "Solo las compras puntuales tienen estado de pago" };
   if (!exp.cardId) return { error: "Las compras sin tarjeta ya cuentan como pagadas" };
+  if (exp.cardKind === "debit") return { error: "Las compras con débito ya están pagadas" };
 
   const result = await db
     .update(expense)

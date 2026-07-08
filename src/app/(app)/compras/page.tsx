@@ -177,6 +177,7 @@ export default async function ComprasPage({ searchParams }: Props) {
           responsibleId: e.responsibleId ?? null,
           responsibleName: e.responsibleId ? (memberMap.get(e.responsibleId) ?? null) : null,
           cardId: e.cardId ?? null,
+          cardKind: e.cardKind ?? null,
           cardName: e.cardName ?? null,
           cardColor: e.cardColor ?? null,
           cardLastFour: e.cardLastFour ?? null,

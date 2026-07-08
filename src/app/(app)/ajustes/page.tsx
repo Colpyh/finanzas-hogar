@@ -28,7 +28,7 @@ const MOCK_MEMBERS = [
 export default async function AjustesPage() {
   let householdName = "Hogar Demo";
   let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
-  let cards: { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; closingDay: number | null; paymentDueDay: number | null; used: number; expenseCount: number; linkedExpenses: CardLinkedExpense[] }[] = [];
+  let cards: { id: string; name: string; lastFour: string | null; kind: string; color: string; creditLimit: number | null; closingDay: number | null; paymentDueDay: number | null; used: number; expenseCount: number; linkedExpenses: CardLinkedExpense[] }[] = [];
   let isOwner = true;
   let isAdmin = false;
   let householdId = "";
@@ -61,6 +61,7 @@ export default async function AjustesPage() {
         id: c.id,
         name: c.name,
         lastFour: c.lastFour,
+        kind: c.kind,
         color: c.color,
         creditLimit: c.creditLimit ? Number(c.creditLimit) : null,
         closingDay: c.closingDay ?? null,

@@ -20,10 +20,13 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
       householdId: household.id,
       name: data.name,
       lastFour: data.lastFour || null,
+      kind: data.kind,
       color: data.color,
       creditLimit: data.creditLimit || null,
-      closingDay: data.closingDay ?? null,
-      paymentDueDay: data.paymentDueDay ?? null,
+      // Débito no tiene ciclo de facturación — sin cierre, las queries
+      // atribuyen sus compras al mes calendario automáticamente.
+      closingDay: data.kind === "debit" ? null : (data.closingDay ?? null),
+      paymentDueDay: data.kind === "debit" ? null : (data.paymentDueDay ?? null),
     });
 
     updateTag(household.id);
@@ -48,10 +51,11 @@ export async function updateCard(id: string, rawData: unknown): Promise<{ error?
       .set({
         name: data.name,
         lastFour: data.lastFour || null,
+        kind: data.kind,
         color: data.color,
         creditLimit: data.creditLimit || null,
-        closingDay: data.closingDay ?? null,
-        paymentDueDay: data.paymentDueDay ?? null,
+        closingDay: data.kind === "debit" ? null : (data.closingDay ?? null),
+        paymentDueDay: data.kind === "debit" ? null : (data.paymentDueDay ?? null),
       })
       .where(and(eq(card.id, id), eq(card.householdId, household.id)));
 

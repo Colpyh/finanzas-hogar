@@ -18,6 +18,7 @@ type Expense = {
   responsibleId?: string | null;
   responsibleName?: string | null;
   cardId?: string | null;
+  cardKind?: string | null;
   cardName?: string | null;
   cardColor?: string | null;
   cardLastFour?: string | null;

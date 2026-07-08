@@ -15,6 +15,7 @@ type Props = {
     responsibleId?: string | null;
     responsibleName?: string | null;
     cardId?: string | null;
+    cardKind?: string | null;
     cardName?: string | null;
     cardColor?: string | null;
     cardLastFour?: string | null;
@@ -29,9 +30,9 @@ function formatDate(dateStr: string): string {
 }
 
 export function PurchaseCard({ expense }: Props) {
-  // Sin tarjeta = pagada al instante (efectivo/débito). Con tarjeta = pendiente
-  // hasta que se marque (paid_at).
-  const isPaid = !expense.cardId || expense.paidAt != null;
+  // Sin tarjeta o con tarjeta de DÉBITO = pagada al instante (el dinero ya
+  // salió). Con crédito = pendiente hasta que se marque (paid_at).
+  const isPaid = !expense.cardId || expense.cardKind === "debit" || expense.paidAt != null;
 
   return (
     <Link

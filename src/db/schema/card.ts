@@ -19,6 +19,8 @@ export const card = pgTable(
       .references(() => household.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     lastFour: text("last_four"), // optional last 4 digits for display
+    // 'credit' | 'debit' — débito no tiene ciclo de facturación y sus compras nacen pagadas
+    kind: text("kind").notNull().default("credit"),
     color: text("color").notNull().default("#6366f1"),
     creditLimit: numeric("credit_limit", { precision: 12, scale: 2 }), // nullable — no limit if null
     // Billing cycle fields (nullable — debit cards / cards without cycle tracking leave these null)

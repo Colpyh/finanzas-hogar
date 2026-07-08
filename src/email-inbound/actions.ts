@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { db } from "@/shared/lib/db";
-import { pendingExpense, expense } from "@/shared/lib/db/schema";
+import { pendingExpense, expense, card } from "@/shared/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
   confirmPendingExpenseSchema,
@@ -42,6 +42,24 @@ export async function confirmPendingExpense(
       throw new Error("Pending expense has no parsed amount or date");
     }
 
+    // Auto-vincular la tarjeta por los últimos 4 dígitos del correo del banco,
+    // solo si hay exactamente UNA tarjeta activa con ese last4 (sin ambigüedad).
+    let matchedCardId: string | undefined;
+    if (pending.parsedCardLast4) {
+      const matches = await tx
+        .select({ id: card.id })
+        .from(card)
+        .where(
+          and(
+            eq(card.householdId, household.id),
+            eq(card.isActive, true),
+            eq(card.lastFour, pending.parsedCardLast4)
+          )
+        )
+        .limit(2);
+      if (matches.length === 1) matchedCardId = matches[0]!.id;
+    }
+
     // Create the expense
     const inserted = await tx
       .insert(expense)
@@ -54,6 +72,7 @@ export async function confirmPendingExpense(
         amount: pending.parsedAmount,
         currency: "CLP",
         expenseDate: pending.parsedDate,
+        ...(matchedCardId ? { cardId: matchedCardId } : {}),
       })
       .returning({ id: expense.id });
 

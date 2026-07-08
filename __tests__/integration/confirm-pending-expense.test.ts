@@ -125,6 +125,71 @@ describe("confirmPendingExpense", () => {
     expect(mockRevalidatePath).toHaveBeenCalledWith("/dashboard");
     expect(mockRevalidatePath).toHaveBeenCalledWith("/compras");
   });
+
+  it("auto-links the card when parsedCardLast4 matches exactly one card", async () => {
+    const UUID_CARD = "550e8400-e29b-41d4-a716-446655440025";
+    const pendingChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([{ ...PENDING_ROW, parsedCardLast4: "7566" }]),
+    };
+    const cardChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([{ id: UUID_CARD }]),
+    };
+    mockTxSelect
+      .mockReturnValueOnce(pendingChain)
+      .mockReturnValueOnce(cardChain);
+
+    const insertChain = {
+      values: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockResolvedValue([{ id: UUID_EXPENSE }]),
+    };
+    mockTxInsert.mockReturnValue(insertChain);
+    mockTxUpdate.mockReturnValue({
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockResolvedValue([{ id: UUID_PENDING }]),
+    });
+
+    const { confirmPendingExpense } = await import("@/email-inbound/actions");
+    await confirmPendingExpense(VALID_INPUT);
+
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.cardId).toBe(UUID_CARD);
+  });
+
+  it("does not link a card when two cards share the same last4 (ambiguous)", async () => {
+    const pendingChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([{ ...PENDING_ROW, parsedCardLast4: "7566" }]),
+    };
+    const cardChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([{ id: "card-a" }, { id: "card-b" }]),
+    };
+    mockTxSelect
+      .mockReturnValueOnce(pendingChain)
+      .mockReturnValueOnce(cardChain);
+
+    const insertChain = {
+      values: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockResolvedValue([{ id: UUID_EXPENSE }]),
+    };
+    mockTxInsert.mockReturnValue(insertChain);
+    mockTxUpdate.mockReturnValue({
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockResolvedValue([{ id: UUID_PENDING }]),
+    });
+
+    const { confirmPendingExpense } = await import("@/email-inbound/actions");
+    await confirmPendingExpense(VALID_INPUT);
+
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.cardId).toBeUndefined();
+  });
 });
 
 describe("discardPendingExpense", () => {
