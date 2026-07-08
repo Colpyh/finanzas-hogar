@@ -2,14 +2,14 @@
 
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { pendingDebtGuard } from "@/balances/guards";
+import { syncSharedInstallmentCounter } from "./installment-sync";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
-import { canMarkInstallmentPaid } from "./installment-utils";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
 
 export async function createPurchase(rawData: unknown) {
@@ -75,28 +75,31 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
 
-  const [current] = await db
-    .select({
-      installmentsPaid: expense.installmentsPaid,
-      installmentsTotal: expense.installmentsTotal,
-    })
-    .from(expense)
-    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
-    .limit(1);
+  // Incremento atómico en un solo UPDATE condicionado: el read-modify-write
+  // en JS perdía incrementos con dos clicks concurrentes (ambos leían N y
+  // escribían N+1), y el guard previo era check-then-act con la misma race.
+  const updated = await db
+    .update(expense)
+    .set({ installmentsPaid: sql`coalesce(${expense.installmentsPaid}, 0) + 1` })
+    .where(
+      and(
+        eq(expense.id, expenseId),
+        eq(expense.householdId, household.id),
+        isNull(expense.deletedAt),
+        sql`coalesce(${expense.installmentsPaid}, 0) < coalesce(${expense.installmentsTotal}, 0)`
+      )
+    )
+    .returning({ paid: expense.installmentsPaid });
 
-  if (!current) return { error: "Gasto no encontrado" };
-
-  const paid = current.installmentsPaid ?? 0;
-  const total = current.installmentsTotal ?? 0;
-
-  if (!canMarkInstallmentPaid(paid, total)) {
+  if (updated.length === 0) {
+    const [current] = await db
+      .select({ paid: expense.installmentsPaid, total: expense.installmentsTotal })
+      .from(expense)
+      .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+      .limit(1);
+    if (!current) return { error: "Gasto no encontrado" };
     return { error: "Todas las cuotas ya fueron pagadas" };
   }
-
-  await db
-    .update(expense)
-    .set({ installmentsPaid: paid + 1 })
-    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
   updateTag(household.id);
   revalidatePath("/compras");
@@ -142,6 +145,9 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
     throw err;
   }
 
+  // Si con este pago el mes quedó completo, cierra la cuota del período.
+  await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
+
   updateTag(household.id);
   revalidatePath("/compras");
   revalidatePath("/balances");
@@ -186,6 +192,9 @@ export async function registerInstallmentShare(expenseId: string): Promise<{ err
     }
     throw err;
   }
+
+  // Si con esta parte el mes quedó completo, cierra la cuota del período.
+  await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
 
   updateTag(household.id);
   revalidatePath("/compras");
@@ -284,11 +293,13 @@ export async function toggleExpensePaid(expenseId: string): Promise<{ error?: st
   if (!household) return { error: "No tenés un hogar activo" };
 
   const [exp] = await db
-    .select({ paidAt: expense.paidAt })
+    .select({ paidAt: expense.paidAt, type: expense.type, cardId: expense.cardId })
     .from(expense)
-    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id), isNull(expense.deletedAt)))
     .limit(1);
   if (!exp) return { error: "Compra no encontrada" };
+  if (exp.type !== "one_time") return { error: "Solo las compras puntuales tienen estado de pago" };
+  if (!exp.cardId) return { error: "Las compras sin tarjeta ya cuentan como pagadas" };
 
   const result = await db
     .update(expense)

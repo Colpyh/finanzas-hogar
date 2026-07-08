@@ -7,6 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
+import { syncSharedInstallmentCounter } from "@/compras/installment-sync";
 
 export async function settleBalanceItem(
   expenseId: string,
@@ -82,6 +83,9 @@ export async function settleBalanceItem(
     }
     throw err;
   }
+
+  // Si al saldar quedó completo el mes de una cuota compartida, cierra el período.
+  await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
 
   updateTag(household.id);
   revalidatePath("/balances");

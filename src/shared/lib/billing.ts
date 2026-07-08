@@ -32,11 +32,14 @@ export function effectiveBillingMonth(
  * for expenses that are DUE in `targetMonth` for a card with `closingDay`.
  *
  * The payment due in month M covers expenses from:
- *   - Start: day (closingDay + 1) of month M-2
- *   - End:   day closingDay       of month M-1
+ *   - Start: day after the closing day of month M-2 (clamped to that month's
+ *     last day, so short months never leave a gap)
+ *   - End:   day closingDay of month M-1 (clamped to that month's last day)
  *
- * JS Date handles day-overflow automatically (e.g., Feb 29 in a non-leap year
- * becomes March 1), which is the correct behavior for billing periods.
+ * Both ends clamp closingDay to the month's real length. Without the start
+ * clamp, closingDay=30 with February as start month overflowed to March 3
+ * while the previous period ended February 28 — purchases on March 1-2 fell
+ * in NO period and vanished from card totals.
  *
  * Example: targetMonth="2026-07", closingDay=25
  *   → { start: "2026-05-26", end: "2026-06-25" }
@@ -54,7 +57,8 @@ export function billingPeriodForMonth(
   const startM = endM === 1 ? 12 : endM - 1;
   const startY = endM === 1 ? endY - 1 : endY;
 
-  const rawStart = new Date(startY, startM - 1, closingDay + 1);
+  const lastDayOfStartMonth = new Date(startY, startM, 0).getDate();
+  const rawStart = new Date(startY, startM - 1, Math.min(closingDay, lastDayOfStartMonth) + 1);
   const start = `${rawStart.getFullYear()}-${String(rawStart.getMonth() + 1).padStart(2, "0")}-${String(rawStart.getDate()).padStart(2, "0")}`;
 
   const lastDayOfEndMonth = new Date(endY, endM, 0).getDate();

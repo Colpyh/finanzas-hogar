@@ -93,4 +93,38 @@ describe("billingPeriodForMonth", () => {
     expect(start).toBe("2026-03-31");
     expect(end).toBe("2026-04-30");
   });
+
+  // Bug B6: sin clamp del inicio, closingDay=30 con febrero como mes de inicio
+  // generaba un HUECO — el período de marzo terminaba el 28-feb pero el de
+  // abril arrancaba el 3-mar (Feb 31 desborda), y las compras del 1-2 de
+  // marzo no caían en ningún período (desaparecían del total de la tarjeta).
+  describe("no gap when closingDay exceeds days in start month", () => {
+    it("April period starts Mar 1 when start month is February (closingDay=30)", () => {
+      // endMonth=March, startMonth=February (28 días en 2026)
+      const { start, end } = billingPeriodForMonth("2026-04-01", 30);
+      expect(start).toBe("2026-03-01");
+      expect(end).toBe("2026-03-30");
+    });
+
+    it("periods are contiguous across the February boundary (closingDay=30)", () => {
+      const march = billingPeriodForMonth("2026-03-01", 30);
+      const april = billingPeriodForMonth("2026-04-01", 30);
+      // Marzo termina 28-feb; abril DEBE arrancar 1-mar (sin hueco)
+      expect(march.end).toBe("2026-02-28");
+      expect(april.start).toBe("2026-03-01");
+    });
+
+    it("closingDay=31 with 30-day start month starts on day 1 of next month", () => {
+      // targetMonth=June → endMonth=May, startMonth=April (30 días)
+      const { start, end } = billingPeriodForMonth("2026-06-01", 31);
+      expect(start).toBe("2026-05-01");
+      expect(end).toBe("2026-05-31");
+    });
+
+    it("leap year February (2028) clamps correctly", () => {
+      // endMonth=March 2028, startMonth=February 2028 (29 días)
+      const { start } = billingPeriodForMonth("2028-04-01", 30);
+      expect(start).toBe("2028-03-01");
+    });
+  });
 });
