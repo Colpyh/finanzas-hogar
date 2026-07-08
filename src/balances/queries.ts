@@ -1,6 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { cacheTag } from "next/cache";
 
 export type BalanceItem = {
   expenseId: string;
@@ -34,12 +35,20 @@ export type MemberBalance = {
  * Settling is still per-item (per expense+month) via `settleBalanceItem`, which
  * records the debtor's payment for that month, removing that item from the sum.
  */
-export async function getPendingBalances(
+/**
+ * Ítems de deuda del hogar — TODO lo que no depende de quién mira
+ * (montos, pagador, deudor, mes). Cacheado por hogar: era el único camino
+ * sin caché del dashboard y bloqueaba el primer paint en cada request.
+ * La parte por-usuario (signo del neto y agrupación) se calcula en
+ * getPendingBalances sobre este resultado, después de la caché.
+ */
+async function getHouseholdDebtItems(
   householdId: string,
   memberCount: number,
-  memberMap: Map<string, string>,
-  currentUserId: string
-): Promise<MemberBalance[]> {
+  memberIds: string[]
+): Promise<BalanceItem[]> {
+  'use cache'
+  cacheTag(householdId)
   const expenses = await db
     .select()
     .from(expense)
@@ -81,7 +90,7 @@ export async function getPendingBalances(
   }
 
   const expenseById = new Map(expenses.map((e) => [e.id, e]));
-  const balanceMap = new Map<string, MemberBalance>();
+  const items: BalanceItem[] = [];
 
   for (const [expenseId, monthMap] of byExpenseMonth) {
     const exp = expenseById.get(expenseId);
@@ -107,37 +116,53 @@ export async function getPendingBalances(
       const shareAmount = totalAmount / memberCount;
 
       const paidByIds = new Set(paidPayments.map((p) => p.paidBy));
-      for (const [memberId] of memberMap) {
+      for (const memberId of memberIds) {
         if (paidByIds.has(memberId)) continue;
 
-        const debtorId = memberId;
-        const payerId = payer.paidBy;
-        const otherMemberId = currentUserId === payerId ? debtorId : payerId;
-
-        if (!balanceMap.has(otherMemberId)) {
-          balanceMap.set(otherMemberId, {
-            memberId: otherMemberId,
-            memberName: memberMap.get(otherMemberId) ?? otherMemberId,
-            net: 0,
-            items: [],
-          });
-        }
-
-        const balance = balanceMap.get(otherMemberId)!;
-        // Positive net = other owes current user. Negative = current user owes other.
-        balance.net += currentUserId === payerId ? shareAmount : -shareAmount;
-        balance.items.push({
+        items.push({
           expenseId: exp.id,
           description: exp.description,
           type: exp.type as "fixed" | "installment",
           totalAmount,
           shareAmount,
-          payerId,
-          debtorId,
+          payerId: payer.paidBy,
+          debtorId: memberId,
           periodMonth: month,
         });
       }
     }
+  }
+
+  return items;
+}
+
+export async function getPendingBalances(
+  householdId: string,
+  memberCount: number,
+  memberMap: Map<string, string>,
+  currentUserId: string
+): Promise<MemberBalance[]> {
+  // Ordenado para que la clave de caché sea estable entre requests.
+  const memberIds = Array.from(memberMap.keys()).sort();
+  const items = await getHouseholdDebtItems(householdId, memberCount, memberIds);
+
+  const balanceMap = new Map<string, MemberBalance>();
+  for (const item of items) {
+    const otherMemberId = currentUserId === item.payerId ? item.debtorId : item.payerId;
+
+    if (!balanceMap.has(otherMemberId)) {
+      balanceMap.set(otherMemberId, {
+        memberId: otherMemberId,
+        memberName: memberMap.get(otherMemberId) ?? otherMemberId,
+        net: 0,
+        items: [],
+      });
+    }
+
+    const balance = balanceMap.get(otherMemberId)!;
+    // Positive net = other owes current user. Negative = current user owes other.
+    balance.net += currentUserId === item.payerId ? item.shareAmount : -item.shareAmount;
+    balance.items.push(item);
   }
 
   // Most recent month first within each member's items.

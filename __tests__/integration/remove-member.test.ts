@@ -27,6 +27,7 @@ jest.mock("@/onboarding/queries", () => ({
   getUserHousehold: jest
     .fn()
     .mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test", role: "owner" }),
+  userHouseholdTag: (userId: string) => `user-household-${userId}`,
 }));
 
 jest.mock("@/household/queries", () => ({

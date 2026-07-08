@@ -1,6 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment, category } from "@/shared/lib/db/schema";
-import { eq, and, isNull, lte, sql } from "drizzle-orm";
+import { eq, and, isNull, lte } from "drizzle-orm";
+import { cacheTag } from "next/cache";
 import { aggregateTotals, calcPercentage } from "@/dashboard/aggregation";
 import type {
   MonthlySummary,
@@ -12,59 +13,74 @@ export async function getMonthlySummary(
   householdId: string,
   month: string
 ): Promise<MonthlySummary> {
+  'use cache'
+  cacheTag(householdId)
   const monthPrefix = month.slice(0, 7); // 'YYYY-MM'
 
-  // fixedTotal: sum of actual payments made for this specific month
-  const fixedPaymentRows = await db
-    .select({ amount: fixedExpensePayment.amount })
-    .from(fixedExpensePayment)
-    .where(
-      and(
-        eq(fixedExpensePayment.householdId, householdId),
-        eq(fixedExpensePayment.periodMonth, month)
-      )
-    );
+  // Las cuatro queries son independientes — en paralelo (antes: 5 secuenciales,
+  // con la de cuotas duplicada).
+  const [fixedPaymentRows, allInstallments, allOneTime, allCategories] = await Promise.all([
+    // fixedTotal: sum of actual payments made for this specific month
+    db
+      .select({ amount: fixedExpensePayment.amount })
+      .from(fixedExpensePayment)
+      .where(
+        and(
+          eq(fixedExpensePayment.householdId, householdId),
+          eq(fixedExpensePayment.periodMonth, month)
+        )
+      ),
+    // installments: activas este mes (con categoría, para byCategory)
+    db
+      .select({
+        categoryId: expense.categoryId,
+        installmentAmount: expense.installmentAmount,
+        installmentsPaid: expense.installmentsPaid,
+        installmentsTotal: expense.installmentsTotal,
+      })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.householdId, householdId),
+          eq(expense.type, "installment"),
+          isNull(expense.deletedAt),
+          lte(expense.startMonth, month)
+        )
+      ),
+    // oneTime: sum of one_time expenses for this period_month
+    db
+      .select({
+        amount: expense.amount,
+        expenseDate: expense.expenseDate,
+        categoryId: expense.categoryId,
+      })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.householdId, householdId),
+          eq(expense.type, "one_time"),
+          isNull(expense.deletedAt)
+        )
+      ),
+    // category names and budgets (solo las del hogar)
+    db
+      .select({ id: category.id, name: category.name, monthlyBudget: category.monthlyBudget })
+      .from(category)
+      .where(eq(category.householdId, householdId)),
+  ]);
+
   const fixedTotal = fixedPaymentRows.reduce(
     (acc, row) => acc + Number(row.amount ?? 0),
     0
   );
 
-  // installmentsTotal: sum of active installment amounts for this month
-  const allInstallments = await db
-    .select({
-      installmentAmount: expense.installmentAmount,
-      installmentsPaid: expense.installmentsPaid,
-      installmentsTotal: expense.installmentsTotal,
-    })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "installment"),
-        isNull(expense.deletedAt),
-        lte(expense.startMonth, month)
-      )
-    );
-
-  const installmentsTotal = allInstallments
-    .filter((row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0))
-    .reduce((acc, row) => acc + Number(row.installmentAmount ?? 0), 0);
-
-  // oneTimeTotal: sum of one_time expenses for this period_month
-  const allOneTime = await db
-    .select({
-      amount: expense.amount,
-      expenseDate: expense.expenseDate,
-      categoryId: expense.categoryId,
-    })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "one_time"),
-        isNull(expense.deletedAt)
-      )
-    );
+  const activeInstallmentsFiltered = allInstallments.filter(
+    (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+  );
+  const installmentsTotal = activeInstallmentsFiltered.reduce(
+    (acc, row) => acc + Number(row.installmentAmount ?? 0),
+    0
+  );
 
   const filteredOneTime = allOneTime.filter(
     (row) => row.expenseDate != null && row.expenseDate.startsWith(monthPrefix)
@@ -75,36 +91,8 @@ export async function getMonthlySummary(
     0
   );
 
-  // byCategory: group one_time + installment expenses by category
-  // Fetch category names and budgets
-  const allCategories = await db
-    .select({ id: category.id, name: category.name, monthlyBudget: category.monthlyBudget })
-    .from(category);
-
   const categoryMap = new Map(allCategories.map((c) => [c.id, c.name]));
   const categoryBudgetMap = new Map(allCategories.map((c) => [c.id, c.monthlyBudget]));
-
-  // Collect all variable expenses with category
-  const activeInstallments = await db
-    .select({
-      categoryId: expense.categoryId,
-      installmentAmount: expense.installmentAmount,
-      installmentsPaid: expense.installmentsPaid,
-      installmentsTotal: expense.installmentsTotal,
-    })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "installment"),
-        isNull(expense.deletedAt),
-        lte(expense.startMonth, month)
-      )
-    );
-
-  const activeInstallmentsFiltered = activeInstallments.filter(
-    (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
-  );
 
   const byCategoryMap = new Map<string, number>();
 
@@ -140,55 +128,58 @@ export async function getFixedVsVariableBreakdown(
   householdId: string,
   month: string
 ): Promise<FixedVsVariableBreakdown> {
+  'use cache'
+  cacheTag(householdId)
   const monthPrefix = month.slice(0, 7);
 
-  // Fixed = sum of fixed_expense_payment.amount WHERE period_month = month (Scenario 5.2)
-  const fixedPaymentRows = await db
-    .select({ amount: fixedExpensePayment.amount })
-    .from(fixedExpensePayment)
-    .where(
-      and(
-        eq(fixedExpensePayment.householdId, householdId),
-        eq(fixedExpensePayment.periodMonth, month)
-      )
-    );
+  const [fixedPaymentRows, allInstallments, allOneTime] = await Promise.all([
+    // Fixed = sum of fixed_expense_payment.amount WHERE period_month = month (Scenario 5.2)
+    db
+      .select({ amount: fixedExpensePayment.amount })
+      .from(fixedExpensePayment)
+      .where(
+        and(
+          eq(fixedExpensePayment.householdId, householdId),
+          eq(fixedExpensePayment.periodMonth, month)
+        )
+      ),
+    // installmentsTotal for the month
+    db
+      .select({
+        installmentAmount: expense.installmentAmount,
+        installmentsPaid: expense.installmentsPaid,
+        installmentsTotal: expense.installmentsTotal,
+      })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.householdId, householdId),
+          eq(expense.type, "installment"),
+          isNull(expense.deletedAt),
+          lte(expense.startMonth, month)
+        )
+      ),
+    // oneTimeTotal
+    db
+      .select({ amount: expense.amount, expenseDate: expense.expenseDate })
+      .from(expense)
+      .where(
+        and(
+          eq(expense.householdId, householdId),
+          eq(expense.type, "one_time"),
+          isNull(expense.deletedAt)
+        )
+      ),
+  ]);
+
   const fixedAmount = fixedPaymentRows.reduce(
     (acc, row) => acc + Number(row.amount ?? 0),
     0
   );
 
-  // installmentsTotal for the month
-  const allInstallments = await db
-    .select({
-      installmentAmount: expense.installmentAmount,
-      installmentsPaid: expense.installmentsPaid,
-      installmentsTotal: expense.installmentsTotal,
-    })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "installment"),
-        isNull(expense.deletedAt),
-        lte(expense.startMonth, month)
-      )
-    );
-
   const installmentsAmount = allInstallments
     .filter((row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0))
     .reduce((acc, row) => acc + Number(row.installmentAmount ?? 0), 0);
-
-  // oneTimeTotal
-  const allOneTime = await db
-    .select({ amount: expense.amount, expenseDate: expense.expenseDate })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "one_time"),
-        isNull(expense.deletedAt)
-      )
-    );
 
   const oneTimeTotal = allOneTime
     .filter(
@@ -213,6 +204,8 @@ export async function getInstallmentBurden(
   householdId: string,
   month: string
 ): Promise<InstallmentBurden> {
+  'use cache'
+  cacheTag(householdId)
   const rows = await db
     .select({
       id: expense.id,

@@ -7,7 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold, userHouseholdTag } from "@/onboarding/queries";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { updateHouseholdSchema } from "./types";
 import { getHouseholdMembers } from "./queries";
@@ -27,6 +27,8 @@ export async function updateHousehold(rawData: unknown) {
     .where(eq(household.id, userHousehold.id))
     .returning();
 
+  // La membresía cacheada (getUserHousehold) incluye el nombre del hogar.
+  updateTag(userHousehold.id);
   revalidatePath("/ajustes");
   return updated;
 }
@@ -117,6 +119,7 @@ export async function addMemberByEmail(
   });
 
   updateTag(userHousehold.id);
+  updateTag(userHouseholdTag(target.id));
   revalidatePath("/ajustes");
   return {};
 }
@@ -155,6 +158,7 @@ export async function removeMember(memberId: string): Promise<{ error?: string }
   await db.delete(householdMember).where(and(eq(householdMember.id, memberId), eq(householdMember.householdId, userHousehold.id)));
 
   updateTag(userHousehold.id);
+  updateTag(userHouseholdTag(target.userId));
   revalidatePath("/ajustes");
   return {};
 }

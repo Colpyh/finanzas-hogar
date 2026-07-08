@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { createHouseholdSchema, redeemInviteSchema } from "./types";
+import { userHouseholdTag } from "./queries";
 import { validateInviteRedemption } from "./invite-validation";
 
 export async function createHousehold(rawData: unknown) {
@@ -29,6 +30,7 @@ export async function createHousehold(rawData: unknown) {
     return [created];
   });
 
+  updateTag(userHouseholdTag(user.id));
   redirect("/dashboard");
   return newHousehold;
 }
@@ -56,6 +58,7 @@ export async function createHouseholdAndReturn(
       return [created];
     });
 
+    updateTag(userHouseholdTag(user.id));
     return { householdId: newHousehold!.id };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al crear el hogar" };
@@ -120,6 +123,7 @@ export async function redeemInvite(rawData: unknown): Promise<{ error?: string }
   });
 
   updateTag(invite.householdId);
+  updateTag(userHouseholdTag(user.id));
   redirect("/dashboard");
   return {};
 }
