@@ -23,7 +23,16 @@ const MOCK_CATEGORIES: Category[] = [
   { id: "cat-8", name: "Otros" },
 ];
 
-export async function NuevoCompraPageWrapper() {
+type PageParams = {
+  tipo?: string;
+  desc?: string;
+  amount?: string;
+  categoryId?: string;
+  cardId?: string;
+  responsibleId?: string;
+};
+
+export async function NuevoCompraPageWrapper({ params = {} }: { params?: PageParams }) {
   let categories: Category[] = MOCK_CATEGORIES;
   let members: Member[] = [];
   let cards: Card[] = [];
@@ -61,5 +70,25 @@ export async function NuevoCompraPageWrapper() {
     // Sin sesión — categorías de ejemplo
   }
 
-  return <NuevoCompraClient categories={categories} members={members} cards={cards} />;
+  // "Repetir compra" llega con tipo=compra + campos: abre el form directo,
+  // sin pasar por el selector de tipo de gasto.
+  const initialPurchase =
+    params.tipo === "compra"
+      ? {
+          description: params.desc,
+          amount: params.amount,
+          categoryId: params.categoryId,
+          cardId: params.cardId,
+          responsibleId: params.responsibleId,
+        }
+      : undefined;
+
+  return (
+    <NuevoCompraClient
+      categories={categories}
+      members={members}
+      cards={cards}
+      initialPurchase={initialPurchase}
+    />
+  );
 }

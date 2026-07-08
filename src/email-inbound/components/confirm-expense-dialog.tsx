@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { confirmPendingExpense } from "@/email-inbound/actions";
+import { formatCurrency } from "@/shared/components/currency-display";
 import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Category = { id: string; name: string };
@@ -138,7 +139,7 @@ export function ConfirmExpenseDialog({
               <div>
                 <span className="block text-xs">Monto</span>
                 <span className="font-medium text-foreground">
-                  ${Number(item.parsedAmount).toLocaleString("es-CL")}
+                  {formatCurrency(Number(item.parsedAmount))}
                 </span>
               </div>
             )}

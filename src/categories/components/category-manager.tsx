@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/shared/components/currency-display";
 import { toast } from "sonner";
 
 type Category = {
@@ -204,7 +205,7 @@ function CategoryItem({ cat, householdId }: { cat: Category; householdId: string
           )}
           {cat.monthlyBudget && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              Presupuesto: ${Number(cat.monthlyBudget).toLocaleString("es-CL")}
+              Presupuesto: {formatCurrency(Number(cat.monthlyBudget))}
             </p>
           )}
         </div>

@@ -83,6 +83,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
         <Label htmlFor="inst-desc">Descripción</Label>
         <Input
           id="inst-desc"
+          autoFocus
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Ej: Notebook Samsung"
@@ -128,6 +129,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
           <Input
             id="inst-amt"
             type="number"
+            inputMode="decimal"
             min="0"
             value={installmentAmount}
             onChange={(e) => setInstallmentAmount(e.target.value)}

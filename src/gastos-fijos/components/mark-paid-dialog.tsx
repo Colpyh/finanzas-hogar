@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { markFixedExpensePaid } from "@/gastos-fijos/actions";
+import { formatCurrency } from "@/shared/components/currency-display";
 import { PiggyBank, CheckCircle2 } from "lucide-react";
 
 type Props = {
@@ -68,7 +69,7 @@ export function MarkPaidDialog({
               disabled={loading}
             />
             <p className="text-xs text-muted-foreground">
-              Estimado: ${estimatedAmount}
+              Estimado: {formatCurrency(parseFloat(estimatedAmount) || 0)}
             </p>
           </div>
 

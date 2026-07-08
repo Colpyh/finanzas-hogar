@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCurrency } from "@/shared/components/currency-display";
+
 type Props = {
   categoryName: string;
   spent: number;
@@ -18,7 +20,7 @@ export function BudgetProgress({ categoryName, spent, budget }: Props) {
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium text-foreground truncate flex-1 mr-2">{categoryName}</span>
         <span className="text-muted-foreground shrink-0 text-xs">
-          ${spent.toLocaleString("es-CL")} / ${budget.toLocaleString("es-CL")}
+          {formatCurrency(spent)} / {formatCurrency(budget)}
         </span>
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -29,7 +31,7 @@ export function BudgetProgress({ categoryName, spent, budget }: Props) {
       </div>
       {over && (
         <p className="text-xs text-red-500">
-          ⚠️ Sobre presupuesto por ${(spent - budget).toLocaleString("es-CL")}
+          ⚠️ Sobre presupuesto por {formatCurrency(spent - budget)}
         </p>
       )}
     </div>

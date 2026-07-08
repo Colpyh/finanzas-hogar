@@ -35,8 +35,27 @@ const OPTIONS = [
   },
 ];
 
-export function NuevoCompraClient({ categories, members, cards }: { categories: Category[]; members: Member[]; cards: Card[] }) {
-  const [selected, setSelected] = useState<ExpenseType>(null);
+type InitialPurchase = {
+  description?: string;
+  amount?: string;
+  categoryId?: string;
+  cardId?: string;
+  responsibleId?: string;
+};
+
+export function NuevoCompraClient({
+  categories,
+  members,
+  cards,
+  initialPurchase,
+}: {
+  categories: Category[];
+  members: Member[];
+  cards: Card[];
+  initialPurchase?: InitialPurchase;
+}) {
+  // Con prefill ("repetir compra") se abre el form directo, sin selector.
+  const [selected, setSelected] = useState<ExpenseType>(initialPurchase ? "purchase" : null);
 
   if (selected === "purchase") {
     return (
@@ -47,7 +66,7 @@ export function NuevoCompraClient({ categories, members, cards }: { categories: 
           </button>
           <h1 className="text-2xl font-bold tracking-tight">Nueva compra</h1>
         </div>
-        <PurchaseForm categories={categories} members={members} cards={cards} />
+        <PurchaseForm categories={categories} members={members} cards={cards} initial={initialPurchase} />
       </div>
     );
   }

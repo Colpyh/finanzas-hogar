@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { MarkPaidButton } from "./mark-paid-button";
+import { RepeatPurchaseButton } from "./repeat-purchase-button";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -9,7 +10,9 @@ type Props = {
     description: string;
     amount: string;
     expenseDate: string | null;
+    categoryId?: string | null;
     categoryName?: string;
+    responsibleId?: string | null;
     responsibleName?: string | null;
     cardId?: string | null;
     cardName?: string | null;
@@ -94,6 +97,15 @@ export function PurchaseCard({ expense }: Props) {
               <MarkPaidButton expenseId={expense.id} />
             </>
           )}
+          <RepeatPurchaseButton
+            prefill={{
+              desc: expense.description,
+              amount: expense.amount,
+              categoryId: expense.categoryId,
+              cardId: expense.cardId,
+              responsibleId: expense.responsibleId,
+            }}
+          />
         </div>
       </div>
 

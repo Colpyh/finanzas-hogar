@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,20 +20,66 @@ import { createPurchase } from "@/compras/actions";
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
 type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
-type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
+/** Valores iniciales (ej. "repetir compra" vía searchParams). */
+type Initial = {
+  description?: string;
+  amount?: string;
+  categoryId?: string;
+  cardId?: string;
+  responsibleId?: string;
+};
+type Props = { categories: Category[]; members: Member[]; cards?: Card[]; initial?: Initial };
 
-export function PurchaseForm({ categories, members, cards = [] }: Props) {
+// Última categoría/tarjeta/responsable usados — la compra diaria típica repite
+// los mismos valores (mismo super, misma tarjeta).
+const DEFAULTS_KEY = "fh:last-purchase-defaults";
+
+export function PurchaseForm({ categories, members, cards = [], initial }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0] ?? "";
-  const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
-  const [amount, setAmount] = useState("");
+  const hasPrefill = Boolean(initial?.categoryId || initial?.description);
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [categoryId, setCategoryId] = useState(
+    initial?.categoryId && categories.some((c) => c.id === initial.categoryId)
+      ? initial.categoryId
+      : (categories[0]?.id ?? "")
+  );
+  const [amount, setAmount] = useState(initial?.amount ?? "");
   const [expenseDate, setExpenseDate] = useState(today);
-  const [responsibleId, setResponsibleId] = useState<string | null>(null);
-  const [cardId, setCardId] = useState<string | null>(null);
+  const [responsibleId, setResponsibleId] = useState<string | null>(
+    initial?.responsibleId && members.some((m) => m.userId === initial.responsibleId)
+      ? initial.responsibleId
+      : null
+  );
+  const [cardId, setCardId] = useState<string | null>(
+    initial?.cardId && cards.some((c) => c.id === initial.cardId) ? initial.cardId : null
+  );
   const [isPrivate, setIsPrivate] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  // Sin prefill, arrancar con los últimos valores usados (en effect para no
+  // divergir del HTML del servidor en la hidratación).
+  useEffect(() => {
+    if (hasPrefill) return;
+    try {
+      const raw = localStorage.getItem(DEFAULTS_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Initial;
+      if (saved.categoryId && categories.some((c) => c.id === saved.categoryId)) {
+        setCategoryId(saved.categoryId);
+      }
+      if (saved.cardId && cards.some((c) => c.id === saved.cardId)) {
+        setCardId(saved.cardId);
+      }
+      if (saved.responsibleId && members.some((m) => m.userId === saved.responsibleId)) {
+        setResponsibleId(saved.responsibleId);
+      }
+    } catch {
+      // localStorage bloqueado o JSON corrupto — defaults normales
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,6 +104,11 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
     setLoading(true);
     try {
       await createPurchase(parsed.data);
+      try {
+        localStorage.setItem(DEFAULTS_KEY, JSON.stringify({ categoryId, cardId, responsibleId }));
+      } catch {
+        // sin localStorage no hay memoria de defaults, nada más
+      }
       router.push("/compras");
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
@@ -71,6 +122,7 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
         <Label htmlFor="desc">Descripción</Label>
         <Input
           id="desc"
+          autoFocus
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Ej: Supermercado"
@@ -101,6 +153,7 @@ export function PurchaseForm({ categories, members, cards = [] }: Props) {
         <Input
           id="amount"
           type="number"
+          inputMode="decimal"
           min="0"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}

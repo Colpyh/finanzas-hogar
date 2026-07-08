@@ -13,7 +13,9 @@ type Expense = {
   installmentAmount: string | null;
   installmentsPaid: number | null;
   installmentsTotal: number | null;
+  categoryId?: string | null;
   categoryName?: string;
+  responsibleId?: string | null;
   responsibleName?: string | null;
   cardId?: string | null;
   cardName?: string | null;

@@ -3,6 +3,18 @@ import { NuevoCompraPageWrapper } from "./page-wrapper";
 
 export const metadata: Metadata = { title: "Nueva Compra" };
 
-export default function NuevoCompraPage() {
-  return <NuevoCompraPageWrapper />;
+type Props = {
+  searchParams: Promise<{
+    tipo?: string;
+    desc?: string;
+    amount?: string;
+    categoryId?: string;
+    cardId?: string;
+    responsibleId?: string;
+  }>;
+};
+
+export default async function NuevoCompraPage({ searchParams }: Props) {
+  const params = await searchParams;
+  return <NuevoCompraPageWrapper params={params} />;
 }

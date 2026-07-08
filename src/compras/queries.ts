@@ -70,6 +70,7 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
       isShared: expense.isShared,
+      categoryId: expense.categoryId,
       responsibleId: expense.responsibleId,
       cardId: expense.cardId,
       paidAt: expense.paidAt,

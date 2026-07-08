@@ -9,7 +9,7 @@ export const createPurchaseSchema = z.object({
   description: z.string().min(1, "La descripción es requerida").max(200),
   categoryId: z.string().uuid("Categoría inválida"),
   amount: amountField,
-  currency: z.string().default("ARS"),
+  currency: z.string().default("CLP"),
   expenseDate: z.string().date("Fecha inválida"),
   responsibleId: z.string().uuid().nullable().optional(),
   cardId: z.string().uuid().nullable().optional(),
@@ -20,7 +20,7 @@ export const createInstallmentSchema = z
   .object({
     description: z.string().min(1, "La descripción es requerida").max(200),
     categoryId: z.string().uuid("Categoría inválida"),
-    currency: z.string().default("ARS"),
+    currency: z.string().default("CLP"),
     installmentsTotal: z
       .number()
       .int()
