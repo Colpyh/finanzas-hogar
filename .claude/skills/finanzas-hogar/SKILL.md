@@ -6,7 +6,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: colpyh
-  version: "1.4"
+  version: "1.5"
 ---
 
 ## Stack
@@ -172,6 +172,7 @@ db.select().from(expense).where(
 - `<Suspense fallback={null}>` en root layout — next-themes requiere cookies server-side
 - `use cache` functions NO pueden llamar `cookies()`, `headers()`, `searchParams` directamente
 - `use cache` functions tampoco deben llamar `new Date()`/`Date.now()` internamente (valor quedaría fijo en la caché) — recibir la fecha/mes como parámetro desde el caller (ver `getAnnualSummary(anchorMonth)` en `src/resumen/annual-queries.ts`)
+- `export const viewport` REEMPLAZA los defaults de Next (no fusiona): SIEMPRE incluir `width: "device-width"` + `initialScale: 1` explícitos o mobile renderiza a 980px y toda la UI se desborda (pasó al agregar themeColor)
 - Leer docs en `node_modules/next/dist/docs/` antes de usar cualquier API nueva
 
 ---
@@ -214,6 +215,8 @@ db.select().from(expense).where(
 ## Patrones de UI
 
 - **Botón interactivo dentro de un `<Link>`**: el handler DEBE hacer `e.preventDefault()` + `e.stopPropagation()` en un client component, sino el click también navega (ej. `mark-paid-button.tsx`, `repeat-purchase-button.tsx`).
+- **Forms que crean registros**: guard SINCRÓNICO contra doble-submit (`submittingRef` — el `disabled` por estado llega tarde ante doble tap en mobile y duplica el gasto) + tras guardar navegar AL MES del registro (`/compras?month=...`), no al mes actual — una boleta vieja caía en otro mes, el usuario no la veía y reintentaba.
+- **PWA**: `src/app/manifest.ts` (standalone, start /dashboard) + íconos generados con `node scripts/generate-icons.mjs` (PNG sin deps) + `appleWebApp` en layout. Instalar desde SAFARI → pantalla completa. El webview embebido de otras apps (Gmail/Google, se reconoce por la ✕ superior) descarta cookies y "cierra la sesión" — no es bug, es el webview.
 - **Páginas con datos de ejemplo (mocks)**: usar `getSessionUser()` (`src/auth/queries.ts`) — devuelve null SOLO sin sesión. NUNCA envolver las queries reales en try/catch vacío: un error real debe ir al error boundary, no mostrar cifras falsas como reales.
 - **Moneda**: SIEMPRE `formatCurrency` de `currency-display.tsx` — nada de `toLocaleString` ad-hoc. Default de schema: CLP.
 - **Listas colapsables**: `INITIAL_VISIBLE` + estado `expanded` + botón "Ver más/todas" (dashboard widgets, categorías en ajustes).
