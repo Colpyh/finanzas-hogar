@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/shared/lib/supabase/service";
 import { parseBciEmail } from "@/email-inbound/parser";
-import { postmarkInboundSchema } from "@/email-inbound/webhook/postmark";
+import { normalizeInboundPayload } from "@/email-inbound/webhook/inbound";
 import { sendPushToHousehold } from "@/shared/lib/push";
 
 export async function POST(
@@ -40,11 +40,11 @@ export async function POST(
     return NextResponse.json({ ok: true, skipped: "parse_error" });
   }
 
-  const parsed = postmarkInboundSchema.safeParse(jsonBody);
-  if (!parsed.success) {
+  // Acepta Postmark y CloudMailin — normalizados a una forma común
+  const payload = normalizeInboundPayload(jsonBody);
+  if (!payload) {
     return NextResponse.json({ ok: true, skipped: "parse_error" });
   }
-  const payload = parsed.data;
 
   const svc = createServiceClient();
 
@@ -59,15 +59,15 @@ export async function POST(
     return NextResponse.json({ ok: true, skipped: "unknown_household" });
   }
 
-  // 5. Only BCI emails proceed (200 OK so Postmark doesn't retry)
-  if (!payload.From.toLowerCase().includes("bci.cl")) {
+  // 5. Only BCI emails proceed (200 OK so the provider doesn't retry)
+  if (!payload.from.toLowerCase().includes("bci.cl")) {
     return NextResponse.json({ ok: true, skipped: "not_bci" });
   }
 
   // 6. Idempotency via SHA-256(MessageID)
   const messageId =
-    payload.MessageID ??
-    `${payload.From}:${payload.Subject}:${payload.Date ?? ""}`;
+    payload.messageId ??
+    `${payload.from}:${payload.subject}:${payload.date ?? ""}`;
   const payloadHash = createHash("sha256").update(messageId).digest("hex");
 
   const { data: existing } = await svc
@@ -86,16 +86,17 @@ export async function POST(
 
   // 7. Parse BCI email (text body preferred over HTML)
   const parsedEmail = parseBciEmail(
-    payload.TextBody ?? payload.HtmlBody ?? ""
+    payload.textBody ?? payload.htmlBody ?? ""
   );
 
   if (!parsedEmail) {
     console.warn("[email-inbound] parse_failed", {
       householdId,
-      from: payload.From,
-      subject: payload.Subject,
-      hasTxt: !!payload.TextBody,
-      hasHtml: !!payload.HtmlBody,
+      provider: payload.provider,
+      from: payload.from,
+      subject: payload.subject,
+      hasTxt: !!payload.textBody,
+      hasHtml: !!payload.htmlBody,
     });
   }
 
@@ -104,7 +105,8 @@ export async function POST(
     .from("pending_expense")
     .insert({
       household_id: householdId,
-      raw_payload: payload,
+      // El JSON original del proveedor (no el normalizado) — para inspección
+      raw_payload: jsonBody,
       payload_hash: payloadHash,
       parsed_amount: parsedEmail?.amount?.toString() ?? null,
       parsed_currency: parsedEmail ? "CLP" : null,

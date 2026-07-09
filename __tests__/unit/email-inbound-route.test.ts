@@ -61,6 +61,29 @@ const NON_BCI_PAYLOAD = {
   TextBody: "Not a BCI email",
 };
 
+// CloudMailin "JSON Normalized" shape — headers en minúsculas, cuerpo en `plain`
+const CLOUDMAILIN_BCI_PAYLOAD = {
+  envelope: {
+    to: "abc123@cloudmailin.net",
+    from: "enviodigital@bci.cl",
+    recipients: ["abc123@cloudmailin.net"],
+  },
+  headers: {
+    subject: "Compra con tarjeta débito",
+    from: "BCI <enviodigital@bci.cl>",
+    date: "Mon, 19 Apr 2026 09:53:00 -0400",
+    message_id: "<cloudmailin-msg-456@bci.cl>",
+  },
+  plain: `
+Número tarjeta débito: ****5616
+Monto: $4.000
+Fecha: 19/04/2026
+Hora: 09:53 horas
+Comercio: MUNICH
+`,
+  html: "<html>BCI email body</html>",
+};
+
 function makeRequest(
   body: unknown,
   secret: string | null,
@@ -294,5 +317,79 @@ describe("POST /api/webhooks/email/[householdId]", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
+  });
+
+  // CloudMailin — valid BCI payload → 200 + insert
+  it("returns 200 ok for a valid CloudMailin BCI payload", async () => {
+    let callCount = 0;
+    const svc = {
+      from: jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest
+              .fn()
+              .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+          };
+        }
+        if (callCount === 2) {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({ data: null }),
+          };
+        }
+        return {
+          insert: jest.fn().mockReturnThis(),
+          values: jest.fn().mockReturnThis(),
+          select: jest.fn().mockReturnThis(),
+          single: jest
+            .fn()
+            .mockResolvedValue({ data: { id: UUID_PENDING }, error: null }),
+        };
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
+    const req = makeRequest(CLOUDMAILIN_BCI_PAYLOAD, TEST_SECRET);
+    const res = await POST(req, {
+      params: Promise.resolve({ householdId: UUID_HOUSEHOLD }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    // El parser debe recibir el cuerpo `plain` de CloudMailin
+    expect(parseBciEmail).toHaveBeenCalledWith(
+      expect.stringContaining("Comercio: MUNICH")
+    );
+  });
+
+  // CloudMailin — non-BCI sender → skipped
+  it("returns skipped=not_bci for a CloudMailin payload from another sender", async () => {
+    const svc = {
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest
+          .fn()
+          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
+    const payload = {
+      ...CLOUDMAILIN_BCI_PAYLOAD,
+      envelope: { ...CLOUDMAILIN_BCI_PAYLOAD.envelope, from: "spam@otro.com" },
+      headers: { ...CLOUDMAILIN_BCI_PAYLOAD.headers, from: "Otro <spam@otro.com>" },
+    };
+    const req = makeRequest(payload, TEST_SECRET);
+    const res = await POST(req, {
+      params: Promise.resolve({ householdId: UUID_HOUSEHOLD }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skipped).toBe("not_bci");
   });
 });
