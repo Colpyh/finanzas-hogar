@@ -4,12 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { PurchaseForm } from "@/compras/components/purchase-form";
 import { InstallmentForm } from "@/compras/components/installment-form";
-import { Receipt, ShoppingCart, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
+import { ReceiptCapture } from "@/receipts/components/receipt-capture";
+import { Receipt, ShoppingCart, CreditCard, Camera, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
 type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
-type ExpenseType = "purchase" | "installment" | null;
+type ExpenseType = "purchase" | "installment" | "receipt" | null;
 
 const OPTIONS = [
   {
@@ -18,6 +19,13 @@ const OPTIONS = [
     desc: "Arriendo, servicios, suscripciones",
     icon: Receipt,
     href: "/gastos-fijos/nuevo",
+  },
+  {
+    type: "receipt" as const,
+    label: "Boleta (foto)",
+    desc: "Sacale una foto y la leemos por vos",
+    icon: Camera,
+    href: null,
   },
   {
     type: "purchase" as const,
@@ -67,6 +75,20 @@ export function NuevoCompraClient({
           <h1 className="text-2xl font-bold tracking-tight">Nueva compra</h1>
         </div>
         <PurchaseForm categories={categories} members={members} cards={cards} initial={initialPurchase} />
+      </div>
+    );
+  }
+
+  if (selected === "receipt") {
+    return (
+      <div className="p-4 max-w-lg mx-auto space-y-5 pb-8">
+        <div className="flex items-center gap-2 pt-2">
+          <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="text-2xl font-bold tracking-tight">Foto de boleta</h1>
+        </div>
+        <ReceiptCapture categories={categories} members={members} cards={cards} />
       </div>
     );
   }

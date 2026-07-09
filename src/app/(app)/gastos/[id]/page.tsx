@@ -9,6 +9,7 @@ import { getHouseholdCards } from "@/tarjetas/queries";
 import { DeleteExpenseButton } from "@/compras/components/delete-expense-button";
 import { EditExpenseForm } from "@/compras/components/edit-expense-form";
 import { InstallmentProgress } from "@/compras/components/installment-progress";
+import { ReceiptDetail } from "@/receipts/components/receipt-detail";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { ChevronLeft } from "lucide-react";
 
@@ -78,6 +79,12 @@ export default async function GastoDetailPage({ params }: Props) {
           </div>
         </div>
       )}
+
+      {/* Boleta fotografiada (ítems + comprobante) */}
+      <ReceiptDetail
+        items={exp.receiptItems ?? null}
+        imagePath={exp.receiptImagePath ?? null}
+      />
 
       {/* Edit form */}
       <div className="rounded-2xl border border-border bg-card p-5">

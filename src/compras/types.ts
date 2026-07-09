@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { receiptItemSchema } from "@/receipts/types";
 
 const amountField = z
   .string()
@@ -14,6 +15,9 @@ export const createPurchaseSchema = z.object({
   responsibleId: z.string().uuid().nullable().optional(),
   cardId: z.string().uuid().nullable().optional(),
   isPrivate: z.boolean().default(false),
+  // Boleta fotografiada (opcional)
+  receiptItems: z.array(receiptItemSchema).max(200).optional(),
+  receiptImagePath: z.string().max(300).optional(),
 });
 
 export const createInstallmentSchema = z

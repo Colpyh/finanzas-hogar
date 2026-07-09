@@ -14,8 +14,11 @@ import {
 } from "@/components/ui/select";
 import { ResponsiblePills } from "@/shared/components/responsible-pills";
 import { CardPills } from "@/shared/components/card-pills";
+import { formatCurrency } from "@/shared/components/currency-display";
 import { createPurchaseSchema } from "@/compras/types";
 import { createPurchase } from "@/compras/actions";
+import type { ReceiptItem } from "@/receipts/types";
+import { X } from "lucide-react";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
@@ -27,14 +30,27 @@ type Initial = {
   categoryId?: string;
   cardId?: string;
   responsibleId?: string;
+  expenseDate?: string;
 };
-type Props = { categories: Category[]; members: Member[]; cards?: Card[]; initial?: Initial };
+/** Datos de una boleta fotografiada — ítems editables + comprobante subido. */
+type ReceiptData = {
+  imagePath?: string;
+  items: ReceiptItem[];
+  itemsMatchTotal: boolean;
+};
+type Props = {
+  categories: Category[];
+  members: Member[];
+  cards?: Card[];
+  initial?: Initial;
+  receipt?: ReceiptData;
+};
 
 // Última categoría/tarjeta/responsable usados — la compra diaria típica repite
 // los mismos valores (mismo super, misma tarjeta).
 const DEFAULTS_KEY = "fh:last-purchase-defaults";
 
-export function PurchaseForm({ categories, members, cards = [], initial }: Props) {
+export function PurchaseForm({ categories, members, cards = [], initial, receipt }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0] ?? "";
   const hasPrefill = Boolean(initial?.categoryId || initial?.description);
@@ -45,7 +61,8 @@ export function PurchaseForm({ categories, members, cards = [], initial }: Props
       : (categories[0]?.id ?? "")
   );
   const [amount, setAmount] = useState(initial?.amount ?? "");
-  const [expenseDate, setExpenseDate] = useState(today);
+  const [expenseDate, setExpenseDate] = useState(initial?.expenseDate ?? today);
+  const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>(receipt?.items ?? []);
   const [responsibleId, setResponsibleId] = useState<string | null>(
     initial?.responsibleId && members.some((m) => m.userId === initial.responsibleId)
       ? initial.responsibleId
@@ -92,6 +109,12 @@ export function PurchaseForm({ categories, members, cards = [], initial }: Props
       responsibleId,
       cardId,
       isPrivate,
+      ...(receipt
+        ? {
+            receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
+            receiptImagePath: receipt.imagePath,
+          }
+        : {}),
     });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -175,6 +198,49 @@ export function PurchaseForm({ categories, members, cards = [], initial }: Props
           className="h-11"
         />
       </div>
+
+      {receipt && receiptItems.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Detalle de la boleta ({receiptItems.length} ítems)</Label>
+          {!receipt.itemsMatchTotal && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2">
+              ⚠️ El detalle no cuadra con el total impreso — revisá los ítems (el total de arriba es el que vale).
+            </p>
+          )}
+          <div
+            className="rounded-xl border border-border overflow-hidden divide-y divide-border"
+            style={{ background: "var(--card-2)" }}
+          >
+            {receiptItems.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-2">
+                <input
+                  value={item.description}
+                  onChange={(e) =>
+                    setReceiptItems((prev) =>
+                      prev.map((it, j) => (j === i ? { ...it, description: e.target.value } : it))
+                    )
+                  }
+                  className="flex-1 min-w-0 bg-transparent text-xs text-foreground outline-none"
+                  disabled={loading}
+                />
+                {item.quantity != null && item.quantity > 1 && (
+                  <span className="text-[11px] text-muted-foreground shrink-0">×{item.quantity}</span>
+                )}
+                <span className="text-xs font-semibold num shrink-0">{formatCurrency(item.total)}</span>
+                <button
+                  type="button"
+                  onClick={() => setReceiptItems((prev) => prev.filter((_, j) => j !== i))}
+                  className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                  aria-label="Quitar ítem"
+                  disabled={loading}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {members.length > 0 && (
         <div className="space-y-1.5">

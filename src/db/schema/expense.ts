@@ -7,6 +7,7 @@ import {
   smallint,
   date,
   boolean,
+  jsonb,
   index,
 } from "drizzle-orm/pg-core";
 import { household } from "./household";
@@ -49,6 +50,12 @@ export const expense = pgTable(
     // One-time fields
     expenseDate: date("expense_date", { mode: "string" }), // date of purchase
     paidAt: timestamp("paid_at", { withTimezone: true }), // one_time con tarjeta: cuándo se marcó pagada (null = pendiente)
+
+    // Boleta fotografiada (opcional): detalle de líneas + comprobante en Storage
+    receiptItems: jsonb("receipt_items").$type<
+      { description: string; quantity: number | null; total: number }[]
+    >(),
+    receiptImagePath: text("receipt_image_path"), // ruta en el bucket privado `receipts`
 
     // Card reference (optional — which card was used for this expense)
     cardId: uuid("card_id"),

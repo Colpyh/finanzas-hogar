@@ -204,6 +204,13 @@ db.select().from(expense).where(
 - **Reparto compartido**: `getPendingBalances` y `getDashboardSummary`/`myShare()` reciben `memberCount` y dividen dinámicamente. OJO: el reparto histórico usa el count ACTUAL — si el hogar crece a 3+, los meses viejos se recalculan retroactivamente (pendiente: persistir reparto por período).
 - **Billing period**: `billingPeriodForMonth` clampea inicio Y fin al largo real del mes (`Math.min(closingDay, últimoDía)`). Sin el clamp del inicio, closingDay=30 + febrero dejaba compras del 1-2 de marzo fuera de todo período.
 
+## Foto de boleta (receipts)
+
+- **Pipeline**: foto comprimida en cliente (canvas 1280px JPEG) → `analyzeReceipt` (server action: extracción + upload en paralelo) → `PurchaseForm` precargado con ítems editables → `createPurchase` con `receiptItems` (jsonb) + `receiptImagePath`.
+- **Extractor con IA**: interfaz propia `ExtractedReceipt` (`src/receipts/types.ts`); implementación actual **Gemini free tier** (`src/receipts/gemini.ts`, env `GEMINI_API_KEY`, modelo via `GEMINI_MODEL` default gemini-2.5-flash). Cambiar de proveedor = reemplazar UN archivo. Devuelve null en fallo de datos; lanza SOLO por config faltante.
+- **Regla de oro**: el total IMPRESO manda — si `itemsMatchTotal` da false, la UI marca el detalle como "revisar" pero nunca ajusta el total.
+- **Storage**: bucket privado `receipts`, path `{householdId}/{uuid}.jpg`, RLS por hogar (`is_household_member` sobre `storage.foldername(name)[1]`). Upload con el cliente AUTENTICADO (regla del proyecto: service client SOLO en webhooks). Display vía signed URL de 1h (`ReceiptDetail`).
+
 ## Patrones de UI
 
 - **Botón interactivo dentro de un `<Link>`**: el handler DEBE hacer `e.preventDefault()` + `e.stopPropagation()` en un client component, sino el click también navega (ej. `mark-paid-button.tsx`, `repeat-purchase-button.tsx`).
