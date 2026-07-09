@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/shared/components/theme-provider";
 import { Suspense } from "react";
@@ -17,6 +17,19 @@ export const metadata: Metadata = {
     template: "%s | Finanzas Hogar",
   },
   description: "Control de gastos del hogar",
+  // PWA standalone en iOS (agregada a inicio desde Safari): sin barra de URL
+  appleWebApp: {
+    capable: true,
+    title: "Finanzas Hogar",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf9ff" },
+    { media: "(prefers-color-scheme: dark)", color: "#16121f" },
+  ],
 };
 
 export default function RootLayout({
