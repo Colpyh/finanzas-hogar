@@ -60,10 +60,7 @@ export async function POST(
   }
 
   // 5. Only BCI emails proceed (200 OK so the provider doesn't retry)
-  // TEMPORAL: acepta reenvíos manuales de prueba desde el Gmail del owner.
-  // REVERTIR después de validar el pipeline end-to-end con CloudMailin.
-  const sender = payload.from.toLowerCase();
-  if (!sender.includes("bci.cl") && !sender.includes("matias.scg90@gmail.com")) {
+  if (!payload.from.toLowerCase().includes("bci.cl")) {
     return NextResponse.json({ ok: true, skipped: "not_bci" });
   }
 
