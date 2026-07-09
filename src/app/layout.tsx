@@ -25,7 +25,11 @@ export const metadata: Metadata = {
   },
 };
 
+// OJO: definir `viewport` reemplaza los defaults de Next — sin width/initialScale
+// explícitos, mobile renderiza a ancho desktop (980px) y la UI se desborda.
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#faf9ff" },
     { media: "(prefers-color-scheme: dark)", color: "#16121f" },

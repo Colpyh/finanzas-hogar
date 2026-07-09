@@ -4,11 +4,13 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 export function QuickAddFab() {
+  // Mobile: flota por ENCIMA del bottom nav (64px + safe area) — antes quedaba
+  // tapado detrás. Desktop (md:) no tiene nav inferior, vuelve a bottom-6.
   return (
     <Link
       href="/compras/nuevo"
       aria-label="Agregar nuevo gasto"
-      className="fixed bottom-6 right-4 z-50 flex items-center justify-center text-white hover:-translate-y-0.5 hover:rotate-90 active:scale-95 transition-all duration-150"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+80px)] md:bottom-6 right-4 z-[60] flex items-center justify-center text-white hover:-translate-y-0.5 hover:rotate-90 active:scale-95 transition-all duration-150"
       style={{
         width: 52,
         height: 52,
