@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +74,9 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
   const [isPrivate, setIsPrivate] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  // Guard SINCRÓNICO contra doble-submit: el estado `loading` no alcanza a
+  // deshabilitar el botón ante un doble tap rápido (React re-renderiza después).
+  const submittingRef = useRef(false);
 
   // Sin prefill, arrancar con los últimos valores usados (en effect para no
   // divergir del HTML del servidor en la hidratación).
@@ -100,6 +103,7 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
     const parsed = createPurchaseSchema.safeParse({
       description,
       categoryId,
@@ -124,6 +128,7 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
       setErrors(errs);
       return;
     }
+    submittingRef.current = true;
     setLoading(true);
     try {
       await createPurchase(parsed.data);
@@ -138,6 +143,7 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
       router.push(`/compras?month=${expenseDate.slice(0, 7)}-01`);
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
+      submittingRef.current = false;
       setLoading(false);
     }
   }

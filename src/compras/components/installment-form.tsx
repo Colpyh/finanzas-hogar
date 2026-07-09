@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,8 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
   const [isShared, setIsShared] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  // Guard sincrónico contra doble-submit (ver purchase-form.tsx)
+  const submittingRef = useRef(false);
 
   const n = Number(installmentsTotal);
   const amt = Number(installmentAmount);
@@ -47,6 +49,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
     const parsed = createInstallmentSchema.safeParse({
       description,
       categoryId,
@@ -67,12 +70,14 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
       setErrors(errs);
       return;
     }
+    submittingRef.current = true;
     setLoading(true);
     try {
       await createInstallment(parsed.data);
-      router.push("/compras");
+      router.push("/compras?type=installment");
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
+      submittingRef.current = false;
       setLoading(false);
     }
   }
