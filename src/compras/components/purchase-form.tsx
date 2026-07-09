@@ -132,7 +132,10 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
       } catch {
         // sin localStorage no hay memoria de defaults, nada más
       }
-      router.push("/compras");
+      // Navegar al MES del gasto: una boleta vieja (ej. escaneada días después)
+      // cae en otro mes y el usuario no la veía en la lista → reintentaba y
+      // duplicaba. Aterrizar donde quedó lo guardado.
+      router.push(`/compras?month=${expenseDate.slice(0, 7)}-01`);
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
       setLoading(false);
