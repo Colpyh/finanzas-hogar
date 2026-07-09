@@ -93,6 +93,14 @@ export async function POST(
   );
 
   if (!parsedEmail) {
+    // BCI manda muchos tipos de correo (transferencias, avisos, estados de
+    // cuenta). Si no parseó como compra Y el asunto tampoco es de compra,
+    // descartarlo — guardarlo solo generaba pendientes vacíos ("—") en la UI.
+    // Si el asunto SÍ es de compra pero no parseó, se guarda igual: es la
+    // señal de que BCI cambió el formato del correo.
+    if (!payload.subject.toLowerCase().includes("uso de tu tarjeta")) {
+      return NextResponse.json({ ok: true, skipped: "not_purchase" });
+    }
     console.warn("[email-inbound] parse_failed", {
       householdId,
       provider: payload.provider,

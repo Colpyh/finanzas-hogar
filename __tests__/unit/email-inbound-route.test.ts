@@ -366,6 +366,81 @@ describe("POST /api/webhooks/email/[householdId]", () => {
     );
   });
 
+  // Correo de BCI que NO es compra (parse falla + asunto no es de compra) → skipped
+  it("returns skipped=not_purchase for a BCI transfer email", async () => {
+    parseBciEmail.mockReturnValue(null);
+    let callCount = 0;
+    const svc = {
+      from: jest.fn().mockImplementation(() => {
+        callCount++;
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({
+            data: callCount === 1 ? { id: UUID_HOUSEHOLD } : null,
+          }),
+        };
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
+    const payload = {
+      ...BCI_PAYLOAD,
+      Subject: "Aviso de Transferencia de Fondos Programada",
+      TextBody: "Monto transferido $5.000 ...",
+    };
+    const req = makeRequest(payload, TEST_SECRET);
+    const res = await POST(req, {
+      params: Promise.resolve({ householdId: UUID_HOUSEHOLD }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skipped).toBe("not_purchase");
+  });
+
+  // Parse falla PERO el asunto es de compra → se guarda igual (detectar drift de formato)
+  it("still inserts when parse fails but subject is a purchase notification", async () => {
+    parseBciEmail.mockReturnValue(null);
+    let callCount = 0;
+    const svc = {
+      from: jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount <= 2) {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: callCount === 1 ? { id: UUID_HOUSEHOLD } : null,
+            }),
+          };
+        }
+        return {
+          insert: jest.fn().mockReturnThis(),
+          values: jest.fn().mockReturnThis(),
+          select: jest.fn().mockReturnThis(),
+          single: jest
+            .fn()
+            .mockResolvedValue({ data: { id: UUID_PENDING }, error: null }),
+        };
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
+    const payload = {
+      ...BCI_PAYLOAD,
+      Subject: "Fwd: Notificación de uso de tu tarjeta de débito",
+      TextBody: "formato nuevo desconocido",
+    };
+    const req = makeRequest(payload, TEST_SECRET);
+    const res = await POST(req, {
+      params: Promise.resolve({ householdId: UUID_HOUSEHOLD }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.pendingId).toBe(UUID_PENDING);
+  });
+
   // CloudMailin — non-BCI sender → skipped
   it("returns skipped=not_bci for a CloudMailin payload from another sender", async () => {
     const svc = {

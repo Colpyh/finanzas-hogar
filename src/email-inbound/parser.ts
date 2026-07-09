@@ -18,8 +18,16 @@ export function parseBciEmail(body: string): ParsedBciEmail | null {
   // Normalize line endings
   const text = body.replace(/\r\n/g, "\n");
 
-  // Amount: "Monto" label followed by $X.XXX (BCI uses dots as thousands sep, no decimals)
-  const amountMatch = text.match(/Monto[^\n$]*\$?\s*([\d.]+)(?:,(\d{1,2}))?/i);
+  // Las etiquetas se anclan al INICIO de línea (flag m): el cuerpo real trae
+  // frases como "*compra en comercio nacional *" ANTES de los datos, y un
+  // regex suelto enganchaba esa palabra "comercio" devolviendo basura.
+  // `[ \t:]*` acepta ambos formatos de BCI: "Monto: $4.000" (con dos puntos,
+  // formato abr-2026) y "Monto $3.500" (sin dos puntos, formato jul-2026).
+  // El anclaje también excluye variantes de otros correos del banco como
+  // "Monto transferido $..." o "Fecha de abono ..." (transferencias).
+
+  // Amount: $X.XXX (BCI uses dots as thousands sep, no decimals on debit)
+  const amountMatch = text.match(/^[ \t]*Monto[ \t:]*\$[ \t]*([\d.]+)(?:,(\d{1,2}))?/im);
   if (!amountMatch || !amountMatch[1]) return null;
   const intPart = amountMatch[1].replace(/\./g, "");
   const decPart = amountMatch[2] ?? "";
@@ -28,8 +36,8 @@ export function parseBciEmail(body: string): ParsedBciEmail | null {
     : Number(intPart);
   if (!Number.isFinite(amount) || amount <= 0) return null;
 
-  // Date: "Fecha" label, DD/MM/YYYY → YYYY-MM-DD
-  const dateMatch = text.match(/Fecha[^\n]*?(\d{2})\/(\d{2})\/(\d{4})/i);
+  // Date: DD/MM/YYYY → YYYY-MM-DD
+  const dateMatch = text.match(/^[ \t]*Fecha[ \t:]*(\d{2})\/(\d{2})\/(\d{4})/im);
   if (!dateMatch) return null;
   const dd = dateMatch[1];
   const mm = dateMatch[2];
@@ -37,13 +45,13 @@ export function parseBciEmail(body: string): ParsedBciEmail | null {
   if (!dd || !mm || !yyyy) return null;
   const date = `${yyyy}-${mm}-${dd}`;
 
-  // Time: "Hora" label, HH:MM
-  const timeMatch = text.match(/Hora[^\n]*?(\d{2}:\d{2})/i);
+  // Time: HH:MM
+  const timeMatch = text.match(/^[ \t]*Hora[ \t:]*(\d{2}:\d{2})/im);
   if (!timeMatch || !timeMatch[1]) return null;
   const time = timeMatch[1];
 
-  // Merchant: "Comercio" label, take the rest of the row, trim
-  const merchantMatch = text.match(/Comercio[^\n:]*[:\s]+([^\n]+)/i);
+  // Merchant: resto de la línea que EMPIEZA con "Comercio"
+  const merchantMatch = text.match(/^[ \t]*Comercio[ \t:]+([^\n]+)/im);
   if (!merchantMatch || !merchantMatch[1]) return null;
   const merchant = merchantMatch[1].trim().replace(/\s+/g, " ");
   if (!merchant) return null;

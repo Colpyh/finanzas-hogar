@@ -29,6 +29,60 @@ Hora: 09:53 horas
 Comercio: SUPERMARKET SA
 `;
 
+// Formato REAL de BCI (jul 2026): sin dos puntos, con asteriscos de énfasis
+// y la línea "*compra en comercio nacional *" ANTES de los datos — la palabra
+// "comercio" ahí enganchaba el regex viejo y devolvía basura como merchant.
+const BCI_TEXT_2026_FORMAT = `
+Hola
+*NOMBRE APELLIDO USUARIO*
+Realizaste un(a)
+*compra en comercio nacional *
+con tu * tarjeta de débito*.
+Número tarjeta débito ****5616
+Monto $3.500
+Fecha 03/07/2026
+Hora 21:28 horas
+Comercio ALMACEN EL SOL
+Si no quieres recibir notificaciones en tu correo electrónico puedes
+modificar tus preferencias en *Bci.cl*.
+`;
+
+// Mismo formato pero reenviado manualmente desde Gmail (wrapper Fwd)
+const BCI_TEXT_2026_FORWARDED = `---------- Forwarded message ---------
+De: <contacto@bci.cl>
+Date: vie, 3 jul 2026 a las 21:28
+Subject: Notificación de uso de tu tarjeta de débito
+To: <usuario@gmail.com>
+
+
+Hola
+*NOMBRE APELLIDO USUARIO*
+Realizaste un(a)
+*compra en comercio nacional *
+con tu * tarjeta de débito*.
+Número tarjeta débito ****5616
+Monto $1.690
+Fecha 04/07/2026
+Hora 13:28 horas
+Comercio MERCADOPAGO*CONV
+`;
+
+// Correo de BCI que NO es compra (transferencia programada) — debe dar null:
+// tiene "Monto transferido" y "Fecha de abono" pero no las etiquetas de compra.
+const BCI_TRANSFER_EMAIL = `
+Hola
+*NOMBRE APELLIDO USUARIO*
+Realizaste una *transferencia de fondos programada * desde tu cuenta N°
+*12345678*
+
+*Datos de tu transferencia*
+Monto transferido $5.000
+Nombre del destinatario Fintual Agf S
+Banco de destino BANCO SECURITY
+Fecha de abono 05/07/2026
+Número de comprobante 1195244383
+`;
+
 describe("parseBciEmail", () => {
   // Scenario 2.1 — $4.000 → 4000
   it("parses amount '$4.000' as 4000", () => {
@@ -90,6 +144,35 @@ describe("parseBciEmail", () => {
       time: "09:53",
       merchant: "MUNICH",
       cardLast4: "5616",
+    });
+  });
+
+  // Formato real 2026 (sin dos puntos, con asteriscos y preámbulo)
+  describe("formato BCI 2026 (sin dos puntos)", () => {
+    it("parses the real 2026 body and does NOT grab 'comercio nacional' as merchant", () => {
+      const result = parseBciEmail(BCI_TEXT_2026_FORMAT);
+      expect(result).toEqual({
+        amount: 3500,
+        date: "2026-07-03",
+        time: "21:28",
+        merchant: "ALMACEN EL SOL",
+        cardLast4: "5616",
+      });
+    });
+
+    it("parses a manually forwarded body (Fwd wrapper)", () => {
+      const result = parseBciEmail(BCI_TEXT_2026_FORWARDED);
+      expect(result).toEqual({
+        amount: 1690,
+        date: "2026-07-04",
+        time: "13:28",
+        merchant: "MERCADOPAGO*CONV",
+        cardLast4: "5616",
+      });
+    });
+
+    it("returns null for a BCI transfer email (Monto transferido / Fecha de abono)", () => {
+      expect(parseBciEmail(BCI_TRANSFER_EMAIL)).toBeNull();
     });
   });
 
