@@ -63,10 +63,22 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
     setLoading(true);
     setError(null);
 
-    const result = await signInWithCredentials(email, password, returnTo);
+    try {
+      const result = await signInWithCredentials(email, password, returnTo);
 
-    if (result?.error) {
-      setError(result.error);
+      if (result?.error || !result?.destination) {
+        setError(result?.error ?? "No se pudo iniciar sesión — intentá de nuevo.");
+        setLoading(false);
+        return;
+      }
+
+      // refresh purga la Router Cache (RSC del usuario/sesión anterior) antes
+      // de navegar — sin esto, tras un logout el login podía rebotar y dejar
+      // el botón pegado en "Ingresando…".
+      router.refresh();
+      router.replace(result.destination);
+    } catch {
+      setError("Error de conexión. Intentá de nuevo.");
       setLoading(false);
     }
   }

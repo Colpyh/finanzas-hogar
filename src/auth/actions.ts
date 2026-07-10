@@ -6,11 +6,15 @@ import { cookies } from "next/headers";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+// Devuelve el destino en vez de hacer redirect() en la action: el cliente
+// navega con router.replace + router.refresh (purga la Router Cache del
+// usuario anterior). Con redirect() en la action, un rebote del guard de
+// ruta volvía al login con `loading` pegado en true ("Ingresando…" eterno).
 export async function signInWithCredentials(
   email: string,
   password: string,
   returnTo?: string
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; destination?: string }> {
   const destination = returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard";
 
   try {
@@ -22,7 +26,7 @@ export async function signInWithCredentials(
     return { error: "Error de conexión. Intentá de nuevo más tarde." };
   }
 
-  redirect(destination);
+  return { destination };
 }
 
 export async function signUp(
