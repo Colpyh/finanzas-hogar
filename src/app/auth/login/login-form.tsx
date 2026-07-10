@@ -72,11 +72,11 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
         return;
       }
 
-      // refresh purga la Router Cache (RSC del usuario/sesión anterior) antes
-      // de navegar — sin esto, tras un logout el login podía rebotar y dejar
-      // el botón pegado en "Ingresando…".
-      router.refresh();
-      router.replace(result.destination);
+      // Límite de auth = recarga COMPLETA (no navegación SPA): purga Router
+      // Cache, estados restaurados y cualquier resto de la sesión anterior.
+      // router.refresh()+replace() competían entre sí y dejaban el botón
+      // pegado en "Ingresando…" tras un ciclo logout→login con credenciales.
+      window.location.assign(result.destination);
     } catch {
       setError("Error de conexión. Intentá de nuevo.");
       setLoading(false);

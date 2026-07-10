@@ -193,7 +193,7 @@ function SidebarContent({
           confirmText="Sí, cerrar sesión"
           variant="destructive"
           loading={pending}
-          onConfirm={() => startTransition(async () => { await signOut(); })}
+          onConfirm={() => startTransition(async () => { await signOut(); window.location.assign("/auth/login"); })}
         />
       </div>
     </div>

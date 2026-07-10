@@ -12,6 +12,8 @@ export function SignOutButton() {
   function handleConfirm() {
     startTransition(async () => {
       await signOut();
+      // Recarga completa: límite de auth, sin restos de la sesión anterior
+      window.location.assign("/auth/login");
     });
   }
 

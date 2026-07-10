@@ -1,15 +1,14 @@
 "use server";
 
 import { createClient } from "@/shared/lib/supabase/server";
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 // Devuelve el destino en vez de hacer redirect() en la action: el cliente
-// navega con router.replace + router.refresh (purga la Router Cache del
-// usuario anterior). Con redirect() en la action, un rebote del guard de
-// ruta volvía al login con `loading` pegado en true ("Ingresando…" eterno).
+// navega con window.location.assign (recarga completa — límite de auth, sin
+// restos de la sesión anterior). Con redirect() en la action, un rebote
+// volvía al login con `loading` pegado en true ("Ingresando…" eterno).
 export async function signInWithCredentials(
   email: string,
   password: string,
@@ -76,11 +75,13 @@ export async function updatePassword(newPassword: string): Promise<{ error?: str
   return {};
 }
 
+// Sin redirect() en la action: el cliente hace window.location.assign para
+// que el logout sea una recarga completa (misma razón que el login — límite
+// de auth = página nueva, sin restos de la sesión en la Router Cache).
 export async function signOut(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete("dev-session");
 
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/auth/login");
 }
