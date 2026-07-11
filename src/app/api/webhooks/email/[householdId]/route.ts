@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/shared/lib/supabase/service";
 import { parseBciEmail } from "@/email-inbound/parser";
+import { htmlToText } from "@/email-inbound/html-to-text";
 import { normalizeInboundPayload } from "@/email-inbound/webhook/inbound";
 import { sendPushToHousehold } from "@/shared/lib/push";
 
@@ -84,9 +85,10 @@ export async function POST(
     });
   }
 
-  // 7. Parse BCI email (text body preferred over HTML)
+  // 7. Parse BCI email. Texto plano si viene; si no, HTML convertido — el
+  // correo ORIGINAL de BCI (reenvío por filtro de Gmail) es HTML-only.
   const parsedEmail = parseBciEmail(
-    payload.textBody ?? payload.htmlBody ?? ""
+    payload.textBody ?? htmlToText(payload.htmlBody ?? "")
   );
 
   if (!parsedEmail) {
