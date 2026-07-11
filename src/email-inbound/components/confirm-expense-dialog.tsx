@@ -106,7 +106,11 @@ export function ConfirmExpenseDialog({
                 id="category"
                 className={categoryError ? "border-destructive" : ""}
               >
-                <SelectValue placeholder="Seleccionar categoría" />
+                <SelectValue>
+                  {(v: string | null) =>
+                    categories.find((c) => c.id === v)?.name ?? "Seleccionar categoría"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
