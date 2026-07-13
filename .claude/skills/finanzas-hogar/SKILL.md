@@ -80,7 +80,8 @@ export async function myMutation() {
 - **Actions frecuentes**: `updateTag(hhTag(hh, dominio))` SOLO por los dominios que ESCRIBE — nunca el master (era la causa de que cada tap dejara todo el hogar frío)
 - **Ops raras de hogar** (rename, add/removeMember, redeemInvite): SÍ usan `updateTag(householdId)` master + `userHouseholdTag`
 - NO cachear queries con `search` (input del usuario) — cache pollution
-- `revalidatePath` se mantiene junto a `updateTag` (no reemplaza)
+- `revalidatePath` SOLO con la ruta desde donde se invoca la action (refresca la vista actual en el mismo roundtrip). Cross-route es redundante: bajo `cacheComponents` toda navegación dinámica re-fetchea (router cache dynamic=0)
+- **Proxy**: fast path sin llamada de red cuando el `expires_at` de la cookie tiene >60s (`session-freshness.ts` — decodifica SIN verificar firma porque solo decide el REFRESH; la autorización real es el `getUser()` de páginas/actions)
 - Query que depende del usuario: separar la parte por-hogar (cacheada) del cálculo por-usuario (post-caché) — ver `getHouseholdDebtItems`/`getPendingBalances`. Args de `'use cache'` deben ser serializables (arrays/objetos planos, NO `Map`)
 - `getUserHousehold` está cacheada con tag `user-household-{userId}` (helper `userHouseholdTag`) + tag del hogar. Toda mutación de membresía (crear hogar, canjear invitación, addMemberByEmail, removeMember) DEBE invalidar ese tag del usuario afectado
 
@@ -218,6 +219,7 @@ db.select().from(expense).where(
 
 - **Botón interactivo dentro de un `<Link>`**: el handler DEBE hacer `e.preventDefault()` + `e.stopPropagation()` en un client component, sino el click también navega (ej. `mark-paid-button.tsx`, `repeat-purchase-button.tsx`).
 - **Forms que crean registros**: guard SINCRÓNICO contra doble-submit (`submittingRef` — el `disabled` por estado llega tarde ante doble tap en mobile y duplica el gasto) + tras guardar navegar AL MES del registro (`/compras?month=...`), no al mes actual — una boleta vieja caía en otro mes, el usuario no la veía y reintentaba.
+- **Optimistic UI (convención para interacciones frecuentes)**: cerrar diálogo + reflejar el resultado AL TAP; la action corre en `startTransition` detrás; en error → revertir + `toast.error`. El override optimista vive en estado local y se RESETEA con `useEffect` cuando las props del servidor re-sincronizan (dejarlo aplicado duplica el efecto). Ejemplos: `purchase-paid-status`, `settle-button`, `installment-card`, `fixed-expense-card`, `pending-expense-list`.
 - **PWA**: `src/app/manifest.ts` (standalone, start /dashboard) + íconos generados con `node scripts/generate-icons.mjs` (PNG sin deps) + `appleWebApp` en layout. Instalar desde SAFARI → pantalla completa. El webview embebido de otras apps (Gmail/Google, se reconoce por la ✕ superior) descarta cookies y "cierra la sesión" — no es bug, es el webview.
 - **Páginas con datos de ejemplo (mocks)**: usar `getSessionUser()` (`src/auth/queries.ts`) — devuelve null SOLO sin sesión. NUNCA envolver las queries reales en try/catch vacío: un error real debe ir al error boundary, no mostrar cifras falsas como reales.
 - **Moneda**: SIEMPRE `formatCurrency` de `currency-display.tsx` — nada de `toLocaleString` ad-hoc. Default de schema: CLP.
