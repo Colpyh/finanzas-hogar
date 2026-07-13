@@ -56,7 +56,10 @@ export async function getPaymentsForMonth(expenseId: string, periodMonth: string
 /** Trae todos los pagos del mes para todos los gastos fijos activos del hogar en una sola query. */
 export async function getAllFixedPaymentsForPeriod(householdId: string, periodMonth: string) {
   'use cache'
-  cacheTag(householdId, hhTag(householdId, "payments"))
+  // Tagea payments (lee fixed_expense_payment) Y expenses (filtra por
+  // expense.isActive/type/deletedAt vía el join) — así desactivar o borrar un
+  // gasto fijo también invalida este resultado.
+  cacheTag(householdId, hhTag(householdId, "payments"), hhTag(householdId, "expenses"))
   return db
     .select({ payment: fixedExpensePayment })
     .from(fixedExpensePayment)

@@ -41,7 +41,7 @@ export async function getAnnualSummary(
   anchorMonth: string
 ): Promise<MonthlyDataPoint[]> {
   "use cache";
-  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "income"));
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "income"), hhTag(householdId, "cards"));
 
   const months = last12Months(anchorMonth);
   const oldest = months[0]!;

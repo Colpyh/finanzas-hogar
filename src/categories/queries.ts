@@ -19,7 +19,7 @@ export async function getCategoryBudgetStatus(
   month: string
 ): Promise<CategoryBudgetStatus[]> {
   "use cache";
-  cacheTag(householdId, hhTag(householdId, "categories"), hhTag(householdId, "expenses"));
+  cacheTag(householdId, hhTag(householdId, "categories"), hhTag(householdId, "expenses"), hhTag(householdId, "cards"));
 
   const monthPrefix = month.slice(0, 7);
 

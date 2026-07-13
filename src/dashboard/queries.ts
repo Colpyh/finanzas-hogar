@@ -33,7 +33,7 @@ export async function getDashboardSummary(
   memberCount: number
 ): Promise<DashboardSummary> {
   'use cache'
-  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"), hhTag(householdId, "income"))
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"), hhTag(householdId, "income"), hhTag(householdId, "cards"))
   // These three SELECTs over `expense` are independent (none uses another's
   // result in its WHERE/input), so run them in parallel to cut latency.
   const monthPrefix = month.slice(0, 7);
