@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { settleBalanceItem } from "@/balances/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
+import { toast } from "sonner";
 
 type Props = {
   expenseId: string;
@@ -16,19 +17,27 @@ type Props = {
 
 export function SettleButton({ expenseId, description, shareAmount, periodMonth, iAmCreditor }: Props) {
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  // Optimista: el ítem se marca "Saldado" al confirmar, sin esperar el
+  // roundtrip; si la action falla, vuelve al botón con un toast.
+  const [settled, setSettled] = useState(false);
+  const [, startTransition] = useTransition();
 
   function handleConfirm() {
-    setError(null);
+    setOpen(false);
+    setSettled(true);
     startTransition(async () => {
       const result = await settleBalanceItem(expenseId, periodMonth);
       if (result?.error) {
-        setError(result.error);
-      } else {
-        setOpen(false);
+        setSettled(false);
+        toast.error(result.error);
       }
     });
+  }
+
+  if (settled) {
+    return (
+      <span className="text-xs font-medium text-muted-foreground shrink-0">✓ Saldado</span>
+    );
   }
 
   return (
@@ -42,7 +51,7 @@ export function SettleButton({ expenseId, description, shareAmount, periodMonth,
 
       <ConfirmDialog
         open={open}
-        onOpenChange={(v) => { setOpen(v); if (!v) setError(null); }}
+        onOpenChange={setOpen}
         title="¿Saldar este gasto?"
         description={
           iAmCreditor
@@ -50,13 +59,9 @@ export function SettleButton({ expenseId, description, shareAmount, periodMonth,
             : `Registrarás tu pago de "${description}" (${formatCurrency(shareAmount)}). Esto cerrará la deuda con el otro miembro.`
         }
         confirmText="Sí, saldar"
-        loading={pending}
+        loading={false}
         onConfirm={handleConfirm}
       />
-
-      {error && (
-        <p className="text-xs text-destructive mt-1 text-right w-full">{error}</p>
-      )}
     </>
   );
 }

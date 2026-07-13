@@ -11,22 +11,33 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { discardPendingExpense } from "@/email-inbound/actions";
+import { toast } from "sonner";
 import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Props = {
   item: PendingExpenseRow | null;
   open: boolean;
   onClose: () => void;
+  onOptimisticHide?: (id: string) => void;
+  onRestore?: (id: string) => void;
 };
 
-export function DiscardConfirmDialog({ item, open, onClose }: Props) {
+export function DiscardConfirmDialog({ item, open, onClose, onOptimisticHide, onRestore }: Props) {
   const [isPending, startTransition] = useTransition();
 
   function handleConfirm() {
     if (!item) return;
+    // Optimista: cerrar y ocultar YA; restaurar con toast si la action falla.
+    const itemId = item.id;
+    onClose();
+    onOptimisticHide?.(itemId);
     startTransition(async () => {
-      await discardPendingExpense({ pendingExpenseId: item.id });
-      onClose();
+      try {
+        await discardPendingExpense({ pendingExpenseId: itemId });
+      } catch {
+        onRestore?.(itemId);
+        toast.error("No se pudo descartar — intentá de nuevo.");
+      }
     });
   }
 

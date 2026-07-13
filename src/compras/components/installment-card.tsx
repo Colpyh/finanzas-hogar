@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { markInstallmentPaid, markAsMonthlyPayer, registerInstallmentShare } from "@/compras/actions";
@@ -32,6 +32,12 @@ type Props = {
   };
 };
 
+type OptimisticState = {
+  paidDelta?: number;
+  status?: "paid";
+  settled?: boolean;
+} | null;
+
 export function InstallmentCard({ expense }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -42,47 +48,74 @@ export function InstallmentCard({ expense }: Props) {
   const [sharingLoading, startShare] = useTransition();
   const [markingBoth, startMarkBoth] = useTransition();
   const [unmarking, startUnmark] = useTransition();
+  // Optimista: los diálogos cierran al tap y la card refleja el nuevo estado
+  // sin esperar el roundtrip; si la action falla, revierte con el error.
+  const [optimistic, setOptimistic] = useState<OptimisticState>(null);
 
-  const paid = expense.installmentsPaid ?? 0;
+  // Cuando el servidor re-sincroniza las props, el override optimista sobra
+  // (dejarlo aplicado duplicaría el efecto, ej. contador +2).
+  useEffect(() => {
+    setOptimistic(null);
+  }, [expense.installmentsPaid, expense.currentUserStatus, expense.isSettled, expense.isPaidThisMonth]);
+
+  const paid = (expense.installmentsPaid ?? 0) + (optimistic?.paidDelta ?? 0);
   const total = expense.installmentsTotal ?? 0;
   const canPay = canMarkInstallmentPaid(paid, total);
   const progress = total > 0 ? Math.round((paid / total) * 100) : 0;
 
   const isShared = expense.isShared ?? false;
-  const isPaidThisMonth = expense.isPaidThisMonth ?? false;
-  const isSettled = expense.isSettled ?? false;
-  const currentUserStatus = expense.currentUserStatus ?? "none";
+  const isPaidThisMonth = optimistic?.status === "paid" || (expense.isPaidThisMonth ?? false);
+  const isSettled = optimistic?.settled ?? (expense.isSettled ?? false);
+  const currentUserStatus = optimistic?.status ?? (expense.currentUserStatus ?? "none");
 
-  async function handlePay() {
+  function handlePay() {
+    setConfirmOpen(false);
+    setError(null);
+    setOptimistic(isShared ? { status: "paid" } : { paidDelta: 1 });
     startLoading(async () => {
       // Para compartidas: solo registra en balance sin tocar el contador
       const result = isShared
         ? await markAsMonthlyPayer(expense.id)
         : await markInstallmentPaid(expense.id);
-      if (result?.error) setError(result.error);
-      setConfirmOpen(false);
+      if (result?.error) {
+        setOptimistic(null);
+        setError(result.error);
+      }
     });
   }
 
-  async function handleShare() {
+  function handleShare() {
+    setConfirmShareOpen(false);
+    setError(null);
+    setOptimistic({ status: "paid" });
     startShare(async () => {
       const result = await registerInstallmentShare(expense.id);
-      if (result?.error) setError(result.error);
-      setConfirmShareOpen(false);
+      if (result?.error) {
+        setOptimistic(null);
+        setError(result.error);
+      }
     });
   }
 
   function handleMarkBoth() {
+    setConfirmMarkBothOpen(false);
+    setError(null);
+    setOptimistic({ settled: true, status: "paid" });
     startMarkBoth(async () => {
-      await markPaidForOther(expense.id);
-      setConfirmMarkBothOpen(false);
+      const result = await markPaidForOther(expense.id);
+      if (result?.error) {
+        setOptimistic(null);
+        setError(result.error);
+      }
     });
   }
 
   function handleUnmark() {
+    setConfirmUnmarkOpen(false);
+    setError(null);
     startUnmark(async () => {
-      await unmarkOtherPayment(expense.id);
-      setConfirmUnmarkOpen(false);
+      const result = await unmarkOtherPayment(expense.id);
+      if (result?.error) setError(result.error);
     });
   }
 

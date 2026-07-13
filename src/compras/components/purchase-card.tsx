@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { MarkPaidButton } from "./mark-paid-button";
+import { PurchasePaidStatus } from "./purchase-paid-status";
 import { RepeatPurchaseButton } from "./repeat-purchase-button";
 import { cn } from "@/lib/utils";
 
@@ -79,25 +79,8 @@ export function PurchaseCard({ expense }: Props) {
           {expense.responsibleName && (
             <span className="text-[11px] font-medium text-primary/80">Paga: {expense.responsibleName}</span>
           )}
-          {/* Estado de pago */}
-          {isPaid ? (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] font-bold px-[7px] py-[2px] rounded-full"
-              style={{ background: "var(--success-bg)", color: "var(--success-fg)" }}
-            >
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                <path d="M5 12l5 5L20 6" />
-              </svg>
-              Pagado
-            </span>
-          ) : (
-            <>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-[7px] py-[2px] rounded-full bg-amber-500/12 text-amber-600 dark:text-amber-400">
-                ⏳ Pendiente
-              </span>
-              <MarkPaidButton expenseId={expense.id} />
-            </>
-          )}
+          {/* Estado de pago (optimista: badge cambia al tap) */}
+          <PurchasePaidStatus expenseId={expense.id} initialPaid={isPaid} />
           <RepeatPurchaseButton
             prefill={{
               desc: expense.description,

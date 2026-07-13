@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { confirmPendingExpense } from "@/email-inbound/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
+import { toast } from "sonner";
 import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Category = { id: string; name: string };
@@ -29,6 +30,9 @@ type Props = {
   categories: Category[];
   open: boolean;
   onClose: () => void;
+  /** Optimista: oculta la card al enviar; onRestore la devuelve si falla. */
+  onOptimisticHide?: (id: string) => void;
+  onRestore?: (id: string) => void;
 };
 
 export function ConfirmExpenseDialog({
@@ -36,6 +40,8 @@ export function ConfirmExpenseDialog({
   categories,
   open,
   onClose,
+  onOptimisticHide,
+  onRestore,
 }: Props) {
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState(
@@ -68,14 +74,25 @@ export function ConfirmExpenseDialog({
     if (!item) return;
     setCategoryError(false);
 
+    // Optimista: cerrar y ocultar la card YA — la action corre detrás.
+    const itemId = item.id;
+    const payload = {
+      pendingExpenseId: itemId,
+      categoryId,
+      description: effectiveDescription || item.parsedMerchant || "Gasto",
+      notes: notes || undefined,
+    };
+    onClose();
+    onOptimisticHide?.(itemId);
+
     startTransition(async () => {
-      await confirmPendingExpense({
-        pendingExpenseId: item.id,
-        categoryId,
-        description: effectiveDescription || item.parsedMerchant || "Gasto",
-        notes: notes || undefined,
-      });
-      onClose();
+      try {
+        await confirmPendingExpense(payload);
+        toast.success("Gasto confirmado");
+      } catch {
+        onRestore?.(itemId);
+        toast.error("No se pudo confirmar el gasto — intentá de nuevo.");
+      }
     });
   }
 

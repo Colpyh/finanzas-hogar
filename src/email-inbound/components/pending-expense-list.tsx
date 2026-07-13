@@ -16,8 +16,21 @@ type Props = {
 export function PendingExpenseList({ items, categories }: Props) {
   const [confirmItem, setConfirmItem] = useState<PendingExpenseRow | null>(null);
   const [discardItem, setDiscardItem] = useState<PendingExpenseRow | null>(null);
+  // Optimista: la card desaparece al confirmar/descartar sin esperar el
+  // roundtrip; si la action falla, se restaura (y el diálogo muestra toast).
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set());
 
-  if (items.length === 0) {
+  const hide = (id: string) => setHiddenIds((prev) => new Set(prev).add(id));
+  const restore = (id: string) =>
+    setHiddenIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+
+  const visible = items.filter((i) => !hiddenIds.has(i.id));
+
+  if (visible.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-[60px] px-5 text-center">
         <span className="text-[46px]">✅</span>
@@ -32,7 +45,7 @@ export function PendingExpenseList({ items, categories }: Props) {
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-[18px] items-start">
-        {items.map((item) => (
+        {visible.map((item) => (
           <PendingExpenseCard
             key={item.id}
             item={item}
@@ -47,12 +60,16 @@ export function PendingExpenseList({ items, categories }: Props) {
         categories={categories}
         open={confirmItem !== null}
         onClose={() => setConfirmItem(null)}
+        onOptimisticHide={hide}
+        onRestore={restore}
       />
 
       <DiscardConfirmDialog
         item={discardItem}
         open={discardItem !== null}
         onClose={() => setDiscardItem(null)}
+        onOptimisticHide={hide}
+        onRestore={restore}
       />
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
@@ -66,11 +66,16 @@ function ActionBtn({
   );
 }
 
+type OptimisticState = {
+  status?: "reserved" | "paid";
+  settled?: boolean;
+} | null;
+
 export function FixedExpenseCard({
   expense,
-  isPaidThisMonth,
-  isSettled,
-  currentUserStatus,
+  isPaidThisMonth: serverPaidThisMonth,
+  isSettled: serverSettled,
+  currentUserStatus: serverStatus,
   paidByName,
   myShareAmount,
   periodMonth,
@@ -84,36 +89,53 @@ export function FixedExpenseCard({
   const [markingBoth, startMarkBoth] = useTransition();
   const [unmarking, startUnmark] = useTransition();
   const [unmarkingMine, startUnmarkMine] = useTransition();
+  // Optimista: la card refleja el pago al tap; revierte con toast si falla.
+  const [optimistic, setOptimistic] = useState<OptimisticState>(null);
+
+  // Reset al re-sincronizar props del servidor (evita doble aplicación).
+  useEffect(() => {
+    setOptimistic(null);
+  }, [serverPaidThisMonth, serverSettled, serverStatus]);
+
+  const currentUserStatus = optimistic?.status ?? serverStatus;
+  const isPaidThisMonth = optimistic?.status != null || serverPaidThisMonth;
+  const isSettled = optimistic?.settled ?? serverSettled;
 
   function handleUpgrade() {
+    setConfirmUpgradeOpen(false);
+    setOptimistic({ status: "paid" });
     startUpgrade(async () => {
       try {
         const result = await upgradeToPaid(expense.id, periodMonth);
         if (result?.error) {
+          setOptimistic(null);
           toast.error(result.error);
         } else {
           toast.success("Pago confirmado");
         }
       } catch {
+        setOptimistic(null);
         toast.error("Error al confirmar el pago. Intentá de nuevo.");
       }
-      setConfirmUpgradeOpen(false);
     });
   }
 
   function handleMarkBoth() {
+    setConfirmMarkBothOpen(false);
+    setOptimistic({ status: "paid", settled: true });
     startMarkBoth(async () => {
       try {
         const result = await markPaidForOther(expense.id, periodMonth);
         if (result?.error) {
+          setOptimistic(null);
           toast.error(result.error);
         } else {
           toast.success("Saldado por ambos");
         }
       } catch {
+        setOptimistic(null);
         toast.error("Error al registrar el pago. Intentá de nuevo.");
       }
-      setConfirmMarkBothOpen(false);
     });
   }
 
@@ -312,6 +334,8 @@ export function FixedExpenseCard({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         periodMonth={periodMonth}
+        onOptimistic={(status) => setOptimistic({ status })}
+        onError={() => setOptimistic(null)}
       />
 
       <ConfirmDialog

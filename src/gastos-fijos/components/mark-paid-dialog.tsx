@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { markFixedExpensePaid } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
+import { toast } from "sonner";
 import { PiggyBank, CheckCircle2 } from "lucide-react";
 
 type Props = {
@@ -21,6 +22,9 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   periodMonth: string;
+  /** Optimista: la card refleja el pago al enviar; onError revierte. */
+  onOptimistic?: (status: "reserved" | "paid") => void;
+  onError?: () => void;
 };
 
 export function MarkPaidDialog({
@@ -29,6 +33,8 @@ export function MarkPaidDialog({
   open,
   onOpenChange,
   periodMonth,
+  onOptimistic,
+  onError,
 }: Props) {
   const [amount, setAmount] = useState(estimatedAmount === "0" ? "" : estimatedAmount);
   const [notes, setNotes] = useState("");
@@ -36,16 +42,24 @@ export function MarkPaidDialog({
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(status: "reserved" | "paid") {
-    setLoading(true);
     setError(null);
 
-    const result = await markFixedExpensePaid({ expenseId, amount, status, notes: notes || undefined, periodMonth });
+    // Validación mínima local antes de cerrar optimista (evita cerrar y
+    // reabrir por un monto vacío, el error más común).
+    if (!amount || !/^\d+(\.\d{1,2})?$/.test(amount)) {
+      setError("Ingresá un monto válido");
+      return;
+    }
 
+    // Optimista: cerrar YA y reflejar el pago en la card; revert en error.
+    const payload = { expenseId, amount, status, notes: notes || undefined, periodMonth };
+    onOpenChange(false);
+    onOptimistic?.(status);
+
+    const result = await markFixedExpensePaid(payload);
     if (result?.error) {
-      setError(result.error);
-      setLoading(false);
-    } else {
-      onOpenChange(false);
+      onError?.();
+      toast.error(result.error);
     }
   }
 
