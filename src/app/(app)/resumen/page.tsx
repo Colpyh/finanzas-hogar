@@ -14,6 +14,7 @@ import { CategoryChart } from "@/resumen/components/category-chart";
 import { FixedVariableBreakdown } from "@/resumen/components/fixed-variable-breakdown";
 import { AnnualChart } from "@/resumen/components/annual-chart";
 import { BudgetProgress } from "@/resumen/components/budget-progress";
+import { InsightsPanel } from "@/insights/components/insights-panel";
 import { formatCurrency } from "@/shared/components/currency-display";
 import type { MonthlySummary, FixedVsVariableBreakdown as FVB, InstallmentBurden } from "@/resumen/types";
 import type { MonthlyDataPoint } from "@/resumen/annual-queries";
@@ -100,6 +101,9 @@ export default async function ResumenPage({ searchParams }: Props) {
         </div>
         <MonthPickerNav month={month} />
       </div>
+
+      {/* Análisis con IA (bajo demanda) */}
+      {user && <InsightsPanel month={month} />}
 
       {/* Annual chart card */}
       {annualData.length > 0 && (
