@@ -14,6 +14,7 @@ import { SignOutButton } from "@/auth/components/sign-out-button";
 import { Bug, ShieldAlert } from "lucide-react";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { PushNotificationToggle } from "@/shared/components/push-notification-toggle";
+import { ShakeToggle } from "@/shared/components/shake-toggle";
 import { BugReportForm } from "@/bug-report/components/bug-report-form";
 import { BugReportPanel } from "@/bug-report/components/bug-report-panel";
 import { getAllBugReports } from "@/bug-report/queries";
@@ -150,6 +151,15 @@ export default async function AjustesPage() {
       <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
         <SectionLabel>Apariencia</SectionLabel>
         <ThemeToggle />
+      </div>
+
+      {/* Gestos */}
+      <div className="bg-card border border-border rounded-[18px] p-4" style={cardStyle}>
+        <SectionLabel>Gestos</SectionLabel>
+        <p className="text-[13px] text-muted-foreground mb-3 leading-snug">
+          Con la app abierta, sacudí el celu para saltar directo a registrar un gasto.
+        </p>
+        <ShakeToggle />
       </div>
 
       {/* Soporte */}

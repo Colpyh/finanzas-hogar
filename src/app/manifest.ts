@@ -19,5 +19,26 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    // Accesos rápidos: mantené presionado el ícono de la PWA en el celu.
+    shortcuts: [
+      {
+        name: "Nuevo gasto",
+        short_name: "Nuevo gasto",
+        url: "/compras/nuevo",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+      {
+        name: "Gastos pendientes",
+        short_name: "Pendientes",
+        url: "/gastos-pendientes",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+      {
+        name: "Balances",
+        short_name: "Balances",
+        url: "/balances",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+    ],
   };
 }
