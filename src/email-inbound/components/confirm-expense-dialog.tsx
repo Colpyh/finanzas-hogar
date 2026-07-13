@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,8 @@ type Category = { id: string; name: string };
 type Props = {
   item: PendingExpenseRow | null;
   categories: Category[];
+  /** Categoría sugerida por historial — pre-seleccionada al abrir. */
+  suggestedCategoryId?: string;
   open: boolean;
   onClose: () => void;
   /** Optimista: oculta la card al enviar; onRestore la devuelve si falla. */
@@ -38,6 +40,7 @@ type Props = {
 export function ConfirmExpenseDialog({
   item,
   categories,
+  suggestedCategoryId,
   open,
   onClose,
   onOptimisticHide,
@@ -50,6 +53,15 @@ export function ConfirmExpenseDialog({
   const [notes, setNotes] = useState("");
   const [categoryError, setCategoryError] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Al abrir para un pendiente, sembrar la categoría sugerida y la descripción.
+  useEffect(() => {
+    if (open) {
+      setCategoryId(suggestedCategoryId ?? "");
+      setDescription(item?.parsedMerchant ?? "");
+      setCategoryError(false);
+    }
+  }, [open, suggestedCategoryId, item?.parsedMerchant]);
 
   // Sync description when item changes
   const effectiveDescription =
@@ -142,6 +154,13 @@ export function ConfirmExpenseDialog({
                 La categoría es requerida
               </p>
             )}
+            {!categoryError &&
+              suggestedCategoryId &&
+              categoryId === suggestedCategoryId && (
+                <p className="text-xs text-muted-foreground">
+                  ✨ Sugerida según tus gastos anteriores
+                </p>
+              )}
           </div>
 
           <div className="space-y-1.5">

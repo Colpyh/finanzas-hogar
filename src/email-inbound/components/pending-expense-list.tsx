@@ -11,9 +11,15 @@ type Category = { id: string; name: string };
 type Props = {
   items: PendingExpenseRow[];
   categories: Category[];
+  /** id del pendiente → categoryId sugerida por historial (opcional). */
+  suggestions?: Record<string, string>;
 };
 
-export function PendingExpenseList({ items, categories }: Props) {
+export function PendingExpenseList({
+  items,
+  categories,
+  suggestions = {},
+}: Props) {
   const [confirmItem, setConfirmItem] = useState<PendingExpenseRow | null>(null);
   const [discardItem, setDiscardItem] = useState<PendingExpenseRow | null>(null);
   // Optimista: la card desaparece al confirmar/descartar sin esperar el
@@ -58,6 +64,7 @@ export function PendingExpenseList({ items, categories }: Props) {
       <ConfirmExpenseDialog
         item={confirmItem}
         categories={categories}
+        suggestedCategoryId={confirmItem ? suggestions[confirmItem.id] : undefined}
         open={confirmItem !== null}
         onClose={() => setConfirmItem(null)}
         onOptimisticHide={hide}

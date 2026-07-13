@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
-import { listPendingByHousehold, getPendingCount } from "@/email-inbound/queries";
+import {
+  listPendingByHousehold,
+  getPendingCount,
+  suggestCategoryByMerchant,
+  normalizeMerchant,
+} from "@/email-inbound/queries";
 import { PendingExpenseList } from "@/email-inbound/components/pending-expense-list";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { db } from "@/shared/lib/db";
@@ -27,6 +32,8 @@ export default async function GastosPendientesPage({
   let items: PendingExpenseRow[] = MOCK_ITEMS;
   let categories: { id: string; name: string }[] = MOCK_CATEGORIES;
   let count = 0;
+  // Categoría sugerida por pendiente (id → categoryId), según historial de gastos.
+  const suggestions: Record<string, string> = {};
 
   try {
     const user = await getUser();
@@ -48,6 +55,21 @@ export default async function GastosPendientesPage({
           ),
         getPendingCount(household.id),
       ]);
+
+      const merchants = items
+        .map((i) => i.parsedMerchant)
+        .filter((m): m is string => Boolean(m));
+      if (merchants.length > 0) {
+        const byMerchant = await suggestCategoryByMerchant(household.id, merchants);
+        const validCategory = new Set(categories.map((c) => c.id));
+        for (const item of items) {
+          if (!item.parsedMerchant) continue;
+          const categoryId = byMerchant[normalizeMerchant(item.parsedMerchant)];
+          if (categoryId && validCategory.has(categoryId)) {
+            suggestions[item.id] = categoryId;
+          }
+        }
+      }
     }
   } catch {
     // Falls back to empty mock state
@@ -67,7 +89,11 @@ export default async function GastosPendientesPage({
         Detectados desde tus correos del{" "}
         <strong className="text-primary">BCI</strong>. Confirma para clasificarlos.
       </p>
-      <PendingExpenseList items={items} categories={categories} />
+      <PendingExpenseList
+        items={items}
+        categories={categories}
+        suggestions={suggestions}
+      />
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-3 mt-4">
           {page === 1 ? (
