@@ -35,7 +35,6 @@ export async function createPurchase(rawData: unknown) {
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/dashboard");
 }
 
 export async function createInstallment(rawData: unknown) {
@@ -68,7 +67,6 @@ export async function createInstallment(rawData: unknown) {
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/dashboard");
 }
 
 export async function markInstallmentPaid(expenseId: string): Promise<{ error?: string }> {
@@ -104,7 +102,6 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -152,8 +149,6 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
   updateTag(hhTag(household.id, "payments"));
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/balances");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -201,8 +196,6 @@ export async function registerInstallmentShare(expenseId: string): Promise<{ err
   updateTag(hhTag(household.id, "payments"));
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/balances");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -222,7 +215,6 @@ export async function updateExpense(expenseId: string, rawData: unknown) {
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
-  revalidatePath("/dashboard");
   return updated;
 }
 
@@ -259,8 +251,6 @@ export async function updateInstallment(
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/balances");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -285,7 +275,6 @@ export async function updateExpenseCard(
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -315,7 +304,6 @@ export async function toggleExpensePaid(expenseId: string): Promise<{ error?: st
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -345,6 +333,5 @@ export async function deleteExpense(expenseId: string): Promise<{ error?: string
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
-  revalidatePath("/dashboard");
   return {};
 }

@@ -122,8 +122,7 @@ describe("confirmPendingExpense", () => {
     expect(mockTxInsert).toHaveBeenCalled();
     expect(mockTxUpdate).toHaveBeenCalled();
     expect(mockRevalidatePath).toHaveBeenCalledWith("/gastos-pendientes");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/dashboard");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/compras");
+    expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
   });
 
   it("auto-links the card when parsedCardLast4 matches exactly one card", async () => {

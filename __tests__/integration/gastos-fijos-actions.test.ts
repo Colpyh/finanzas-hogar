@@ -101,7 +101,7 @@ describe("markFixedExpensePaid", () => {
     expect(result).toEqual({});
     expect(mockInsert).toHaveBeenCalled();
     expect(mockRevalidatePath).toHaveBeenCalledWith("/gastos-fijos");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/dashboard");
+    expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
   });
 
   it("returns error on duplicate payment (unique constraint)", async () => {

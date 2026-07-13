@@ -158,7 +158,9 @@ describe("settleBalanceItem", () => {
     expect(result).toEqual({ error: "Este ítem ya está saldado" });
   });
 
-  it("revalidates all required paths on success", async () => {
+  // Solo la ruta de invocación: los cross-route son redundantes bajo
+  // cacheComponents (las navegaciones dinámicas re-fetchean siempre).
+  it("revalidates only the invoking route on success", async () => {
     mockSelect
       .mockReturnValueOnce(selectChain([]))
       .mockReturnValueOnce(selectChain([EXPENSE_ROW]));
@@ -169,8 +171,6 @@ describe("settleBalanceItem", () => {
     await settleBalanceItem(UUID_EXPENSE, PERIOD);
 
     expect(mockRevalidatePath).toHaveBeenCalledWith("/balances");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/gastos-fijos");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/compras");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/dashboard");
+    expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
   });
 });

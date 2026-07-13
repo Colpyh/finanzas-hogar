@@ -40,7 +40,6 @@ export async function createFixedExpense(rawData: unknown) {
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
 }
 
 export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: string }> {
@@ -84,7 +83,6 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
 
   updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -119,7 +117,6 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
 
   updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -146,7 +143,6 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<{ err
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -167,7 +163,6 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return updated;
 }
 
@@ -214,7 +209,6 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
 
   updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -241,7 +235,6 @@ export async function unmarkMyPayment(expenseId: string, month?: string): Promis
 
   updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -272,7 +265,6 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
 
   updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return {};
 }
 
@@ -296,6 +288,5 @@ export async function deleteFixedExpense(expenseId: string): Promise<{ error?: s
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
-  revalidatePath("/dashboard");
   return {};
 }

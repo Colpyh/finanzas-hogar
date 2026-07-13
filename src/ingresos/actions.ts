@@ -44,7 +44,6 @@ export async function addIncome(rawData: unknown): Promise<{ error?: string }> {
 
     updateTag(hhTag(household.id, "income"));
     revalidatePath("/ingresos");
-    revalidatePath("/dashboard");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al guardar" };
@@ -70,7 +69,6 @@ export async function deleteIncome(id: string): Promise<{ error?: string }> {
 
     updateTag(hhTag(household.id, "income"));
     revalidatePath("/ingresos");
-    revalidatePath("/dashboard");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al eliminar" };

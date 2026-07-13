@@ -132,8 +132,7 @@ describe("confirmPendingExpense", () => {
     expect(mockTxInsert).toHaveBeenCalled();
     expect(mockTxUpdate).toHaveBeenCalled();
     expect(mockRevalidatePath).toHaveBeenCalledWith("/gastos-pendientes");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/dashboard");
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/compras");
+    expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
   });
 });
 

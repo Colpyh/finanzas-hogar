@@ -89,8 +89,6 @@ export async function confirmPendingExpense(
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-pendientes");
-  revalidatePath("/dashboard");
-  revalidatePath("/compras");
 }
 
 export async function discardPendingExpense(
@@ -118,5 +116,4 @@ export async function discardPendingExpense(
   }
 
   revalidatePath("/gastos-pendientes");
-  revalidatePath("/dashboard");
 }

@@ -91,8 +91,5 @@ export async function settleBalanceItem(
   updateTag(hhTag(household.id, "payments"));
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/balances");
-  revalidatePath("/gastos-fijos");
-  revalidatePath("/compras");
-  revalidatePath("/dashboard");
   return {};
 }

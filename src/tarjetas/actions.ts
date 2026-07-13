@@ -32,7 +32,6 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
 
     updateTag(hhTag(household.id, "cards"));
     revalidatePath("/ajustes");
-    revalidatePath("/compras/nuevo");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al guardar" };
@@ -62,8 +61,6 @@ export async function updateCard(id: string, rawData: unknown): Promise<{ error?
 
     updateTag(hhTag(household.id, "cards"));
     revalidatePath("/ajustes");
-    revalidatePath("/compras");
-    revalidatePath("/compras/nuevo");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al guardar" };
@@ -83,7 +80,6 @@ export async function deleteCard(id: string): Promise<{ error?: string }> {
 
     updateTag(hhTag(household.id, "cards"));
     revalidatePath("/ajustes");
-    revalidatePath("/compras/nuevo");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al eliminar" };
