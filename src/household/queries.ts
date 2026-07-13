@@ -2,11 +2,12 @@ import { db } from "@/shared/lib/db";
 import { householdMember, householdInvite } from "@/shared/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { cacheTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getDisplayNamesByIds } from "@/shared/lib/supabase/admin";
 
 export async function getHouseholdMembers(householdId: string) {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "members"))
 
   const rows = await db
     .select({

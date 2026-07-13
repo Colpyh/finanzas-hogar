@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { card } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { addCardSchema, updateCardSchema } from "./types";
@@ -29,7 +30,7 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
       paymentDueDay: data.kind === "debit" ? null : (data.paymentDueDay ?? null),
     });
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "cards"));
     revalidatePath("/ajustes");
     revalidatePath("/compras/nuevo");
     return {};
@@ -59,7 +60,7 @@ export async function updateCard(id: string, rawData: unknown): Promise<{ error?
       })
       .where(and(eq(card.id, id), eq(card.householdId, household.id)));
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "cards"));
     revalidatePath("/ajustes");
     revalidatePath("/compras");
     revalidatePath("/compras/nuevo");
@@ -80,7 +81,7 @@ export async function deleteCard(id: string): Promise<{ error?: string }> {
       .set({ isActive: false })
       .where(and(eq(card.id, id), eq(card.householdId, household.id)));
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "cards"));
     revalidatePath("/ajustes");
     revalidatePath("/compras/nuevo");
     return {};

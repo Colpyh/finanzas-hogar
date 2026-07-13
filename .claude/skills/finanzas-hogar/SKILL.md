@@ -73,10 +73,12 @@ export async function myMutation() {
 }
 ```
 
-**Reglas críticas de caching:**
+**Reglas críticas de caching (v2 — tags GRANULARES por dominio, jul 2026):**
 - `'use cache'` SIEMPRE dentro del body de la función, nunca a nivel de archivo
-- Tag = `householdId` (UUID) — clave por hogar, no por usuario
-- `updateTag` en CADA Server Action que mute datos de expenses, income, categories, balances
+- Dominios en `src/shared/lib/cache-tags.ts`: `expenses | payments | cards | categories | income | members` → `hhTag(householdId, domain)`
+- **Queries**: `cacheTag(householdId, hhTag(hh, ...dominiosQueLEE))` — el master tag (householdId pelado) va SIEMPRE primero como palanca "invalidar todo". Si la query llama a OTRA función cacheada, debe tagear también los dominios de esa (invalidar el tag interno NO invalida al outer)
+- **Actions frecuentes**: `updateTag(hhTag(hh, dominio))` SOLO por los dominios que ESCRIBE — nunca el master (era la causa de que cada tap dejara todo el hogar frío)
+- **Ops raras de hogar** (rename, add/removeMember, redeemInvite): SÍ usan `updateTag(householdId)` master + `userHouseholdTag`
 - NO cachear queries con `search` (input del usuario) — cache pollution
 - `revalidatePath` se mantiene junto a `updateTag` (no reemplaza)
 - Query que depende del usuario: separar la parte por-hogar (cacheada) del cálculo por-usuario (post-caché) — ver `getHouseholdDebtItems`/`getPendingBalances`. Args de `'use cache'` deben ser serializables (arrays/objetos planos, NO `Map`)

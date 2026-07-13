@@ -2,6 +2,7 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment, category } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte } from "drizzle-orm";
 import { cacheTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { aggregateTotals, calcPercentage } from "@/dashboard/aggregation";
 import type {
   MonthlySummary,
@@ -14,7 +15,7 @@ export async function getMonthlySummary(
   month: string
 ): Promise<MonthlySummary> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"), hhTag(householdId, "categories"))
   const monthPrefix = month.slice(0, 7); // 'YYYY-MM'
 
   // Las cuatro queries son independientes — en paralelo (antes: 5 secuenciales,
@@ -129,7 +130,7 @@ export async function getFixedVsVariableBreakdown(
   month: string
 ): Promise<FixedVsVariableBreakdown> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const monthPrefix = month.slice(0, 7);
 
   const [fixedPaymentRows, allInstallments, allOneTime] = await Promise.all([
@@ -205,7 +206,7 @@ export async function getInstallmentBurden(
   month: string
 ): Promise<InstallmentBurden> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"))
   const rows = await db
     .select({
       id: expense.id,

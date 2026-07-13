@@ -5,6 +5,7 @@ import { db } from "@/shared/lib/db";
 import { category, expense } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 
@@ -35,7 +36,7 @@ export async function createCategory(rawData: CategoryInput): Promise<{ error?: 
       monthlyBudget: data.monthlyBudget != null ? String(data.monthlyBudget) : null,
     });
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "categories"));
     revalidatePath("/ajustes");
     return {};
   } catch (err) {
@@ -69,7 +70,7 @@ export async function updateCategory(
 
     if (result.length === 0) return { error: "Categoría no encontrada" };
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "categories"));
     revalidatePath("/ajustes");
     return {};
   } catch (err) {
@@ -100,7 +101,7 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
 
     if (result.length === 0) return { error: "Categoría no encontrada" };
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "categories"));
     revalidatePath("/ajustes");
     return {};
   } catch (err) {

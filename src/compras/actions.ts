@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment, card } from "@/shared/lib/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -32,7 +33,7 @@ export async function createPurchase(rawData: unknown) {
     })
     .returning();
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/dashboard");
 }
@@ -65,7 +66,7 @@ export async function createInstallment(rawData: unknown) {
     })
     .returning();
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/dashboard");
 }
@@ -101,7 +102,7 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
     return { error: "Todas las cuotas ya fueron pagadas" };
   }
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/dashboard");
   return {};
@@ -148,7 +149,8 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
   // Si con este pago el mes quedó completo, cierra la cuota del período.
   await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/balances");
   revalidatePath("/dashboard");
@@ -196,7 +198,8 @@ export async function registerInstallmentShare(expenseId: string): Promise<{ err
   // Si con esta parte el mes quedó completo, cierra la cuota del período.
   await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/balances");
   revalidatePath("/dashboard");
@@ -216,7 +219,7 @@ export async function updateExpense(expenseId: string, rawData: unknown) {
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .returning();
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
   revalidatePath("/dashboard");
@@ -254,7 +257,7 @@ export async function updateInstallment(
     })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/balances");
   revalidatePath("/dashboard");
@@ -279,7 +282,7 @@ export async function updateExpenseCard(
 
   await db.update(expense).set({ cardId }).where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
   revalidatePath("/dashboard");
@@ -310,7 +313,7 @@ export async function toggleExpensePaid(expenseId: string): Promise<{ error?: st
     .returning({ id: expense.id });
   if (result.length === 0) return { error: "No se pudo actualizar la compra" };
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/dashboard");
   return {};
@@ -340,7 +343,7 @@ export async function deleteExpense(expenseId: string): Promise<{ error?: string
     .set({ deletedAt: new Date() })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath("/dashboard");
   return {};

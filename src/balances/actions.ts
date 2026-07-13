@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -87,7 +88,8 @@ export async function settleBalanceItem(
   // Si al saldar quedó completo el mes de una cuota compartida, cierra el período.
   await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/balances");
   revalidatePath("/gastos-fijos");
   revalidatePath("/compras");

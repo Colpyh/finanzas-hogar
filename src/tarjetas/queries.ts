@@ -1,5 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { cacheTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { card, expense } from "@/shared/lib/db/schema";
 import { eq, and, isNull, isNotNull, gte, lte, desc } from "drizzle-orm";
 import { billingPeriodForMonth } from "@/shared/lib/billing";
@@ -95,7 +96,7 @@ export async function getCardPaymentsDue(
   month: string
 ): Promise<CardPaymentDue[]> {
   "use cache";
-  cacheTag(householdId);
+  cacheTag(householdId, hhTag(householdId, "cards"), hhTag(householdId, "expenses"));
 
   const billingCards = await db
     .select()
@@ -188,7 +189,7 @@ export type CardLinkedExpense = {
  */
 export async function getCardLinkedExpenses(householdId: string): Promise<CardLinkedExpense[]> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"))
   const rows = await db
     .select({
       id: expense.id,

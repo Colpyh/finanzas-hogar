@@ -2,6 +2,7 @@ import { db } from "@/shared/lib/db";
 import { income } from "@/shared/lib/db/schema";
 import { eq, and, lte } from "drizzle-orm";
 import { cacheTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 
 /**
  * Returns income rows for a given month:
@@ -13,7 +14,7 @@ import { cacheTag } from "next/cache";
  */
 export async function getMonthlyIncome(householdId: string, periodMonth: string) {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "income"))
   const allRows = await db
     .select()
     .from(income)

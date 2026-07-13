@@ -82,7 +82,8 @@ describe("markInstallmentPaid (atomic counter)", () => {
     // Un solo UPDATE, sin SELECT previo del contador
     expect(mockUpdate).toHaveBeenCalledTimes(1);
     expect(mockSelect).not.toHaveBeenCalled();
-    expect(mockUpdateTag).toHaveBeenCalledWith(UUID_HOUSEHOLD);
+    // Tag granular: marcar cuota escribe solo el dominio expenses del hogar
+    expect(mockUpdateTag).toHaveBeenCalledWith(`${UUID_HOUSEHOLD}:expenses`);
   });
 
   it("returns error when expense not found (0 rows updated, no row exists)", async () => {

@@ -110,7 +110,7 @@ describe("deleteExpense (compras)", () => {
 
     expect(result).toEqual({});
     expect(mockUpdate).toHaveBeenCalled();
-    expect(mockUpdateTag).toHaveBeenCalledWith(UUID_HOUSEHOLD);
+    expect(mockUpdateTag).toHaveBeenCalledWith(`${UUID_HOUSEHOLD}:expenses`);
   });
 
   it("allows deletion when debt exists but for OTHER expenses", async () => {

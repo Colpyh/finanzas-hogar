@@ -2,6 +2,7 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte, gte, lt, desc, inArray } from "drizzle-orm";
 import { cacheTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getMonthlyIncomeTotal, getMyMonthlyIncomeTotal } from "@/ingresos/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
@@ -32,7 +33,7 @@ export async function getDashboardSummary(
   memberCount: number
 ): Promise<DashboardSummary> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"), hhTag(householdId, "income"))
   // These three SELECTs over `expense` are independent (none uses another's
   // result in its WHERE/input), so run them in parallel to cut latency.
   const monthPrefix = month.slice(0, 7);
@@ -162,7 +163,7 @@ export async function getFixedExpenseStatusThisMonth(
   month: string
 ): Promise<FixedBillWithStatus[]> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const [expenses, payments] = await Promise.all([
     getActiveFixedExpenses(householdId),
     getAllFixedPaymentsForPeriod(householdId, month),
@@ -185,7 +186,7 @@ export async function getActiveInstallments(
   month: string
 ): Promise<ActiveInstallment[]> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"))
   const rows = await db
     .select({
       id: expense.id,
@@ -225,7 +226,7 @@ export async function getRecentPurchases(
   limit = 5
 ): Promise<RecentPurchase[]> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "cards"))
   // Fetch a 3-month window to cover billing period attribution
   // (a purchase from prev-prev month can belong to this month's bill)
   const y = parseInt(month.slice(0, 4));

@@ -1,5 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { cacheTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { expense, income, card } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte } from "drizzle-orm";
 import { elapsedMonths } from "./month-utils";
@@ -40,7 +41,7 @@ export async function getAnnualSummary(
   anchorMonth: string
 ): Promise<MonthlyDataPoint[]> {
   "use cache";
-  cacheTag(householdId);
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "income"));
 
   const months = last12Months(anchorMonth);
   const oldest = months[0]!;

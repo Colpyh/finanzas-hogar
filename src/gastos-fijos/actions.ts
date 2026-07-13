@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
@@ -37,7 +38,7 @@ export async function createFixedExpense(rawData: unknown) {
     })
     .returning();
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
 }
@@ -81,7 +82,7 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
     throw err;
   }
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -116,7 +117,7 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
     return { error: "No se encontró el pago para confirmar" };
   }
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -143,7 +144,7 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<{ err
 
   if (result.length === 0) return { error: "Gasto no encontrado" };
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -164,7 +165,7 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
 
   if (!updated) throw new Error("Gasto no encontrado");
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return updated;
@@ -211,7 +212,7 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
     throw err;
   }
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -238,7 +239,7 @@ export async function unmarkMyPayment(expenseId: string, month?: string): Promis
 
   if (deleted.length === 0) return { error: "No se encontró el pago" };
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -269,7 +270,7 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
 
   if (deleted.length === 0) return { error: "No se encontró el pago" };
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "payments"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};
@@ -293,7 +294,7 @@ export async function deleteFixedExpense(expenseId: string): Promise<{ error?: s
 
   if (result.length === 0) return { error: "Gasto no encontrado" };
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
   revalidatePath("/dashboard");
   return {};

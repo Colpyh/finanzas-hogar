@@ -4,6 +4,7 @@ import { db } from "@/shared/lib/db";
 import { income } from "@/shared/lib/db/schema";
 import { eq, and, lte } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
@@ -41,7 +42,7 @@ export async function addIncome(rawData: unknown): Promise<{ error?: string }> {
       periodMonth: data.periodMonth,
     });
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "income"));
     revalidatePath("/ingresos");
     revalidatePath("/dashboard");
     return {};
@@ -67,7 +68,7 @@ export async function deleteIncome(id: string): Promise<{ error?: string }> {
 
     await db.delete(income).where(eq(income.id, id));
 
-    updateTag(household.id);
+    updateTag(hhTag(household.id, "income"));
     revalidatePath("/ingresos");
     revalidatePath("/dashboard");
     return {};

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { db } from "@/shared/lib/db";
@@ -86,7 +87,7 @@ export async function confirmPendingExpense(
       .where(eq(pendingExpense.id, pending.id));
   });
 
-  updateTag(household.id);
+  updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-pendientes");
   revalidatePath("/dashboard");
   revalidatePath("/compras");
@@ -116,7 +117,6 @@ export async function discardPendingExpense(
     throw new Error("Pending expense not found or already processed");
   }
 
-  updateTag(household.id);
   revalidatePath("/gastos-pendientes");
   revalidatePath("/dashboard");
 }

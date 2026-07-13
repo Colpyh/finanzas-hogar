@@ -2,6 +2,7 @@ import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { cacheTag } from "next/cache";
+import { hhTag } from "@/shared/lib/cache-tags";
 
 export type BalanceItem = {
   expenseId: string;
@@ -48,7 +49,7 @@ async function getHouseholdDebtItems(
   memberIds: string[]
 ): Promise<BalanceItem[]> {
   'use cache'
-  cacheTag(householdId)
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const expenses = await db
     .select()
     .from(expense)
