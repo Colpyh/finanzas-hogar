@@ -10,6 +10,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Server Actions aceptan 1MB por default; la cartola en PDF puede pesar más.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+  },
   async headers() {
     return [
       {

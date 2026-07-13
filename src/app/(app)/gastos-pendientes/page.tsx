@@ -9,6 +9,7 @@ import {
   normalizeMerchant,
 } from "@/email-inbound/queries";
 import { PendingExpenseList } from "@/email-inbound/components/pending-expense-list";
+import { CartolaUpload } from "@/cartola/components/cartola-upload";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { db } from "@/shared/lib/db";
 import { category } from "@/shared/lib/db/schema";
@@ -79,16 +80,21 @@ export default async function GastosPendientesPage({
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto pb-8">
-      <h1
-        className="text-[23px] font-semibold text-foreground"
-        style={{ letterSpacing: "-0.02em" }}
-      >
-        Gastos pendientes
-      </h1>
-      <p className="text-[13px] text-muted-foreground mt-1 leading-snug">
-        Detectados desde tus correos del{" "}
-        <strong className="text-primary">BCI</strong>. Confirma para clasificarlos.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1
+            className="text-[23px] font-semibold text-foreground"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Gastos pendientes
+          </h1>
+          <p className="text-[13px] text-muted-foreground mt-1 leading-snug">
+            Detectados desde tus correos del{" "}
+            <strong className="text-primary">BCI</strong> o subiendo tu cartola. Confirma para clasificarlos.
+          </p>
+        </div>
+        <CartolaUpload />
+      </div>
       <PendingExpenseList
         items={items}
         categories={categories}
