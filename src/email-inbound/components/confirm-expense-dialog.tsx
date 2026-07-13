@@ -54,11 +54,15 @@ export function ConfirmExpenseDialog({
   const [categoryError, setCategoryError] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Al abrir para un pendiente, sembrar la categoría sugerida y la descripción.
+  // Al abrir para un pendiente, RESETEAR todo el form: sembrar categoría
+  // sugerida + descripción y limpiar notas. El cierre al confirmar es
+  // programático (no dispara onOpenChange), así que sin este reset las notas
+  // del gasto anterior quedaban pegadas en el siguiente.
   useEffect(() => {
     if (open) {
       setCategoryId(suggestedCategoryId ?? "");
       setDescription(item?.parsedMerchant ?? "");
+      setNotes("");
       setCategoryError(false);
     }
   }, [open, suggestedCategoryId, item?.parsedMerchant]);
