@@ -2,15 +2,17 @@ import "server-only";
 import { cartolaExtractionSchema, type CartolaMovement } from "./types";
 
 /**
- * Extrae los movimientos de una cartola bancaria en PDF vía Gemini (free tier,
- * misma API key que el OCR de boletas). Mismo patrón que receipts/gemini e
- * insights/gemini: cambiar de proveedor = reemplazar este archivo.
+ * Extrae los movimientos de una cartola bancaria vía Gemini (free tier, misma
+ * API key que el OCR de boletas). Recibe el TEXTO ya extraído del PDF en el
+ * cliente (el PDF cifrado se descifra en el navegador, ver extract-pdf-text).
+ * Mismo patrón que insights/gemini: cambiar de proveedor = reemplazar este
+ * archivo.
  */
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 const PROMPT = `Eres un extractor de cartolas bancarias chilenas (BCI y similares).
-Analiza el PDF y devuelve TODOS los movimientos como JSON. Para cada uno:
+Te paso el TEXTO de una cartola. Devuelve TODOS los movimientos como JSON. Para cada uno:
 - fecha: en formato YYYY-MM-DD
 - descripcion: la glosa / comercio del movimiento
 - monto: el valor en pesos chilenos como número entero POSITIVO, sin signo ni
@@ -47,7 +49,7 @@ const RESPONSE_SCHEMA = {
  * Devuelve null si la cartola no se pudo leer. Lanza SOLO por config faltante.
  */
 export async function extractCartolaMovements(
-  pdfBase64: string
+  cartolaText: string
 ): Promise<CartolaMovement[] | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
@@ -60,14 +62,7 @@ export async function extractCartolaMovements(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
-                { text: PROMPT },
-              ],
-            },
-          ],
+          contents: [{ parts: [{ text: `${PROMPT}\n\nTEXTO DE LA CARTOLA:\n${cartolaText}` }] }],
           generationConfig: {
             temperature: 0,
             responseMimeType: "application/json",

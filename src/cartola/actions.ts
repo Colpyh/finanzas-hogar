@@ -10,8 +10,9 @@ import { pendingExpense, expense } from "@/shared/lib/db/schema";
 import { extractCartolaMovements } from "./gemini";
 import type { CartolaMovement } from "./types";
 
-// ~3.7MB de PDF real (base64 agrega ~33%). Coincide con el bodySizeLimit (4mb).
-const MAX_BASE64_LENGTH = 5_000_000;
+// El texto de una cartola (ya extraído en el cliente) es chico; guard contra
+// payloads anómalos.
+const MAX_TEXT_LENGTH = 500_000;
 // Ventana de días para considerar dos movimientos "el mismo" (la fecha de la
 // cartola puede diferir 1-2 días de la fecha de compra que llegó por correo).
 const DEDUP_DAY_WINDOW = 2;
@@ -36,15 +37,15 @@ function daysApart(a: string, b: string): number {
   return ms / 86_400_000;
 }
 
-export async function importCartola(pdfBase64: string): Promise<ImportCartolaResult> {
+export async function importCartola(cartolaText: string): Promise<ImportCartolaResult> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) return { error: "No tenés un hogar activo" };
-  if (!pdfBase64 || pdfBase64.length > MAX_BASE64_LENGTH) {
-    return { error: "El PDF es inválido o demasiado grande." };
+  if (!cartolaText || cartolaText.length > MAX_TEXT_LENGTH) {
+    return { error: "La cartola está vacía o es demasiado grande." };
   }
 
-  const movements = await extractCartolaMovements(pdfBase64);
+  const movements = await extractCartolaMovements(cartolaText);
   if (!movements) return { error: "No se pudo leer la cartola. Probá con otro PDF." };
 
   const gastos = movements.filter((m) => m.tipo === "gasto");

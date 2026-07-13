@@ -31,17 +31,16 @@ describe("extractCartolaMovements", () => {
     global.fetch = originalFetch;
   });
 
-  it("mapea la respuesta válida y manda el PDF inline", async () => {
+  it("mapea la respuesta válida y manda el texto de la cartola en el prompt", async () => {
     global.fetch = jest.fn().mockResolvedValue(geminiResponse(JSON.stringify(VALID)));
 
     const { extractCartolaMovements } = await import("@/cartola/gemini");
-    const result = await extractCartolaMovements("cGRmYmFzZTY0");
+    const result = await extractCartolaMovements("03/07 JUMBO MAIPU 45.990");
 
     expect(result).toEqual(VALID.movimientos);
     const [, init] = (global.fetch as jest.Mock).mock.calls[0];
     const body = JSON.parse(init.body);
-    const inline = body.contents[0].parts.find((p: { inline_data?: { mime_type: string } }) => p.inline_data);
-    expect(inline.inline_data.mime_type).toBe("application/pdf");
+    expect(body.contents[0].parts[0].text).toContain("JUMBO MAIPU");
   });
 
   it("devuelve null con JSON inválido", async () => {
