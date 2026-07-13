@@ -28,6 +28,7 @@ type Props = {
   paidByName?: string | null;
   myShareAmount?: string;
   periodMonth: string;
+  memberCount: number;
 };
 
 function ActionBtn({
@@ -79,7 +80,12 @@ export function FixedExpenseCard({
   paidByName,
   myShareAmount,
   periodMonth,
+  memberCount,
 }: Props) {
+  // Los atajos "marcar/deshacer el pago del OTRO" asumen un único otro miembro.
+  // Con 3+ se ocultan: cada uno marca su parte, y el saldar entre personas vive
+  // en Balances (por-deudor). Con 2 miembros el flujo queda igual que siempre.
+  const twoMembers = memberCount <= 2;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmUpgradeOpen, setConfirmUpgradeOpen] = useState(false);
   const [confirmMarkBothOpen, setConfirmMarkBothOpen] = useState(false);
@@ -239,8 +245,14 @@ export function FixedExpenseCard({
     }
   } else {
     if (isSettled) {
-      actionButtons = (
+      // Editar el pago del otro solo tiene sentido con 2 miembros; a 3+ es un
+      // ✓ estático (deshacer un pago ajeno específico se maneja aparte).
+      actionButtons = twoMembers ? (
         <ActionBtn onClick={() => setConfirmUnmarkOpen(true)} variant="success" title="Saldado — click para editar" disabled={unmarking}>
+          ✓
+        </ActionBtn>
+      ) : (
+        <ActionBtn onClick={() => {}} variant="success" title="Pagado por todos" disabled>
           ✓
         </ActionBtn>
       );
@@ -248,9 +260,11 @@ export function FixedExpenseCard({
       actionButtons = (
         <>
           <ActionBtn onClick={() => setConfirmUnmarkMineOpen(true)} variant="amber" title="Deshacer mi pago" disabled={unmarkingMine}>↩</ActionBtn>
-          <ActionBtn onClick={() => setConfirmMarkBothOpen(true)} variant="amber" title="Marcar saldado por ambos" disabled={markingBoth}>
-            <Users size={13} />
-          </ActionBtn>
+          {twoMembers && (
+            <ActionBtn onClick={() => setConfirmMarkBothOpen(true)} variant="amber" title="Marcar saldado por ambos" disabled={markingBoth}>
+              <Users size={13} />
+            </ActionBtn>
+          )}
         </>
       );
     } else if (isPaidThisMonth && currentUserStatus === "none") {

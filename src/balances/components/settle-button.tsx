@@ -12,10 +12,14 @@ type Props = {
   description: string;
   shareAmount: number;
   periodMonth: string;
+  /** Miembro cuya parte se salda (el deudor de este ítem). */
+  debtorId: string;
+  /** Nombre del deudor, para el mensaje cuando soy el acreedor. */
+  debtorName: string;
   iAmCreditor: boolean;
 };
 
-export function SettleButton({ expenseId, description, shareAmount, periodMonth, iAmCreditor }: Props) {
+export function SettleButton({ expenseId, description, shareAmount, periodMonth, debtorId, debtorName, iAmCreditor }: Props) {
   const [open, setOpen] = useState(false);
   // Optimista: el ítem se marca "Saldado" al confirmar, sin esperar el
   // roundtrip; si la action falla, vuelve al botón con un toast.
@@ -26,7 +30,7 @@ export function SettleButton({ expenseId, description, shareAmount, periodMonth,
     setOpen(false);
     setSettled(true);
     startTransition(async () => {
-      const result = await settleBalanceItem(expenseId, periodMonth);
+      const result = await settleBalanceItem(expenseId, periodMonth, debtorId);
       if (result?.error) {
         setSettled(false);
         toast.error(result.error);
@@ -55,8 +59,8 @@ export function SettleButton({ expenseId, description, shareAmount, periodMonth,
         title="¿Saldar este gasto?"
         description={
           iAmCreditor
-            ? `Registrarás el pago de la otra persona por "${description}" (${formatCurrency(shareAmount)}). Esto lo marcará como saldado en ambos lados.`
-            : `Registrarás tu pago de "${description}" (${formatCurrency(shareAmount)}). Esto cerrará la deuda con el otro miembro.`
+            ? `Registrarás el pago de ${debtorName} por "${description}" (${formatCurrency(shareAmount)}). Esto saldará su parte.`
+            : `Registrarás tu pago de "${description}" (${formatCurrency(shareAmount)}). Esto cerrará tu deuda de este ítem.`
         }
         confirmText="Sí, saldar"
         loading={false}

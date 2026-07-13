@@ -24,8 +24,9 @@ export default async function BalancesPage() {
     user.id
   );
 
-  const totalNet = balances.reduce((sum, b) => sum + b.net, 0);
-  const netIsPositive = totalNet >= 0;
+  // Neto por miembro (no un único total): con 3+ miembros sumar todo mezcla
+  // lo que te deben con lo que debés. Cada miembro con saldo != 0 es una card.
+  const memberNets = balances.filter((b) => Math.round(b.net) !== 0);
 
   // Flat list of all items with their balance context
   const allItems = balances.flatMap((b) =>
@@ -74,29 +75,35 @@ export default async function BalancesPage() {
         </div>
       ) : (
         <>
-          {/* Net card */}
-          <div
-            className="rounded-[22px] p-[22px] text-center"
-            style={{
-              background: netIsPositive
-                ? "linear-gradient(140deg,#22c55e,#15803d)"
-                : "linear-gradient(140deg,#f59e0b,#d97706)",
-              boxShadow: netIsPositive
-                ? "0 14px 34px rgba(21,128,61,.35)"
-                : "0 14px 34px rgba(217,119,6,.35)",
-            }}
-          >
-            <p className="text-[13px] font-medium" style={{ color: "rgba(255,255,255,.85)" }}>
-              {netIsPositive
-                ? `${balances[0]?.memberName} te debe`
-                : `Debes a ${balances[0]?.memberName}`}
-            </p>
-            <p
-              className="text-[36px] font-semibold text-white mt-1 num"
-              style={{ letterSpacing: "-0.01em" }}
-            >
-              {formatCurrency(Math.abs(totalNet))}
-            </p>
+          {/* Net por miembro — una card por persona con saldo pendiente */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[11px]">
+            {memberNets.map((b) => {
+              const positive = b.net > 0; // te debe
+              return (
+                <div
+                  key={b.memberId}
+                  className="rounded-[22px] p-[22px] text-center"
+                  style={{
+                    background: positive
+                      ? "linear-gradient(140deg,#22c55e,#15803d)"
+                      : "linear-gradient(140deg,#f59e0b,#d97706)",
+                    boxShadow: positive
+                      ? "0 14px 34px rgba(21,128,61,.35)"
+                      : "0 14px 34px rgba(217,119,6,.35)",
+                  }}
+                >
+                  <p className="text-[13px] font-medium" style={{ color: "rgba(255,255,255,.85)" }}>
+                    {positive ? `${b.memberName} te debe` : `Debes a ${b.memberName}`}
+                  </p>
+                  <p
+                    className="text-[36px] font-semibold text-white mt-1 num"
+                    style={{ letterSpacing: "-0.01em" }}
+                  >
+                    {formatCurrency(Math.abs(b.net))}
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
           {/* Movements */}
@@ -118,7 +125,7 @@ export default async function BalancesPage() {
                 const initial = payerName.charAt(0).toUpperCase();
                 return (
                   <div
-                    key={item.expenseId}
+                    key={`${item.expenseId}-${item.periodMonth}-${item.debtorId}`}
                     className="bg-card border border-border rounded-[18px] p-[14px_15px]"
                     style={{ boxShadow: "var(--shadow-sm)" }}
                   >
@@ -150,6 +157,8 @@ export default async function BalancesPage() {
                       description={item.description}
                       shareAmount={item.shareAmount}
                       periodMonth={item.periodMonth}
+                      debtorId={item.debtorId}
+                      debtorName={memberMap.get(item.debtorId) ?? "el deudor"}
                       iAmCreditor={item.payerId === user.id}
                     />
                   </div>

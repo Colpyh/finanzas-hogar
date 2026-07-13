@@ -12,29 +12,21 @@ import { syncSharedInstallmentCounter } from "@/compras/installment-sync";
 
 export async function settleBalanceItem(
   expenseId: string,
-  periodMonth: string
+  periodMonth: string,
+  debtorId: string
 ): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
   if (!household) throw new Error("No household");
 
-  // ¿Ya pagué este mes? Si sí, soy el acreedor → registro al otro.
-  // Si no, soy el deudor → registro mi propio pago.
-  const [myPayment] = await db
-    .select({ id: fixedExpensePayment.id })
-    .from(fixedExpensePayment)
-    .where(
-      and(
-        eq(fixedExpensePayment.expenseId, expenseId),
-        eq(fixedExpensePayment.periodMonth, periodMonth),
-        eq(fixedExpensePayment.paidBy, user.id)
-      )
-    )
-    .limit(1);
-
+  // Saldar un ítem = registrar que el DEUDOR de ese ítem pagó su parte. El
+  // deudor lo pasa la UI explícitamente (con 3+ miembros hay varios "otros",
+  // así que no se puede inferir). Sirve tanto si soy yo el deudor (registro mi
+  // propio pago) como si soy el acreedor (registro el del otro): en ambos
+  // casos la fila a insertar es paidBy = debtorId.
   const members = await getHouseholdMembers(household.id);
-  const otherMember = members.find((m) => m.userId !== user.id);
-  if (!otherMember) return { error: "No hay otro miembro en el hogar" };
+  const isMember = members.some((m) => m.userId === debtorId);
+  if (!isMember) return { error: "El deudor no pertenece al hogar" };
 
   const [exp] = await db
     .select()
@@ -65,14 +57,11 @@ export async function settleBalanceItem(
   }
   const shareAmount = (monthlyAmount / members.length).toFixed(2);
 
-  // Si ya pagué → el que falta es el otro. Si no pagué → el que falta soy yo.
-  const targetId = myPayment ? otherMember.userId : user.id;
-
   try {
     await db.insert(fixedExpensePayment).values({
       expenseId,
       householdId: household.id,
-      paidBy: targetId,
+      paidBy: debtorId,
       periodMonth,
       amount: shareAmount,
       status: "paid",

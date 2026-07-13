@@ -9,7 +9,6 @@ const UUID_USER = "550e8400-e29b-41d4-a716-446655440010";
 const UUID_OTHER = "550e8400-e29b-41d4-a716-446655440011";
 const UUID_HOUSEHOLD = "550e8400-e29b-41d4-a716-446655440012";
 const UUID_EXPENSE = "550e8400-e29b-41d4-a716-446655440013";
-const UUID_PAYMENT = "550e8400-e29b-41d4-a716-446655440014";
 const PERIOD = "2026-04";
 
 // --- Mocks ---
@@ -83,61 +82,48 @@ describe("settleBalanceItem", () => {
     (getUserHousehold as jest.Mock).mockResolvedValueOnce(null);
 
     const { settleBalanceItem } = await import("@/balances/actions");
-    await expect(settleBalanceItem(UUID_EXPENSE, PERIOD)).rejects.toThrow("No household");
+    await expect(settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_OTHER)).rejects.toThrow("No household");
+  });
+
+  it("returns error when debtor is not a household member", async () => {
+    const { settleBalanceItem } = await import("@/balances/actions");
+    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD, "550e8400-e29b-41d4-a716-4466554400ff");
+    expect(result).toEqual({ error: "El deudor no pertenece al hogar" });
   });
 
   it("returns error when expense not found", async () => {
-    // 1st select: myPayment → not found
-    // getHouseholdMembers uses its module mock (2 members)
-    // 2nd select: expense → not found
-    mockSelect
-      .mockReturnValueOnce(selectChain([]))   // myPayment check
-      .mockReturnValueOnce(selectChain([]));  // expense check
+    // getHouseholdMembers uses its module mock (2 members) → debtor válido
+    // 1st (y único) select: expense → not found
+    mockSelect.mockReturnValueOnce(selectChain([])); // expense check
 
     const { settleBalanceItem } = await import("@/balances/actions");
-    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD);
+    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_OTHER);
     expect(result).toEqual({ error: "Gasto no encontrado" });
   });
 
-  it("returns error when no other member in household", async () => {
-    const { getHouseholdMembers } = await import("@/household/queries");
-    (getHouseholdMembers as jest.Mock).mockResolvedValueOnce([
-      { id: "m1", userId: UUID_USER, role: "owner", displayName: "User" },
-    ]);
-
-    mockSelect.mockReturnValueOnce(selectChain([])); // myPayment check
-
-    const { settleBalanceItem } = await import("@/balances/actions");
-    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD);
-    expect(result).toEqual({ error: "No hay otro miembro en el hogar" });
-  });
-
-  it("debtor path: no existing payment → inserts for current user", async () => {
-    mockSelect
-      .mockReturnValueOnce(selectChain([]))           // myPayment → none (user is debtor)
-      .mockReturnValueOnce(selectChain([EXPENSE_ROW])); // expense found
+  it("N-member: inserts payment for the explicit debtor (current user)", async () => {
+    mockSelect.mockReturnValueOnce(selectChain([EXPENSE_ROW])); // expense found
 
     mockInsert.mockReturnValueOnce(insertChain());
 
     const { settleBalanceItem } = await import("@/balances/actions");
-    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD);
+    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_USER);
 
     expect(result).toEqual({});
 
-    // The insert values call should have paidBy = user.id (debtor)
     const insertedValues = mockInsert.mock.results[0].value.values.mock.calls[0][0];
     expect(insertedValues.paidBy).toBe(UUID_USER);
+    // reparto = monto / nº miembros = 100 / 2
+    expect(insertedValues.amount).toBe("50.00");
   });
 
-  it("creditor path: existing payment → inserts for other member", async () => {
-    mockSelect
-      .mockReturnValueOnce(selectChain([{ id: UUID_PAYMENT }])) // myPayment → found (user is creditor)
-      .mockReturnValueOnce(selectChain([EXPENSE_ROW]));          // expense found
+  it("N-member: inserts payment for the explicit debtor (otro miembro)", async () => {
+    mockSelect.mockReturnValueOnce(selectChain([EXPENSE_ROW])); // expense found
 
     mockInsert.mockReturnValueOnce(insertChain());
 
     const { settleBalanceItem } = await import("@/balances/actions");
-    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD);
+    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_OTHER);
 
     expect(result).toEqual({});
 
@@ -146,29 +132,25 @@ describe("settleBalanceItem", () => {
   });
 
   it("returns error on unique constraint violation (already settled)", async () => {
-    mockSelect
-      .mockReturnValueOnce(selectChain([]))
-      .mockReturnValueOnce(selectChain([EXPENSE_ROW]));
+    mockSelect.mockReturnValueOnce(selectChain([EXPENSE_ROW]));
 
     const uniqueErr = new Error('duplicate key value violates unique constraint "uq_expense_period_user"');
     mockInsert.mockReturnValueOnce(insertChain(uniqueErr));
 
     const { settleBalanceItem } = await import("@/balances/actions");
-    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD);
+    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_OTHER);
     expect(result).toEqual({ error: "Este ítem ya está saldado" });
   });
 
   // Solo la ruta de invocación: los cross-route son redundantes bajo
   // cacheComponents (las navegaciones dinámicas re-fetchean siempre).
   it("revalidates only the invoking route on success", async () => {
-    mockSelect
-      .mockReturnValueOnce(selectChain([]))
-      .mockReturnValueOnce(selectChain([EXPENSE_ROW]));
+    mockSelect.mockReturnValueOnce(selectChain([EXPENSE_ROW]));
 
     mockInsert.mockReturnValueOnce(insertChain());
 
     const { settleBalanceItem } = await import("@/balances/actions");
-    await settleBalanceItem(UUID_EXPENSE, PERIOD);
+    await settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_OTHER);
 
     expect(mockRevalidatePath).toHaveBeenCalledWith("/balances");
     expect(mockRevalidatePath).toHaveBeenCalledTimes(1);

@@ -172,6 +172,11 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
   if (!household) throw new Error("No household");
 
   const members = await getHouseholdMembers(household.id);
+  // Atajo pensado para 2 miembros: con 3+ hay varios "otros" y no se puede
+  // inferir cuál pagó → saldar por-deudor se hace en Balances.
+  if (members.length > 2) {
+    return { error: "Con más de 2 miembros, saldá cada parte desde Balances" };
+  }
   const otherMember = members.find((m) => m.userId !== user.id);
   if (!otherMember) return { error: "No hay otro miembro en el hogar" };
 
@@ -244,6 +249,9 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
   if (!household) throw new Error("No household");
 
   const members = await getHouseholdMembers(household.id);
+  if (members.length > 2) {
+    return { error: "Con más de 2 miembros, gestioná los pagos desde Balances" };
+  }
   const otherMember = members.find((m) => m.userId !== user.id);
   if (!otherMember) return { error: "No hay otro miembro en el hogar" };
 

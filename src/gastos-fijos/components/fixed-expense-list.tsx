@@ -41,7 +41,7 @@ function SectionLabel({ label, count, total }: { label: string; count: number; t
   );
 }
 
-function GroupCard({ expenses, periodMonth }: { expenses: EnrichedExpense[]; periodMonth: string }) {
+function GroupCard({ expenses, periodMonth, memberCount }: { expenses: EnrichedExpense[]; periodMonth: string; memberCount: number }) {
   return (
     <div className="bg-card border border-border rounded-[14px] overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
       {expenses.map((exp) => (
@@ -54,13 +54,14 @@ function GroupCard({ expenses, periodMonth }: { expenses: EnrichedExpense[]; per
           paidByName={exp.paidByName}
           myShareAmount={exp.myShareAmount}
           periodMonth={periodMonth}
+          memberCount={memberCount}
         />
       ))}
     </div>
   );
 }
 
-export function FixedExpenseList({ expenses, memberCount: _memberCount, periodMonth }: Props) {
+export function FixedExpenseList({ expenses, memberCount, periodMonth }: Props) {
   if (expenses.length === 0) {
     return (
       <EmptyState
@@ -85,13 +86,13 @@ export function FixedExpenseList({ expenses, memberCount: _memberCount, periodMo
       {paid.length > 0 && (
         <>
           <SectionLabel label="Pagados" count={paid.length} total={sumGroup(paid)} />
-          <GroupCard expenses={paid} periodMonth={periodMonth} />
+          <GroupCard expenses={paid} periodMonth={periodMonth} memberCount={memberCount} />
         </>
       )}
       {pending.length > 0 && (
         <>
           <SectionLabel label="Pendientes" count={pending.length} total={sumGroup(pending)} />
-          <GroupCard expenses={pending} periodMonth={periodMonth} />
+          <GroupCard expenses={pending} periodMonth={periodMonth} memberCount={memberCount} />
         </>
       )}
     </div>
