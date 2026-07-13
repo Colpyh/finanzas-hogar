@@ -1,7 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
-import { expense, income, card } from "@/shared/lib/db/schema";
+import { expense, income, card, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte } from "drizzle-orm";
 import { elapsedMonths } from "./month-utils";
 import { effectiveBillingMonth } from "@/shared/lib/billing";
@@ -41,7 +41,7 @@ export async function getAnnualSummary(
   anchorMonth: string
 ): Promise<MonthlyDataPoint[]> {
   "use cache";
-  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "income"), hhTag(householdId, "cards"));
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "income"), hhTag(householdId, "cards"), hhTag(householdId, "payments"));
 
   const months = last12Months(anchorMonth);
   const oldest = months[0]!;
@@ -61,19 +61,21 @@ export async function getAnnualSummary(
       )
     );
 
-  // Fixed expenses (constant per month — use the active total)
-  const fixedRows = await db
-    .select({ amount: expense.amount })
-    .from(expense)
-    .where(
-      and(
-        eq(expense.householdId, householdId),
-        eq(expense.type, "fixed"),
-        eq(expense.isActive, true),
-        isNull(expense.deletedAt)
-      )
-    );
-  const fixedMonthly = fixedRows.reduce((acc, r) => acc + Number(r.amount ?? 0), 0);
+  // Fijos + variables: el monto REAL de cada mes vive en los pagos registrados
+  // (fixed_expense_payment.periodMonth), igual que getMonthlySummary. Así el
+  // gráfico varía mes a mes e incluye los variables (luz/agua/gas, cuyo
+  // expense.amount es 0). El enfoque viejo — total fijo activo, constante para
+  // los 12 meses y sin variables — dejaba las barras chatas e iguales.
+  const paymentRows = await db
+    .select({ periodMonth: fixedExpensePayment.periodMonth, amount: fixedExpensePayment.amount })
+    .from(fixedExpensePayment)
+    .where(eq(fixedExpensePayment.householdId, householdId));
+
+  const paidByMonth = new Map<string, number>();
+  for (const r of paymentRows) {
+    if (!r.periodMonth) continue;
+    paidByMonth.set(r.periodMonth, (paidByMonth.get(r.periodMonth) ?? 0) + Number(r.amount ?? 0));
+  }
 
   // Active installments per month
   const installmentRows = await db
@@ -93,11 +95,41 @@ export async function getAnnualSummary(
       )
     );
 
-  // Income per month
+  // Income: los sueldos (type=salary) se cargan una vez y se propagan hacia
+  // adelante (el más reciente por miembro con periodMonth <= mes); los ingresos
+  // puntuales (type=other) cuentan solo su mes exacto. Misma lógica que
+  // getMonthlyIncome — sin esto, el ingreso aparecía solo el mes en que se cargó.
   const incomeRows = await db
-    .select({ amount: income.amount, periodMonth: income.periodMonth })
+    .select({
+      type: income.type,
+      memberId: income.memberId,
+      amount: income.amount,
+      periodMonth: income.periodMonth,
+      createdAt: income.createdAt,
+    })
     .from(income)
     .where(eq(income.householdId, householdId));
+
+  function incomeForMonth(month: string): number {
+    const latestSalaryByMember = new Map<string, (typeof incomeRows)[number]>();
+    for (const r of incomeRows) {
+      if (r.type !== "salary" || !r.periodMonth || r.periodMonth > month) continue;
+      const existing = latestSalaryByMember.get(r.memberId);
+      if (
+        !existing ||
+        r.periodMonth > existing.periodMonth! ||
+        (r.periodMonth === existing.periodMonth && r.createdAt > existing.createdAt)
+      ) {
+        latestSalaryByMember.set(r.memberId, r);
+      }
+    }
+    let total = 0;
+    for (const r of latestSalaryByMember.values()) total += Number(r.amount ?? 0);
+    for (const r of incomeRows) {
+      if (r.type === "other" && r.periodMonth === month) total += Number(r.amount ?? 0);
+    }
+    return total;
+  }
 
   return months.map((month) => {
     const prefix = month.slice(0, 7);
@@ -123,15 +155,13 @@ export async function getAnnualSummary(
       })
       .reduce((acc, r) => acc + Number(r.installmentAmount ?? 0), 0);
 
-    const monthIncome = incomeRows
-      .filter((r) => r.periodMonth?.startsWith(prefix))
-      .reduce((acc, r) => acc + Number(r.amount ?? 0), 0);
+    const fixedPaid = paidByMonth.get(month) ?? 0;
 
     return {
       month,
       label: toLabel(month),
-      expenses: fixedMonthly + installments + oneTime,
-      income: monthIncome,
+      expenses: fixedPaid + installments + oneTime,
+      income: incomeForMonth(month),
     };
   });
 }
