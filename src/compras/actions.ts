@@ -10,7 +10,7 @@ import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { pendingDebtGuard } from "@/balances/guards";
 import { syncSharedInstallmentCounter } from "./installment-sync";
-import { currentPeriodMonth } from "@/shared/lib/db/helpers";
+import { currentPeriodMonth, monthFromDate } from "@/shared/lib/db/helpers";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
 
 export async function createPurchase(rawData: unknown) {
@@ -20,7 +20,7 @@ export async function createPurchase(rawData: unknown) {
 
   const data = createPurchaseSchema.parse(rawData);
 
-  await db
+  const [created] = await db
     .insert(expense)
     .values({
       ...data,
@@ -30,8 +30,31 @@ export async function createPurchase(rawData: unknown) {
       responsibleId: data.responsibleId ?? null,
       cardId: data.cardId ?? null,
       isPrivate: data.isPrivate ?? false,
+      isShared: data.isShared ?? false,
     })
     .returning();
+
+  // Compra puntual compartida: no es recurrente (a diferencia de cuotas/fijos),
+  // así que registramos de una el pago de quien la pagó físicamente
+  // (responsable, o quien la cargó si no hay responsable) — el resto del
+  // hogar aparece con su parte pendiente en Balances desde el primer momento.
+  if (data.isShared && created) {
+    const members = await getHouseholdMembers(household.id);
+    const payerId = data.responsibleId ?? user.id;
+    const shareAmount = (parseFloat(data.amount) / members.length).toFixed(2);
+
+    await db.insert(fixedExpensePayment).values({
+      expenseId: created.id,
+      householdId: household.id,
+      paidBy: payerId,
+      periodMonth: monthFromDate(data.expenseDate),
+      amount: shareAmount,
+      status: "paid",
+    });
+
+    updateTag(hhTag(household.id, "payments"));
+    revalidatePath("/balances");
+  }
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");

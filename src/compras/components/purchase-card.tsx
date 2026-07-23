@@ -20,6 +20,7 @@ type Props = {
     cardColor?: string | null;
     cardLastFour?: string | null;
     isPrivate?: boolean;
+    isShared?: boolean;
     paidAt?: string | null;
   };
 };
@@ -55,6 +56,11 @@ export function PurchaseCard({ expense }: Props) {
           {expense.isPrivate && (
             <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
               Privado
+            </span>
+          )}
+          {expense.isShared && (
+            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
+              Compartido
             </span>
           )}
         </div>

@@ -72,6 +72,7 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
     initial?.cardId && cards.some((c) => c.id === initial.cardId) ? initial.cardId : null
   );
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isShared, setIsShared] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   // Guard SINCRÓNICO contra doble-submit: el estado `loading` no alcanza a
@@ -113,6 +114,7 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
       responsibleId,
       cardId,
       isPrivate,
+      isShared,
       ...(receipt
         ? {
             receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
@@ -284,7 +286,10 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
 
       <button
         type="button"
-        onClick={() => setIsPrivate((v) => !v)}
+        onClick={() => {
+          setIsPrivate((v) => !v);
+          setIsShared(false);
+        }}
         className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
           isPrivate ? "border-primary/40 bg-primary/5" : "border-border bg-card"
         }`}
@@ -298,6 +303,28 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
           <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isPrivate ? "translate-x-4" : "translate-x-0"}`} />
         </div>
       </button>
+
+      {members.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setIsShared((v) => !v);
+            setIsPrivate(false);
+          }}
+          className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
+            isShared ? "border-primary/40 bg-primary/5" : "border-border bg-card"
+          }`}
+          disabled={loading}
+        >
+          <div className="text-left">
+            <p className="text-sm font-medium text-foreground">Gasto compartido</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Se divide con el resto del hogar — verás la deuda en Balances</p>
+          </div>
+          <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${isShared ? "bg-primary" : "bg-muted"}`}>
+            <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isShared ? "translate-x-4" : "translate-x-0"}`} />
+          </div>
+        </button>
+      )}
 
       <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
         {loading ? "Guardando..." : "Registrar compra"}

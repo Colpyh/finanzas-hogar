@@ -21,6 +21,15 @@ export function currentPeriodMonth(): string {
 }
 
 /**
+ * Truncates a 'YYYY-MM-DD' date string to its first-of-month form
+ * ('YYYY-MM-01'). Used to derive period_month from an expense's own date
+ * (not "now") — e.g. a one-time shared purchase's initial settlement.
+ */
+export function monthFromDate(dateStr: string): string {
+  return `${dateStr.slice(0, 7)}-01`;
+}
+
+/**
  * Parses and validates a ?month= URL search param.
  * Accepts 'YYYY-MM-01' format. Falls back to currentPeriodMonth() if invalid.
  */

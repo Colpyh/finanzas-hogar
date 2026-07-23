@@ -6,19 +6,25 @@ const amountField = z
   .min(1, "El monto es requerido")
   .regex(/^\d+(\.\d{1,2})?$/, "Monto inválido");
 
-export const createPurchaseSchema = z.object({
-  description: z.string().min(1, "La descripción es requerida").max(200),
-  categoryId: z.string().uuid("Categoría inválida"),
-  amount: amountField,
-  currency: z.string().default("CLP"),
-  expenseDate: z.string().date("Fecha inválida"),
-  responsibleId: z.string().uuid().nullable().optional(),
-  cardId: z.string().uuid().nullable().optional(),
-  isPrivate: z.boolean().default(false),
-  // Boleta fotografiada (opcional)
-  receiptItems: z.array(receiptItemSchema).max(200).optional(),
-  receiptImagePath: z.string().max(300).optional(),
-});
+export const createPurchaseSchema = z
+  .object({
+    description: z.string().min(1, "La descripción es requerida").max(200),
+    categoryId: z.string().uuid("Categoría inválida"),
+    amount: amountField,
+    currency: z.string().default("CLP"),
+    expenseDate: z.string().date("Fecha inválida"),
+    responsibleId: z.string().uuid().nullable().optional(),
+    cardId: z.string().uuid().nullable().optional(),
+    isPrivate: z.boolean().default(false),
+    isShared: z.boolean().default(false),
+    // Boleta fotografiada (opcional)
+    receiptItems: z.array(receiptItemSchema).max(200).optional(),
+    receiptImagePath: z.string().max(300).optional(),
+  })
+  .refine((data) => !(data.isPrivate && data.isShared), {
+    message: "Un gasto no puede ser privado y compartido a la vez",
+    path: ["isShared"],
+  });
 
 export const createInstallmentSchema = z
   .object({
