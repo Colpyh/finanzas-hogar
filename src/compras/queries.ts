@@ -12,11 +12,18 @@ export type ExpenseFilters = {
   offset?: number;
 };
 
-function buildConditions(householdId: string, filters: Omit<ExpenseFilters, "limit" | "offset">) {
+function buildConditions(
+  householdId: string,
+  filters: Omit<ExpenseFilters, "limit" | "offset">,
+  currentUserId: string
+) {
   const conditions = [
     eq(expense.householdId, householdId),
     isNull(expense.deletedAt),
     or(eq(expense.type, "one_time"), eq(expense.type, "installment")),
+    // Un gasto privado solo lo ve quien lo creó — el resto del hogar no
+    // debe verlo ni en la lista ni en el export CSV.
+    or(eq(expense.isPrivate, false), eq(expense.createdBy, currentUserId)),
   ];
 
   if (filters.type && filters.type !== "all") {
@@ -56,8 +63,12 @@ function buildConditions(householdId: string, filters: Omit<ExpenseFilters, "lim
   return conditions;
 }
 
-export async function getExpenses(householdId: string, filters: ExpenseFilters = {}) {
-  const conditions = buildConditions(householdId, filters);
+export async function getExpenses(
+  householdId: string,
+  filters: ExpenseFilters = {},
+  currentUserId: string
+) {
+  const conditions = buildConditions(householdId, filters, currentUserId);
 
   const base = db
     .select({
@@ -98,9 +109,10 @@ export async function getExpenses(householdId: string, filters: ExpenseFilters =
 
 export async function countExpenses(
   householdId: string,
-  filters: Omit<ExpenseFilters, "limit" | "offset"> = {}
+  filters: Omit<ExpenseFilters, "limit" | "offset"> = {},
+  currentUserId: string
 ): Promise<number> {
-  const conditions = buildConditions(householdId, filters);
+  const conditions = buildConditions(householdId, filters, currentUserId);
 
   const [row] = await db
     .select({ total: sql<number>`count(*)` })

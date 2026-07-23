@@ -126,8 +126,8 @@ export default async function ComprasPage({ searchParams }: Props) {
       };
 
       const [dbExpenses, total, members, dbCards, sharedPayments] = await Promise.all([
-        getExpenses(household.id, { ...sharedFilters, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-        countExpenses(household.id, sharedFilters),
+        getExpenses(household.id, { ...sharedFilters, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }, user.id),
+        countExpenses(household.id, sharedFilters, user.id),
         getHouseholdMembers(household.id),
         getHouseholdCards(household.id),
         getSharedInstallmentPaymentsForPeriod(household.id, month),

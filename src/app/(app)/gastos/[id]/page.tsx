@@ -29,6 +29,8 @@ export default async function GastoDetailPage({ params }: Props) {
     getHouseholdMembers(household.id),
   ]);
   if (!exp) notFound();
+  // Gasto privado: solo lo puede ver quien lo creó, ni por URL directa.
+  if (exp.isPrivate && exp.createdBy !== user.id) notFound();
 
   const isInstallment = exp.type === "installment";
   const isCreator = exp.createdBy === user.id;

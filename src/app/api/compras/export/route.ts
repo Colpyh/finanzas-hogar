@@ -42,14 +42,18 @@ export async function GET(req: NextRequest) {
   const dateFrom = dateRegex.test(fromParam) ? fromParam : month;
   const dateTo = dateRegex.test(toParam) ? toParam : lastDay;
 
-  const rows = await getExpenses(household.id, {
-    type: typeFilter,
-    dateFrom,
-    dateTo,
-    cardId: cardFilter ?? undefined,
-    search: q || undefined,
-    // No limit/offset — export all
-  });
+  const rows = await getExpenses(
+    household.id,
+    {
+      type: typeFilter,
+      dateFrom,
+      dateTo,
+      cardId: cardFilter ?? undefined,
+      search: q || undefined,
+      // No limit/offset — export all
+    },
+    user.id
+  );
 
   const header = ["Fecha", "Descripción", "Tipo", "Monto", "Moneda", "Categoría ID", "Tarjeta"];
   const lines: string[] = [header.join(",")];
