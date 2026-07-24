@@ -197,7 +197,10 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
 
       <button
         type="button"
-        onClick={() => setIsShared((v) => !v)}
+        onClick={() => {
+          setIsShared((v) => !v);
+          setIsPrivate(false);
+        }}
         className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
           isShared ? "border-primary/40 bg-primary/5" : "border-border bg-card"
         }`}
@@ -214,7 +217,10 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
 
       <button
         type="button"
-        onClick={() => setIsPrivate((v) => !v)}
+        onClick={() => {
+          setIsPrivate((v) => !v);
+          setIsShared(false);
+        }}
         className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
           isPrivate ? "border-primary/40 bg-primary/5" : "border-border bg-card"
         }`}

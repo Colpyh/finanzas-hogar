@@ -11,18 +11,23 @@ const amountField = z
   .min(1, "El monto es requerido")
   .regex(/^\d+(\.\d{1,2})?$/, "Monto inválido");
 
-export const createFixedExpenseSchema = z.object({
-  description: z.string().min(1, "La descripción es requerida").max(200),
-  categoryId: z.string().uuid("Categoría inválida"),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Monto inválido").optional().default("0"),
-  expenseType: z.enum(["fixed", "variable"]).default("fixed"),
-  currency: z.string().default("CLP"),
-  recurrenceDay: recurrenceDayField,
-  isShared: z.boolean().default(false),
-  isPrivate: z.boolean().default(false),
-  responsibleId: z.string().uuid().nullable().optional(),
-  cardId: z.string().uuid().nullable().optional(),
-});
+export const createFixedExpenseSchema = z
+  .object({
+    description: z.string().min(1, "La descripción es requerida").max(200),
+    categoryId: z.string().uuid("Categoría inválida"),
+    amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Monto inválido").optional().default("0"),
+    expenseType: z.enum(["fixed", "variable"]).default("fixed"),
+    currency: z.string().default("CLP"),
+    recurrenceDay: recurrenceDayField,
+    isShared: z.boolean().default(false),
+    isPrivate: z.boolean().default(false),
+    responsibleId: z.string().uuid().nullable().optional(),
+    cardId: z.string().uuid().nullable().optional(),
+  })
+  .refine((data) => !(data.isPrivate && data.isShared), {
+    message: "Un gasto no puede ser privado y compartido a la vez",
+    path: ["isShared"],
+  });
 
 export const updateFixedExpenseSchema = z.object({
   description: z.string().min(1).max(200).optional(),

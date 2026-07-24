@@ -42,6 +42,10 @@ export const createInstallmentSchema = z
     isPrivate: z.boolean().default(false),
     isShared: z.boolean().default(false),
   })
+  .refine((data) => !(data.isPrivate && data.isShared), {
+    message: "Un gasto no puede ser privado y compartido a la vez",
+    path: ["isShared"],
+  })
   .transform((data) => ({
     ...data,
     amount: (Number(data.installmentAmount) * data.installmentsTotal).toFixed(2),

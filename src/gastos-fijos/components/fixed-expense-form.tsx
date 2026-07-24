@@ -160,7 +160,7 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
 
       <button
         type="button"
-        onClick={() => setForm((prev) => ({ ...prev, isShared: !prev.isShared }))}
+        onClick={() => setForm((prev) => ({ ...prev, isShared: !prev.isShared, isPrivate: false }))}
         className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${form.isShared ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
         disabled={loading}
       >
@@ -175,7 +175,7 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
 
       <button
         type="button"
-        onClick={() => setForm((prev) => ({ ...prev, isPrivate: !prev.isPrivate }))}
+        onClick={() => setForm((prev) => ({ ...prev, isPrivate: !prev.isPrivate, isShared: false }))}
         className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${form.isPrivate ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
         disabled={loading}
       >

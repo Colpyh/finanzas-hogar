@@ -57,6 +57,7 @@ async function getHouseholdDebtItems(
       and(
         eq(expense.householdId, householdId),
         eq(expense.isShared, true),
+        eq(expense.isPrivate, false),
         isNull(expense.deletedAt)
       )
     );
@@ -64,6 +65,10 @@ async function getHouseholdDebtItems(
   if (expenses.length === 0) return [];
 
   // All payments for shared expenses, across every month (no period filter).
+  // isPrivate=false: un gasto compartido+privado (estado contradictorio; el
+  // form y el schema lo impiden en creación) nunca debe generar ni exponer
+  // deuda entre miembros — categórico, no depende de quién mira (este
+  // resultado se cachea sin userId y se comparte entre ambos miembros).
   const allPayments = await db
     .select()
     .from(fixedExpensePayment)
@@ -72,6 +77,7 @@ async function getHouseholdDebtItems(
       and(
         eq(expense.householdId, householdId),
         eq(expense.isShared, true),
+        eq(expense.isPrivate, false),
         isNull(expense.deletedAt)
       )
     );
