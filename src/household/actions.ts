@@ -6,17 +6,17 @@ import { household, householdInvite, householdMember } from "@/shared/lib/db/sch
 import { and, eq } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { getUser } from "@/auth/queries";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { updateHouseholdSchema } from "./types";
-import { getHouseholdMembers, getUserHousehold, userHouseholdTag } from "./queries";
+import { getHouseholdMembers, userHouseholdTag } from "./queries";
+import { requireHousehold } from "./guards";
 import { getPendingBalances } from "@/balances/queries";
 import { formatCurrency } from "@/shared/components/currency-display";
 
 export async function updateHousehold(rawData: unknown): Promise<{ error?: string }> {
-  const user = await getUser();
-  const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household: userHousehold } = auth;
 
   const { name } = updateHouseholdSchema.parse(rawData);
 
@@ -32,9 +32,9 @@ export async function updateHousehold(rawData: unknown): Promise<{ error?: strin
 }
 
 export async function createInvite(): Promise<{ error?: string; token?: string }> {
-  const user = await getUser();
-  const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household: userHousehold } = auth;
   if (userHousehold.role !== "owner") return { error: "Solo el propietario puede invitar" };
 
   // NFR-2: 256-bit entropy token
@@ -58,9 +58,9 @@ export async function generateInvite(): Promise<void> {
 }
 
 export async function revokeInvite(inviteId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household: userHousehold } = auth;
 
   await db
     .update(householdInvite)
@@ -74,9 +74,9 @@ export async function revokeInvite(inviteId: string): Promise<{ error?: string }
 export async function addMemberByEmail(
   formData: FormData
 ): Promise<{ error?: string }> {
-  const user = await getUser();
-  const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household: userHousehold } = auth;
   if (userHousehold.role !== "owner") return { error: "Solo el propietario puede agregar miembros" };
 
   const email = (formData.get("query") as string | null)?.trim().toLowerCase() ?? "";
@@ -124,9 +124,9 @@ export async function addMemberByEmail(
 // mensajes de errores lanzados en Server Actions, así que un throw nunca
 // llega legible al usuario (y escala al error boundary de toda la página).
 export async function removeMember(memberId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household: userHousehold } = auth;
   if (userHousehold.role !== "owner") return { error: "Solo el propietario puede eliminar miembros" };
 
   const [target] = await db

@@ -132,7 +132,10 @@ describe("settleBalanceItem", () => {
   it("returns error on unique constraint violation (already settled)", async () => {
     mockSelect.mockReturnValueOnce(selectChain([EXPENSE_ROW]));
 
-    const uniqueErr = new Error('duplicate key value violates unique constraint "uq_expense_period_user"');
+    const uniqueErr = Object.assign(
+      new Error('duplicate key value violates unique constraint "uq_expense_period_user"'),
+      { code: "23505" }
+    );
     mockInsert.mockReturnValueOnce(insertChain(uniqueErr));
 
     const { settleBalanceItem } = await import("@/balances/actions");

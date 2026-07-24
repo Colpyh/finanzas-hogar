@@ -29,8 +29,11 @@ jest.mock("@/household/queries", () => ({
   ]),
 }));
 
-// currentPeriodMonth is a pure helper — return a fixed value so tests are deterministic
+// currentPeriodMonth is a pure helper — return a fixed value so tests are
+// deterministic. isUniqueViolation queda con su implementación real (chequea
+// err.code === '23505', no depende de fecha/reloj).
 jest.mock("@/shared/lib/db/helpers", () => ({
+  ...jest.requireActual("@/shared/lib/db/helpers"),
   currentPeriodMonth: jest.fn().mockReturnValue("2026-04"),
 }));
 
@@ -103,7 +106,10 @@ describe("markFixedExpensePaid", () => {
 
   it("returns error on duplicate payment (unique constraint)", async () => {
     mockSelect.mockReturnValueOnce(selectChain([{ id: UUID_EXPENSE }]));
-    const uniqueErr = new Error('duplicate key value violates unique constraint "uq_expense_period_user"');
+    const uniqueErr = Object.assign(
+      new Error('duplicate key value violates unique constraint "uq_expense_period_user"'),
+      { code: "23505" }
+    );
     mockInsert.mockReturnValueOnce(insertChain(uniqueErr));
 
     const { markFixedExpensePaid } = await import("@/gastos-fijos/actions");
@@ -153,7 +159,10 @@ describe("markPaidForOther", () => {
 
   it("returns error when other member already paid (unique constraint)", async () => {
     mockSelect.mockReturnValueOnce(selectChain([EXPENSE_ROW]));
-    const uniqueErr = new Error('duplicate key value violates unique constraint "uq_expense_period_user"');
+    const uniqueErr = Object.assign(
+      new Error('duplicate key value violates unique constraint "uq_expense_period_user"'),
+      { code: "23505" }
+    );
     mockInsert.mockReturnValueOnce(insertChain(uniqueErr));
 
     const { markPaidForOther } = await import("@/gastos-fijos/actions");

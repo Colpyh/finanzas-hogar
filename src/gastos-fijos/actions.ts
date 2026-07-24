@@ -5,10 +5,11 @@ import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
-import { getUser } from "@/auth/queries";
-import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
+import { getHouseholdMembers } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 import { pendingDebtGuard } from "@/balances/guards";
-import { currentPeriodMonth } from "@/shared/lib/db/helpers";
+import { currentPeriodMonth, isUniqueViolation } from "@/shared/lib/db/helpers";
+import { splitShareForDb } from "@/shared/lib/split-share";
 import {
   createFixedExpenseSchema,
   markPaidSchema,
@@ -16,9 +17,9 @@ import {
 } from "./types";
 
 export async function createFixedExpense(rawData: unknown): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   let data: ReturnType<typeof createFixedExpenseSchema.parse>;
   try {
@@ -48,9 +49,9 @@ export async function createFixedExpense(rawData: unknown): Promise<{ error?: st
 }
 
 export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   let data: ReturnType<typeof markPaidSchema.parse>;
   try {
@@ -86,10 +87,7 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
       notes: data.notes,
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
-      return { error: "Ya confirmaste tu pago este mes" };
-    }
+    if (isUniqueViolation(err)) return { error: "Ya confirmaste tu pago este mes" };
     throw err;
   }
 
@@ -99,9 +97,9 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
 }
 
 export async function upgradeToPaid(expenseId: string, month?: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const periodMonth = month ?? currentPeriodMonth();
 
@@ -133,9 +131,9 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
 }
 
 export async function toggleFixedExpenseActive(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
 
   const [current] = await db
     .select({ isActive: expense.isActive })
@@ -159,9 +157,9 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<{ err
 }
 
 export async function updateFixedExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   let data: ReturnType<typeof updateFixedExpenseSchema.parse>;
   try {
@@ -198,9 +196,9 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown): P
 }
 
 export async function markPaidForOther(expenseId: string, month?: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const members = await getHouseholdMembers(household.id);
   // Atajo pensado para 2 miembros: con 3+ hay varios "otros" y no se puede
@@ -222,7 +220,7 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
   const monthlyAmount = exp.type === "installment"
     ? parseFloat(exp.installmentAmount ?? "0")
     : parseFloat(exp.amount ?? "0");
-  const shareAmount = (monthlyAmount / members.length).toFixed(2);
+  const shareAmount = splitShareForDb(monthlyAmount, members.length);
   const markerName = user.email ?? "otro miembro";
 
   try {
@@ -236,10 +234,7 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
       notes: `Marcado por ${markerName}`,
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
-      return { error: "El otro miembro ya tiene un pago registrado este mes" };
-    }
+    if (isUniqueViolation(err)) return { error: "El otro miembro ya tiene un pago registrado este mes" };
     throw err;
   }
 
@@ -249,9 +244,9 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
 }
 
 export async function unmarkMyPayment(expenseId: string, month?: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const periodMonth = month ?? currentPeriodMonth();
 
@@ -275,9 +270,9 @@ export async function unmarkMyPayment(expenseId: string, month?: string): Promis
 }
 
 export async function unmarkOtherPayment(expenseId: string, month?: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const members = await getHouseholdMembers(household.id);
   if (members.length > 2) {
@@ -308,9 +303,9 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
 }
 
 export async function deleteFixedExpense(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   // Guard: no soft-borrar un gasto compartido con meses sin saldar (la deuda
   // desaparecería del balance en silencio).

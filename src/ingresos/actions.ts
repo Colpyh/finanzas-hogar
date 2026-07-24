@@ -5,16 +5,15 @@ import { income } from "@/shared/lib/db/schema";
 import { eq, and, lte } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
-import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { addIncomeSchema } from "./types";
 
 export async function addIncome(rawData: unknown): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "No tienes un hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { user, household } = auth;
 
     const data = addIncomeSchema.parse(rawData);
 
@@ -52,9 +51,9 @@ export async function addIncome(rawData: unknown): Promise<{ error?: string }> {
 
 export async function deleteIncome(id: string): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "No tienes un hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { user, household } = auth;
 
     const [row] = await db
       .select({ memberId: income.memberId })

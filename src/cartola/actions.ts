@@ -3,8 +3,7 @@
 import { createHash } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
-import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 import { db } from "@/shared/lib/db";
 import { pendingExpense, expense } from "@/shared/lib/db/schema";
 import { hhTag } from "@/shared/lib/cache-tags";
@@ -39,9 +38,9 @@ function daysApart(a: string, b: string): number {
 }
 
 export async function importCartola(cartolaText: string): Promise<ImportCartolaResult> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
   if (!cartolaText || cartolaText.length > MAX_TEXT_LENGTH) {
     return { error: "La cartola está vacía o es demasiado grande." };
   }

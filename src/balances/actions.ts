@@ -5,8 +5,10 @@ import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
-import { getUser } from "@/auth/queries";
-import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
+import { getHouseholdMembers } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
+import { isUniqueViolation } from "@/shared/lib/db/helpers";
+import { splitShareForDb } from "@/shared/lib/split-share";
 import { syncSharedInstallmentCounter } from "@/compras/installment-sync";
 
 export async function settleBalanceItem(
@@ -14,9 +16,9 @@ export async function settleBalanceItem(
   periodMonth: string,
   debtorId: string
 ): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
 
   // Saldar un ítem = registrar que el DEUDOR de ese ítem pagó su parte. El
   // deudor lo pasa la UI explícitamente (con 3+ miembros hay varios "otros",
@@ -54,7 +56,7 @@ export async function settleBalanceItem(
   } else {
     monthlyAmount = parseFloat(exp.amount ?? "0");
   }
-  const shareAmount = (monthlyAmount / members.length).toFixed(2);
+  const shareAmount = splitShareForDb(monthlyAmount, members.length);
 
   try {
     await db.insert(fixedExpensePayment).values({
@@ -66,10 +68,7 @@ export async function settleBalanceItem(
       status: "paid",
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
-      return { error: "Este ítem ya está saldado" };
-    }
+    if (isUniqueViolation(err)) return { error: "Este ítem ya está saldado" };
     throw err;
   }
 

@@ -6,8 +6,7 @@ import { category, expense } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
-import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 
 const categorySchema = z.object({
   name: z.string().min(1).max(50),
@@ -20,9 +19,9 @@ type CategoryInput = z.input<typeof categorySchema>;
 
 export async function createCategory(rawData: CategoryInput): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "No tienes un hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { household } = auth;
 
     const parsed = categorySchema.safeParse(rawData);
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
@@ -49,9 +48,9 @@ export async function updateCategory(
   rawData: CategoryInput
 ): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "Sin hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { household } = auth;
 
     const parsed = categorySchema.safeParse(rawData);
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
@@ -80,9 +79,9 @@ export async function updateCategory(
 
 export async function deleteCategory(id: string): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "Sin hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { household } = auth;
 
     const usages = await db
       .select({ id: expense.id })

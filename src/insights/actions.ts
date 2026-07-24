@@ -1,8 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { monthToDate, formatMonthLabel } from "@/resumen/month-utils";
 import {
@@ -23,9 +22,9 @@ export async function analyzeFinances(
   const parsedMonth = monthSchema.safeParse(month);
   if (!parsedMonth.success) return { error: "Mes inválido" };
 
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No hay hogar" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const monthDb = monthToDate(parsedMonth.data);
 

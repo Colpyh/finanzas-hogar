@@ -5,15 +5,14 @@ import { card } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
-import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 import { addCardSchema, updateCardSchema } from "./types";
 
 export async function addCard(rawData: unknown): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "No tienes un hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { household } = auth;
 
     const data = addCardSchema.parse(rawData);
 
@@ -40,9 +39,9 @@ export async function addCard(rawData: unknown): Promise<{ error?: string }> {
 
 export async function updateCard(id: string, rawData: unknown): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "Sin hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { household } = auth;
 
     const data = updateCardSchema.parse(rawData);
 
@@ -69,9 +68,9 @@ export async function updateCard(id: string, rawData: unknown): Promise<{ error?
 
 export async function deleteCard(id: string): Promise<{ error?: string }> {
   try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "Sin hogar activo" };
+    const auth = await requireHousehold();
+    if (!auth.ok) return { error: auth.error };
+    const { household } = auth;
 
     await db
       .update(card)

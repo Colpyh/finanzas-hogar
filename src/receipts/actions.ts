@@ -1,8 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 import { createClient } from "@/shared/lib/supabase/server";
 import { extractReceiptWithGemini } from "./gemini";
 import { itemsMatchTotal, type ExtractedReceipt } from "./types";
@@ -30,9 +29,9 @@ export async function analyzeReceipt(
   imageBase64: string,
   mimeType: string
 ): Promise<AnalyzeReceiptResult> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
 
   if (!ALLOWED_MIME.has(mimeType)) {
     return { error: "El archivo debe ser una imagen (JPG, PNG o WebP)" };
