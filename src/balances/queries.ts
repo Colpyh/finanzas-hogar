@@ -51,7 +51,13 @@ async function getHouseholdDebtItems(
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const expenses = await db
-    .select()
+    .select({
+      id: expense.id,
+      type: expense.type,
+      description: expense.description,
+      amount: expense.amount,
+      installmentAmount: expense.installmentAmount,
+    })
     .from(expense)
     .where(
       and(
@@ -70,7 +76,7 @@ async function getHouseholdDebtItems(
   // deuda entre miembros — categórico, no depende de quién mira (este
   // resultado se cachea sin userId y se comparte entre ambos miembros).
   const allPayments = await db
-    .select()
+    .select({ payment: fixedExpensePayment })
     .from(fixedExpensePayment)
     .innerJoin(expense, eq(fixedExpensePayment.expenseId, expense.id))
     .where(
@@ -83,9 +89,9 @@ async function getHouseholdDebtItems(
     );
 
   // Group payments by expense, then by month.
-  const byExpenseMonth = new Map<string, Map<string, typeof allPayments[number]["fixed_expense_payment"][]>>();
+  const byExpenseMonth = new Map<string, Map<string, typeof allPayments[number]["payment"][]>>();
   for (const row of allPayments) {
-    const p = row.fixed_expense_payment;
+    const p = row.payment;
     let monthMap = byExpenseMonth.get(p.expenseId);
     if (!monthMap) {
       monthMap = new Map();

@@ -12,7 +12,16 @@ export async function getActiveFixedExpenses(householdId: string, userId: string
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"))
   return db
-    .select()
+    .select({
+      id: expense.id,
+      description: expense.description,
+      amount: expense.amount,
+      type: expense.type,
+      recurrenceDay: expense.recurrenceDay,
+      isActive: expense.isActive,
+      isShared: expense.isShared,
+      responsibleId: expense.responsibleId,
+    })
     .from(expense)
     .where(
       and(
