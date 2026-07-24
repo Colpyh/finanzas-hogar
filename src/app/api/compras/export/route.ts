@@ -6,7 +6,13 @@ import { parseMonthParam } from "@/shared/lib/db/helpers";
 
 function escapeCsvField(value: string | null | undefined): string {
   if (value == null) return "";
-  const str = String(value);
+  let str = String(value);
+  // CSV/fórmula injection: un valor que empieza con = + - @ se interpreta
+  // como fórmula al abrir el CSV en Excel/Sheets (ej. una descripción
+  // "=HYPERLINK(...)"). Prefijar comilla simple neutraliza la fórmula.
+  if (/^[=+\-@]/.test(str)) {
+    str = `'${str}`;
+  }
   if (str.includes('"') || str.includes(",") || str.includes("\n")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
