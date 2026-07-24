@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatCurrency } from "@/shared/components/currency-display";
-import type { CategoryBudgetStatus } from "@/dashboard/types";
+import type { CategoryBudgetStatus } from "@/categories/types";
 
 type Props = {
   categories: CategoryBudgetStatus[];

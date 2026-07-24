@@ -31,8 +31,8 @@ import type {
   FixedBillWithStatus,
   ActiveInstallment,
   RecentPurchase,
-  CategoryBudgetStatus,
 } from "@/dashboard/types";
+import type { CategoryBudgetStatus } from "@/categories/types";
 import type { MemberBalance } from "@/balances/queries";
 
 export const metadata: Metadata = { title: "Inicio" };

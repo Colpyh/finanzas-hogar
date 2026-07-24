@@ -3,7 +3,7 @@ import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { category, expense, card } from "@/shared/lib/db/schema";
 import { or, isNull, isNotNull, eq, and, asc, inArray, lte } from "drizzle-orm";
-import type { CategoryBudgetStatus } from "@/dashboard/types";
+import type { CategoryBudgetStatus } from "./types";
 import { effectiveBillingMonth } from "@/shared/lib/billing";
 import { visibleToUser } from "@/shared/lib/db/visibility";
 
