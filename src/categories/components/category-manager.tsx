@@ -125,7 +125,7 @@ function EditCategoryInline({ cat, onClose }: { cat: Category; onClose: () => vo
         name,
         icon: icon || undefined,
         color: color || undefined,
-        monthlyBudget: Number(budget) || undefined,
+        monthlyBudget: budget === "" ? undefined : Number(budget),
       });
       if (result.error) {
         setError(result.error);
@@ -260,7 +260,7 @@ function AddCategoryForm({ onClose }: { onClose: () => void }) {
         name,
         icon: icon || undefined,
         color: color || undefined,
-        monthlyBudget: Number(budget) || undefined,
+        monthlyBudget: budget === "" ? undefined : Number(budget),
       });
       if (result.error) {
         setError(result.error);
