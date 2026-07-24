@@ -250,7 +250,7 @@ export async function updateInstallment(
   if (!household) throw new Error("No household");
 
   const [current] = await db
-    .select({ installmentsTotal: expense.installmentsTotal })
+    .select({ installmentsTotal: expense.installmentsTotal, isShared: expense.isShared })
     .from(expense)
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .limit(1);
@@ -261,6 +261,14 @@ export async function updateInstallment(
 
   if (data.installmentsPaid > (current.installmentsTotal ?? 0)) {
     return { error: "Las cuotas pagadas no pueden superar el total" };
+  }
+
+  // Desmarcar "compartido" saca el gasto de getHouseholdDebtItems (filtra
+  // isShared=true) — sin este guard, una deuda sin saldar desaparecería del
+  // balance en silencio, igual que borrar sin pendingDebtGuard.
+  if (data.isShared === false && current.isShared) {
+    const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+    if (debtError) return { error: debtError };
   }
 
   await db

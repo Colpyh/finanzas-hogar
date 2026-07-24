@@ -153,6 +153,20 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
 
   const data = updateFixedExpenseSchema.parse(rawData);
 
+  // Mismo guard que el borrado: desmarcar "compartido" saca el gasto de
+  // getHouseholdDebtItems y una deuda sin saldar desaparecería en silencio.
+  if (data.isShared === false) {
+    const [current] = await db
+      .select({ isShared: expense.isShared })
+      .from(expense)
+      .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+      .limit(1);
+    if (current?.isShared) {
+      const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+      if (debtError) throw new Error(debtError);
+    }
+  }
+
   const [updated] = await db
     .update(expense)
     .set(data)
