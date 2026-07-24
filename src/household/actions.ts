@@ -14,23 +14,22 @@ import { getHouseholdMembers } from "./queries";
 import { getPendingBalances } from "@/balances/queries";
 import { formatCurrency } from "@/shared/components/currency-display";
 
-export async function updateHousehold(rawData: unknown) {
+export async function updateHousehold(rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) throw new Error("No household");
+  if (!userHousehold) return { error: "No tienes un hogar activo" };
 
   const { name } = updateHouseholdSchema.parse(rawData);
 
-  const [updated] = await db
+  await db
     .update(household)
     .set({ name })
-    .where(eq(household.id, userHousehold.id))
-    .returning();
+    .where(eq(household.id, userHousehold.id));
 
   // La membresía cacheada (getUserHousehold) incluye el nombre del hogar.
   updateTag(userHousehold.id);
   revalidatePath("/ajustes");
-  return updated;
+  return {};
 }
 
 export async function createInvite(): Promise<{ error?: string; token?: string }> {
@@ -59,10 +58,10 @@ export async function generateInvite(): Promise<void> {
   redirect("/ajustes");
 }
 
-export async function revokeInvite(inviteId: string) {
+export async function revokeInvite(inviteId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) throw new Error("No household");
+  if (!userHousehold) return { error: "No tienes un hogar activo" };
 
   await db
     .update(householdInvite)
@@ -70,6 +69,7 @@ export async function revokeInvite(inviteId: string) {
     .where(and(eq(householdInvite.id, inviteId), eq(householdInvite.householdId, userHousehold.id)));
 
   revalidatePath("/ajustes");
+  return {};
 }
 
 export async function addMemberByEmail(
@@ -77,7 +77,7 @@ export async function addMemberByEmail(
 ): Promise<{ error?: string }> {
   const user = await getUser();
   const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) return { error: "No tienes un hogar" };
+  if (!userHousehold) return { error: "No tienes un hogar activo" };
   if (userHousehold.role !== "owner") return { error: "Solo el propietario puede agregar miembros" };
 
   const email = (formData.get("query") as string | null)?.trim().toLowerCase() ?? "";

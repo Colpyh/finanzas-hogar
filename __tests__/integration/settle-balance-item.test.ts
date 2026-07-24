@@ -77,12 +77,13 @@ describe("settleBalanceItem", () => {
     jest.clearAllMocks();
   });
 
-  it("throws when user has no household", async () => {
+  it("returns error when user has no household", async () => {
     const { getUserHousehold } = await import("@/onboarding/queries");
     (getUserHousehold as jest.Mock).mockResolvedValueOnce(null);
 
     const { settleBalanceItem } = await import("@/balances/actions");
-    await expect(settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_OTHER)).rejects.toThrow("No household");
+    const result = await settleBalanceItem(UUID_EXPENSE, PERIOD, UUID_OTHER);
+    expect(result.error).toBe("No tienes un hogar activo");
   });
 
   it("returns error when debtor is not a household member", async () => {

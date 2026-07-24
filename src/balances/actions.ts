@@ -17,7 +17,7 @@ export async function settleBalanceItem(
 ): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   // Saldar un ítem = registrar que el DEUDOR de ese ítem pagó su parte. El
   // deudor lo pasa la UI explícitamente (con 3+ miembros hay varios "otros",

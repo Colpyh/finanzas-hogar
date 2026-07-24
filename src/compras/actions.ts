@@ -275,7 +275,7 @@ export async function updateInstallment(
 ): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const [current] = await db
     .select({ installmentsTotal: expense.installmentsTotal, isShared: expense.isShared })
@@ -319,7 +319,7 @@ export async function updateExpenseCard(
 ): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No household" };
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const [row] = await db
     .select({ id: expense.id })
@@ -341,7 +341,7 @@ export async function updateExpenseCard(
 export async function toggleExpensePaid(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tenés un hogar activo" };
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const [exp] = await db
     .select({ paidAt: expense.paidAt, type: expense.type, cardId: expense.cardId, cardKind: card.kind })
@@ -369,7 +369,7 @@ export async function toggleExpensePaid(expenseId: string): Promise<{ error?: st
 export async function deleteExpense(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No household" };
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const [row] = await db
     .select({ createdBy: expense.createdBy })

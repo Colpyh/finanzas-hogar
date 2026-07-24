@@ -41,7 +41,7 @@ function daysApart(a: string, b: string): number {
 export async function importCartola(cartolaText: string): Promise<ImportCartolaResult> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tenés un hogar activo" };
+  if (!household) return { error: "No tienes un hogar activo" };
   if (!cartolaText || cartolaText.length > MAX_TEXT_LENGTH) {
     return { error: "La cartola está vacía o es demasiado grande." };
   }
