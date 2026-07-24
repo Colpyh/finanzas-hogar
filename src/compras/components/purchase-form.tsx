@@ -50,9 +50,18 @@ type Props = {
 // los mismos valores (mismo super, misma tarjeta).
 const DEFAULTS_KEY = "fh:last-purchase-defaults";
 
+/** Fecha de HOY en la zona horaria local del navegador (no UTC — de noche en
+ * Chile, toISOString() ya cae en el día siguiente y precargaba mal la fecha). */
+function todayLocal(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 export function PurchaseForm({ categories, members, cards = [], initial, receipt }: Props) {
   const router = useRouter();
-  const today = new Date().toISOString().split("T")[0] ?? "";
+  const today = todayLocal();
   const hasPrefill = Boolean(initial?.categoryId || initial?.description);
   const [description, setDescription] = useState(initial?.description ?? "");
   const [categoryId, setCategoryId] = useState(
