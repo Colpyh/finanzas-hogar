@@ -216,7 +216,7 @@ export default async function ComprasPage({ searchParams }: Props) {
           className="text-[23px] font-semibold text-foreground"
           style={{ letterSpacing: "-0.02em" }}
         >
-          Tarjeta
+          Compras
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
           <MonthSelector month={month} />
