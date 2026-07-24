@@ -1,4 +1,5 @@
 import "server-only";
+import { callGemini } from "@/shared/lib/gemini";
 import {
   financialInsightsSchema,
   type FinancialInsights,
@@ -11,8 +12,6 @@ import {
  * FinancialInsights — cambiar de proveedor (Claude u otro) es reemplazar este
  * archivo, igual que receipts/gemini.ts y el normalizeInboundPayload de email.
  */
-
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 const SYSTEM = `Eres un asesor de finanzas del hogar en Chile, cercano y directo.
 Te paso los números de UN mes de un hogar (en pesos chilenos) más su promedio
@@ -58,53 +57,13 @@ const RESPONSE_SCHEMA = {
 export async function generateFinancialInsights(
   input: InsightsInput
 ): Promise<FinancialInsights | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-
   const prompt = `${SYSTEM}\n\nDatos del hogar (JSON):\n${JSON.stringify(input)}`;
 
-  let res: Response;
-  try {
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.4,
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-          },
-        }),
-      }
-    );
-  } catch {
-    return null;
-  }
-
-  if (!res.ok) {
-    console.warn("[insights] gemini_http_error", { status: res.status });
-    return null;
-  }
-
-  let raw: unknown;
-  try {
-    const json = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return null;
-    raw = JSON.parse(text);
-  } catch {
-    return null;
-  }
-
-  const parsed = financialInsightsSchema.safeParse(raw);
-  if (!parsed.success) {
-    console.warn("[insights] gemini_schema_mismatch");
-    return null;
-  }
-  return parsed.data;
+  return callGemini({
+    contents: [{ parts: [{ text: prompt }] }],
+    responseSchema: RESPONSE_SCHEMA,
+    schema: financialInsightsSchema,
+    logTag: "insights",
+    temperature: 0.4,
+  });
 }

@@ -3,6 +3,7 @@ import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
+import { splitShare } from "@/shared/lib/split-share";
 
 export type BalanceItem = {
   expenseId: string;
@@ -126,7 +127,7 @@ async function getHouseholdDebtItems(
           : exp.type === "variable"
             ? parseFloat(payer.amount ?? "0")
             : parseFloat(exp.amount ?? "0");
-      const shareAmount = totalAmount / memberCount;
+      const shareAmount = splitShare(totalAmount, memberCount);
 
       const paidByIds = new Set(paidPayments.map((p) => p.paidBy));
       for (const memberId of memberIds) {

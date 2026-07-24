@@ -1,4 +1,5 @@
 import "server-only";
+import { callGemini } from "@/shared/lib/gemini";
 import { extractedReceiptSchema, type ExtractedReceipt } from "./types";
 
 /**
@@ -9,8 +10,6 @@ import { extractedReceiptSchema, type ExtractedReceipt } from "./types";
  * (Claude u otro) es reemplazar este archivo, igual que el patrón
  * normalizeInboundPayload de email-inbound.
  */
-
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 const PROMPT = `Eres un extractor de datos de boletas chilenas (formato SII).
 Analiza la imagen y devuelve JSON con:
@@ -54,58 +53,17 @@ export async function extractReceiptWithGemini(
   imageBase64: string,
   mimeType: string
 ): Promise<ExtractedReceipt | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-
-  let res: Response;
-  try {
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+  return callGemini({
+    contents: [
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { inline_data: { mime_type: mimeType, data: imageBase64 } },
-                { text: PROMPT },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0,
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-          },
-        }),
-      }
-    );
-  } catch {
-    return null;
-  }
-
-  if (!res.ok) {
-    console.warn("[receipts] gemini_http_error", { status: res.status });
-    return null;
-  }
-
-  let raw: unknown;
-  try {
-    const json = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return null;
-    raw = JSON.parse(text);
-  } catch {
-    return null;
-  }
-
-  const parsed = extractedReceiptSchema.safeParse(raw);
-  if (!parsed.success) {
-    console.warn("[receipts] gemini_schema_mismatch");
-    return null;
-  }
-  return parsed.data;
+        parts: [
+          { inline_data: { mime_type: mimeType, data: imageBase64 } },
+          { text: PROMPT },
+        ],
+      },
+    ],
+    responseSchema: RESPONSE_SCHEMA,
+    schema: extractedReceiptSchema,
+    logTag: "receipts",
+  });
 }

@@ -7,6 +7,7 @@ import { getHouseholdCards } from "@/tarjetas/queries";
 import { PurchaseList } from "@/compras/components/purchase-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
+import { splitShareForDb } from "@/shared/lib/split-share";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus, Download, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -158,7 +159,7 @@ export default async function ComprasPage({ searchParams }: Props) {
           const currentUserStatus = myPayment ? (myPayment.status as "reserved" | "paid") : "none";
           const otherPaid = paidPayments.find((p) => p.paidBy !== user.id);
           const paidByName = otherPaid ? (memberMap.get(otherPaid.paidBy) ?? null) : null;
-          const myShareAmount = (parseFloat(e.installmentAmount ?? "0") / memberCount).toFixed(2);
+          const myShareAmount = splitShareForDb(e.installmentAmount, memberCount);
           sharedFields = { isPaidThisMonth, isSettled, currentUserStatus, paidByName, myShareAmount };
         }
 

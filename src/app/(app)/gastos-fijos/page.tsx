@@ -7,6 +7,7 @@ import { FixedExpenseList } from "@/gastos-fijos/components/fixed-expense-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { variableMonthAmount } from "@/shared/lib/variable-expense";
+import { splitShareForDb } from "@/shared/lib/split-share";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -103,7 +104,7 @@ export default async function GastosFijosPage({ searchParams }: Props) {
         if (isVariable && currentUserStatus === "none" && !isPaidThisMonth) {
           myShareAmount = "0";
         } else if (isShared && memberCount > 1) {
-          myShareAmount = (totalAmount / memberCount).toFixed(2);
+          myShareAmount = splitShareForDb(totalAmount, memberCount);
         } else {
           myShareAmount = monthAmount;
         }

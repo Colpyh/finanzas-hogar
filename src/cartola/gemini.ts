@@ -1,4 +1,5 @@
 import "server-only";
+import { callGemini } from "@/shared/lib/gemini";
 import { cartolaExtractionSchema, type CartolaMovement } from "./types";
 
 /**
@@ -8,8 +9,6 @@ import { cartolaExtractionSchema, type CartolaMovement } from "./types";
  * Mismo patrón que insights/gemini: cambiar de proveedor = reemplazar este
  * archivo.
  */
-
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 const PROMPT = `Eres un extractor de cartolas bancarias chilenas (BCI y similares).
 Te paso el TEXTO de una cartola. Devuelve TODOS los movimientos como JSON. Para cada uno:
@@ -51,51 +50,11 @@ const RESPONSE_SCHEMA = {
 export async function extractCartolaMovements(
   cartolaText: string
 ): Promise<CartolaMovement[] | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-
-  let res: Response;
-  try {
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${PROMPT}\n\nTEXTO DE LA CARTOLA:\n${cartolaText}` }] }],
-          generationConfig: {
-            temperature: 0,
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-          },
-        }),
-      }
-    );
-  } catch {
-    return null;
-  }
-
-  if (!res.ok) {
-    console.warn("[cartola] gemini_http_error", { status: res.status });
-    return null;
-  }
-
-  let raw: unknown;
-  try {
-    const json = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return null;
-    raw = JSON.parse(text);
-  } catch {
-    return null;
-  }
-
-  const parsed = cartolaExtractionSchema.safeParse(raw);
-  if (!parsed.success) {
-    console.warn("[cartola] gemini_schema_mismatch");
-    return null;
-  }
-  return parsed.data.movimientos;
+  const result = await callGemini({
+    contents: [{ parts: [{ text: `${PROMPT}\n\nTEXTO DE LA CARTOLA:\n${cartolaText}` }] }],
+    responseSchema: RESPONSE_SCHEMA,
+    schema: cartolaExtractionSchema,
+    logTag: "cartola",
+  });
+  return result?.movimientos ?? null;
 }
