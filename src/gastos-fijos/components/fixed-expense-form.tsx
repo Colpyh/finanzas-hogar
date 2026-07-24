@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { createFixedExpenseSchema } from "@/gastos-fijos/types";
 import { createFixedExpense } from "@/gastos-fijos/actions";
 import { CardPills } from "@/shared/components/card-pills";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };

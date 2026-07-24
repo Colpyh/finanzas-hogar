@@ -8,7 +8,7 @@ import { upgradeToPaid, markPaidForOther, unmarkOtherPayment, unmarkMyPayment } 
 import { formatCurrency } from "@/shared/components/currency-display";
 import { Pencil, Users, Check, Undo2 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 type Props = {
   expense: {

@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { Moon, Sun, Monitor } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 const OPTIONS = [
   { value: "light", label: "Claro", icon: Sun },

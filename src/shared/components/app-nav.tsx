@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState, useTransition } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 import { useHousehold } from "@/shared/hooks/use-household";
 import { TrendingUp, LogOut } from "lucide-react";
 import { signOut } from "@/auth/actions";

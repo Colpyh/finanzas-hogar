@@ -10,7 +10,7 @@ import { variableMonthAmount } from "@/shared/lib/variable-expense";
 import { splitShareForDb } from "@/shared/lib/split-share";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus, Scale } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 export const metadata: Metadata = { title: "Gastos Fijos" };
 

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useHousehold } from "@/shared/hooks/use-household";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 type View = "group" | "personal";
 

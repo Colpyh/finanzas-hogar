@@ -10,7 +10,7 @@ import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { splitShareForDb } from "@/shared/lib/split-share";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus, Download, Search, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 const PAGE_SIZE = 20;
 
