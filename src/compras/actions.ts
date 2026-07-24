@@ -5,17 +5,18 @@ import { expense, fixedExpensePayment, card } from "@/shared/lib/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
-import { getUser } from "@/auth/queries";
-import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
+import { getHouseholdMembers } from "@/household/queries";
+import { requireHousehold } from "@/household/guards";
 import { pendingDebtGuard } from "@/balances/guards";
 import { syncSharedInstallmentCounter } from "./installment-sync";
-import { currentPeriodMonth, monthFromDate } from "@/shared/lib/db/helpers";
+import { currentPeriodMonth, monthFromDate, isUniqueViolation } from "@/shared/lib/db/helpers";
+import { splitShareForDb } from "@/shared/lib/split-share";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
 
 export async function createPurchase(rawData: unknown): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   let data: ReturnType<typeof createPurchaseSchema.parse>;
   try {
@@ -52,7 +53,7 @@ export async function createPurchase(rawData: unknown): Promise<{ error?: string
     // hogar aparece con su parte pendiente en Balances desde el primer momento.
     if (data.isShared && created && members) {
       const payerId = data.responsibleId ?? user.id;
-      const shareAmount = (parseFloat(data.amount) / members.length).toFixed(2);
+      const shareAmount = splitShareForDb(data.amount, members.length);
 
       await tx.insert(fixedExpensePayment).values({
         expenseId: created.id,
@@ -75,9 +76,9 @@ export async function createPurchase(rawData: unknown): Promise<{ error?: string
 }
 
 export async function createInstallment(rawData: unknown): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   let data: ReturnType<typeof createInstallmentSchema.parse>;
   try {
@@ -113,9 +114,9 @@ export async function createInstallment(rawData: unknown): Promise<{ error?: str
 }
 
 export async function markInstallmentPaid(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
 
   // Incremento atómico en un solo UPDATE condicionado: el read-modify-write
   // en JS perdía incrementos con dos clicks concurrentes (ambos leían N y
@@ -148,11 +149,20 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
   return {};
 }
 
-/** Solo registra el pago mensual en balance, sin tocar el contador de cuotas. */
-export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+/**
+ * Registra el pago mensual de una cuota compartida, sin tocar el contador de
+ * cuotas (eso lo hace syncSharedInstallmentCounter cuando el mes cierra).
+ * markAsMonthlyPayer y registerInstallmentShare eran esta misma función
+ * copiada dos veces — solo difieren en el mensaje de conflicto (quién soy yo
+ * en el pago: el titular o el deudor que salda su parte).
+ */
+async function registerSharedInstallmentPayment(
+  expenseId: string,
+  conflictMessage: string
+): Promise<{ error?: string }> {
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const [current] = await db
     .select({
@@ -166,7 +176,7 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
   if (!current?.isShared) return { error: "Gasto no encontrado o no compartido" };
 
   const members = await getHouseholdMembers(household.id);
-  const shareAmount = (parseFloat(current.installmentAmount ?? "0") / members.length).toFixed(2);
+  const shareAmount = splitShareForDb(current.installmentAmount, members.length);
   const periodMonth = currentPeriodMonth();
 
   try {
@@ -179,10 +189,7 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
       status: "paid",
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
-      return { error: "Ya registraste tu pago este mes" };
-    }
+    if (isUniqueViolation(err)) return { error: conflictMessage };
     throw err;
   }
 
@@ -195,57 +202,20 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
   return {};
 }
 
+/** Solo registra el pago mensual en balance, sin tocar el contador de cuotas. */
+export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: string }> {
+  return registerSharedInstallmentPayment(expenseId, "Ya registraste tu pago este mes");
+}
+
 /** Registra la parte del deudor sin incrementar el contador de cuotas. */
 export async function registerInstallmentShare(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
-
-  const [current] = await db
-    .select({
-      installmentAmount: expense.installmentAmount,
-      isShared: expense.isShared,
-    })
-    .from(expense)
-    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
-    .limit(1);
-
-  if (!current?.isShared) return { error: "Gasto no encontrado o no compartido" };
-
-  const members = await getHouseholdMembers(household.id);
-  const shareAmount = (parseFloat(current.installmentAmount ?? "0") / members.length).toFixed(2);
-  const periodMonth = currentPeriodMonth();
-
-  try {
-    await db.insert(fixedExpensePayment).values({
-      expenseId,
-      householdId: household.id,
-      paidBy: user.id,
-      periodMonth,
-      amount: shareAmount,
-      status: "paid",
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("uq_expense_period_user") || msg.includes("unique")) {
-      return { error: "Ya registraste tu parte este mes" };
-    }
-    throw err;
-  }
-
-  // Si con esta parte el mes quedó completo, cierra la cuota del período.
-  await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
-
-  updateTag(hhTag(household.id, "payments"));
-  updateTag(hhTag(household.id, "expenses"));
-  revalidatePath("/compras");
-  return {};
+  return registerSharedInstallmentPayment(expenseId, "Ya registraste tu parte este mes");
 }
 
 export async function updateExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
 
   let data: ReturnType<typeof updateExpenseSchema.parse>;
   try {
@@ -272,9 +242,9 @@ export async function updateInstallment(
   expenseId: string,
   rawData: unknown,
 ): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const [current] = await db
     .select({ installmentsTotal: expense.installmentsTotal, isShared: expense.isShared })
@@ -316,9 +286,9 @@ export async function updateExpenseCard(
   expenseId: string,
   cardId: string | null,
 ): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
 
   const [row] = await db
     .select({ id: expense.id })
@@ -338,9 +308,9 @@ export async function updateExpenseCard(
 
 /** Marca/desmarca una compra puntual (one_time) como pagada. Toggle de paid_at. */
 export async function toggleExpensePaid(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { household } = auth;
 
   const [exp] = await db
     .select({ paidAt: expense.paidAt, type: expense.type, cardId: expense.cardId, cardKind: card.kind })
@@ -366,9 +336,9 @@ export async function toggleExpensePaid(expenseId: string): Promise<{ error?: st
 }
 
 export async function deleteExpense(expenseId: string): Promise<{ error?: string }> {
-  const user = await getUser();
-  const household = await getUserHousehold(user.id);
-  if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
   const [row] = await db
     .select({ createdBy: expense.createdBy })

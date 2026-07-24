@@ -21,6 +21,21 @@ export function currentPeriodMonth(): string {
 }
 
 /**
+ * True si el error es una violación de constraint UNIQUE de Postgres
+ * (SQLSTATE 23505) — ej. dos inserts concurrentes para el mismo
+ * expenseId+periodMonth+paidBy. Más robusto que matchear el mensaje por
+ * string (frágil ante cambios de versión/locale del driver).
+ */
+export function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: unknown }).code === "23505"
+  );
+}
+
+/**
  * Truncates a 'YYYY-MM-DD' date string to its first-of-month form
  * ('YYYY-MM-01'). Used to derive period_month from an expense's own date
  * (not "now") — e.g. a one-time shared purchase's initial settlement.
