@@ -40,11 +40,15 @@ function getDb(): DbClient {
   // Serverless-tuned pool. On Vercel each warm instance keeps its own pool, so
   // we cap connections low and recycle aggressively to avoid exhausting the
   // Supabase pooler. Pair this with the transaction-mode pooler (port 6543) in
-  // DATABASE_URL for best results.
+  // DATABASE_URL for best results — confirmado en uso (jul 2026). max:1
+  // serializaba los Promise.all de las páginas a nivel DB (una sola conexión
+  // por instance): con el pooler transaction-mode multiplexando, max:4 deja
+  // que esas queries corran en paralelo sin arriesgar agotar el pool de
+  // Supabase (cada warm instance de Vercel abre su propio pool).
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 1,
+    max: 4,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 5_000,
   });
