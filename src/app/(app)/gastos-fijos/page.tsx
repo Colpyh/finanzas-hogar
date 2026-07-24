@@ -56,7 +56,7 @@ export default async function GastosFijosPage({ searchParams }: Props) {
     const household = await getUserHousehold(user.id);
     if (household) {
       const [dbExpenses, members, allPayments] = await Promise.all([
-        getActiveFixedExpenses(household.id),
+        getActiveFixedExpenses(household.id, user.id),
         getHouseholdMembers(household.id),
         getAllFixedPaymentsForPeriod(household.id, month),
       ]);

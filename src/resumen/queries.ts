@@ -3,6 +3,7 @@ import { expense, fixedExpensePayment, category } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte } from "drizzle-orm";
 import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
+import { visibleToUser } from "@/shared/lib/db/visibility";
 import { aggregateTotals, calcPercentage } from "@/dashboard/aggregation";
 import type {
   MonthlySummary,
@@ -12,7 +13,8 @@ import type {
 
 export async function getMonthlySummary(
   householdId: string,
-  month: string
+  month: string,
+  userId: string
 ): Promise<MonthlySummary> {
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"), hhTag(householdId, "categories"))
@@ -22,13 +24,16 @@ export async function getMonthlySummary(
   // con la de cuotas duplicada).
   const [fixedPaymentRows, allInstallments, allOneTime, allCategories] = await Promise.all([
     // fixedTotal: sum of actual payments made for this specific month
+    // (join a expense solo para poder filtrar gastos privados de otro miembro)
     db
       .select({ amount: fixedExpensePayment.amount })
       .from(fixedExpensePayment)
+      .innerJoin(expense, eq(fixedExpensePayment.expenseId, expense.id))
       .where(
         and(
           eq(fixedExpensePayment.householdId, householdId),
-          eq(fixedExpensePayment.periodMonth, month)
+          eq(fixedExpensePayment.periodMonth, month),
+          visibleToUser(userId)
         )
       ),
     // installments: activas este mes (con categoría, para byCategory)
@@ -45,7 +50,8 @@ export async function getMonthlySummary(
           eq(expense.householdId, householdId),
           eq(expense.type, "installment"),
           isNull(expense.deletedAt),
-          lte(expense.startMonth, month)
+          lte(expense.startMonth, month),
+          visibleToUser(userId)
         )
       ),
     // oneTime: sum of one_time expenses for this period_month
@@ -60,7 +66,8 @@ export async function getMonthlySummary(
         and(
           eq(expense.householdId, householdId),
           eq(expense.type, "one_time"),
-          isNull(expense.deletedAt)
+          isNull(expense.deletedAt),
+          visibleToUser(userId)
         )
       ),
     // category names and budgets (solo las del hogar)
@@ -127,7 +134,8 @@ export async function getMonthlySummary(
 
 export async function getFixedVsVariableBreakdown(
   householdId: string,
-  month: string
+  month: string,
+  userId: string
 ): Promise<FixedVsVariableBreakdown> {
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
@@ -135,13 +143,16 @@ export async function getFixedVsVariableBreakdown(
 
   const [fixedPaymentRows, allInstallments, allOneTime] = await Promise.all([
     // Fixed = sum of fixed_expense_payment.amount WHERE period_month = month (Scenario 5.2)
+    // (join a expense solo para poder filtrar gastos privados de otro miembro)
     db
       .select({ amount: fixedExpensePayment.amount })
       .from(fixedExpensePayment)
+      .innerJoin(expense, eq(fixedExpensePayment.expenseId, expense.id))
       .where(
         and(
           eq(fixedExpensePayment.householdId, householdId),
-          eq(fixedExpensePayment.periodMonth, month)
+          eq(fixedExpensePayment.periodMonth, month),
+          visibleToUser(userId)
         )
       ),
     // installmentsTotal for the month
@@ -157,7 +168,8 @@ export async function getFixedVsVariableBreakdown(
           eq(expense.householdId, householdId),
           eq(expense.type, "installment"),
           isNull(expense.deletedAt),
-          lte(expense.startMonth, month)
+          lte(expense.startMonth, month),
+          visibleToUser(userId)
         )
       ),
     // oneTimeTotal
@@ -168,7 +180,8 @@ export async function getFixedVsVariableBreakdown(
         and(
           eq(expense.householdId, householdId),
           eq(expense.type, "one_time"),
-          isNull(expense.deletedAt)
+          isNull(expense.deletedAt),
+          visibleToUser(userId)
         )
       ),
   ]);
@@ -203,7 +216,8 @@ export async function getFixedVsVariableBreakdown(
 
 export async function getInstallmentBurden(
   householdId: string,
-  month: string
+  month: string,
+  userId: string
 ): Promise<InstallmentBurden> {
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"))
@@ -221,7 +235,8 @@ export async function getInstallmentBurden(
         eq(expense.householdId, householdId),
         eq(expense.type, "installment"),
         isNull(expense.deletedAt),
-        lte(expense.startMonth, month)
+        lte(expense.startMonth, month),
+        visibleToUser(userId)
       )
     );
 

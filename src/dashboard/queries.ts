@@ -3,6 +3,7 @@ import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, lte, gte, lt, desc, inArray } from "drizzle-orm";
 import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
+import { visibleToUser } from "@/shared/lib/db/visibility";
 import { getMonthlyIncomeTotal, getMyMonthlyIncomeTotal } from "@/ingresos/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { aggregateTotals } from "@/dashboard/aggregation";
@@ -47,7 +48,8 @@ export async function getDashboardSummary(
           eq(expense.householdId, householdId),
           inArray(expense.type, ["fixed", "variable"]),
           eq(expense.isActive, true),
-          isNull(expense.deletedAt)
+          isNull(expense.deletedAt),
+          visibleToUser(userId)
         )
       ),
     // installmentsTotal: sum of active installment amounts for this month
@@ -64,7 +66,8 @@ export async function getDashboardSummary(
           eq(expense.householdId, householdId),
           eq(expense.type, "installment"),
           isNull(expense.deletedAt),
-          lte(expense.startMonth, month)
+          lte(expense.startMonth, month),
+          visibleToUser(userId)
         )
       ),
     // oneTimeTotal: sum of one_time expenses for this period_month,
@@ -82,7 +85,8 @@ export async function getDashboardSummary(
         and(
           eq(expense.householdId, householdId),
           eq(expense.type, "one_time"),
-          isNull(expense.deletedAt)
+          isNull(expense.deletedAt),
+          visibleToUser(userId)
         )
       ),
     getAllFixedPaymentsForPeriod(householdId, month),
@@ -160,12 +164,13 @@ export async function getDashboardSummary(
 
 export async function getFixedExpenseStatusThisMonth(
   householdId: string,
-  month: string
+  month: string,
+  userId: string
 ): Promise<FixedBillWithStatus[]> {
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const [expenses, payments] = await Promise.all([
-    getActiveFixedExpenses(householdId),
+    getActiveFixedExpenses(householdId, userId),
     getAllFixedPaymentsForPeriod(householdId, month),
   ]);
 
@@ -183,7 +188,8 @@ export async function getFixedExpenseStatusThisMonth(
 
 export async function getActiveInstallments(
   householdId: string,
-  month: string
+  month: string,
+  userId: string
 ): Promise<ActiveInstallment[]> {
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"))
@@ -202,7 +208,8 @@ export async function getActiveInstallments(
         eq(expense.householdId, householdId),
         eq(expense.type, "installment"),
         isNull(expense.deletedAt),
-        lte(expense.startMonth, month)
+        lte(expense.startMonth, month),
+        visibleToUser(userId)
       )
     );
 
@@ -223,6 +230,7 @@ export async function getActiveInstallments(
 export async function getRecentPurchases(
   householdId: string,
   month: string,
+  userId: string,
   limit = 5
 ): Promise<RecentPurchase[]> {
   'use cache'
@@ -254,7 +262,8 @@ export async function getRecentPurchases(
         eq(expense.type, "one_time"),
         isNull(expense.deletedAt),
         gte(expense.expenseDate, windowStart),
-        lt(expense.expenseDate, windowEnd)
+        lt(expense.expenseDate, windowEnd),
+        visibleToUser(userId)
       )
     )
     .orderBy(desc(expense.createdAt));

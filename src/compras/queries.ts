@@ -1,6 +1,7 @@
 import { db } from "@/shared/lib/db";
 import { expense, card, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { eq, and, isNull, gte, lte, or, desc, ilike, sql } from "drizzle-orm";
+import { visibleToUser } from "@/shared/lib/db/visibility";
 
 export type ExpenseFilters = {
   type?: "one_time" | "installment" | "all";
@@ -23,7 +24,7 @@ function buildConditions(
     or(eq(expense.type, "one_time"), eq(expense.type, "installment")),
     // Un gasto privado solo lo ve quien lo creó — el resto del hogar no
     // debe verlo ni en la lista ni en el export CSV.
-    or(eq(expense.isPrivate, false), eq(expense.createdBy, currentUserId)),
+    visibleToUser(currentUserId),
   ];
 
   if (filters.type && filters.type !== "all") {

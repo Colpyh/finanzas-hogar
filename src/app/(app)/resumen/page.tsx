@@ -70,9 +70,9 @@ export default async function ResumenPage({ searchParams }: Props) {
     const household = await getUserHousehold(user.id);
     if (household) {
       [summary, breakdown, burden, annualData] = await Promise.all([
-        getMonthlySummary(household.id, monthDb),
-        getFixedVsVariableBreakdown(household.id, monthDb),
-        getInstallmentBurden(household.id, monthDb),
+        getMonthlySummary(household.id, monthDb, user.id),
+        getFixedVsVariableBreakdown(household.id, monthDb, user.id),
+        getInstallmentBurden(household.id, monthDb, user.id),
         getAnnualSummary(household.id, currentPeriodMonth()),
       ]);
     }

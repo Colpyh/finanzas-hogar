@@ -4,10 +4,11 @@ import { eq, and, isNull, inArray } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
+import { visibleToUser } from "@/shared/lib/db/visibility";
 
 export type FixedExpensePayment = InferSelectModel<typeof fixedExpensePayment>;
 
-export async function getActiveFixedExpenses(householdId: string) {
+export async function getActiveFixedExpenses(householdId: string, userId: string) {
   'use cache'
   cacheTag(householdId, hhTag(householdId, "expenses"))
   return db
@@ -18,7 +19,8 @@ export async function getActiveFixedExpenses(householdId: string) {
         eq(expense.householdId, householdId),
         inArray(expense.type, ["fixed", "variable"]),
         eq(expense.isActive, true),
-        isNull(expense.deletedAt)
+        isNull(expense.deletedAt),
+        visibleToUser(userId)
       )
     );
 }

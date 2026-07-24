@@ -30,9 +30,9 @@ export async function analyzeFinances(
   const monthDb = monthToDate(parsedMonth.data);
 
   const [summary, breakdown, burden, annual, ingresoMensual] = await Promise.all([
-    getMonthlySummary(household.id, monthDb),
-    getFixedVsVariableBreakdown(household.id, monthDb),
-    getInstallmentBurden(household.id, monthDb),
+    getMonthlySummary(household.id, monthDb, user.id),
+    getFixedVsVariableBreakdown(household.id, monthDb, user.id),
+    getInstallmentBurden(household.id, monthDb, user.id),
     getAnnualSummary(household.id, currentPeriodMonth()),
     getMonthlyIncomeTotal(household.id, monthDb),
   ]);

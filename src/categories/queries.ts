@@ -5,6 +5,7 @@ import { category, expense, card } from "@/shared/lib/db/schema";
 import { or, isNull, isNotNull, eq, and, asc, inArray, lte } from "drizzle-orm";
 import type { CategoryBudgetStatus } from "@/dashboard/types";
 import { effectiveBillingMonth } from "@/shared/lib/billing";
+import { visibleToUser } from "@/shared/lib/db/visibility";
 
 export async function getCategories(householdId: string) {
   return db
@@ -16,7 +17,8 @@ export async function getCategories(householdId: string) {
 
 export async function getCategoryBudgetStatus(
   householdId: string,
-  month: string
+  month: string,
+  userId: string
 ): Promise<CategoryBudgetStatus[]> {
   "use cache";
   cacheTag(householdId, hhTag(householdId, "categories"), hhTag(householdId, "expenses"), hhTag(householdId, "cards"));
@@ -47,7 +49,8 @@ export async function getCategoryBudgetStatus(
           eq(expense.householdId, householdId),
           eq(expense.type, "one_time"),
           isNull(expense.deletedAt),
-          inArray(expense.categoryId, categoryIds)
+          inArray(expense.categoryId, categoryIds),
+          visibleToUser(userId)
         )
       ),
     db
@@ -59,7 +62,8 @@ export async function getCategoryBudgetStatus(
           inArray(expense.type, ["fixed", "variable"]),
           eq(expense.isActive, true),
           isNull(expense.deletedAt),
-          inArray(expense.categoryId, categoryIds)
+          inArray(expense.categoryId, categoryIds),
+          visibleToUser(userId)
         )
       ),
     db
@@ -76,7 +80,8 @@ export async function getCategoryBudgetStatus(
           eq(expense.type, "installment"),
           isNull(expense.deletedAt),
           lte(expense.startMonth, month),
-          inArray(expense.categoryId, categoryIds)
+          inArray(expense.categoryId, categoryIds),
+          visibleToUser(userId)
         )
       ),
   ]);
