@@ -166,7 +166,7 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
       >
         <div className="text-left">
           <p className="text-sm font-medium text-foreground">Gasto compartido</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Se divide entre los dos, uno lo paga</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Se divide con el resto del hogar — verás la deuda en Balances</p>
         </div>
         <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${form.isShared ? "bg-primary" : "bg-muted"}`}>
           <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.isShared ? "translate-x-4" : "translate-x-0"}`} />

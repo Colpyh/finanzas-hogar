@@ -25,7 +25,10 @@ type Props = { categories: Category[]; members: Member[]; cards?: Card[] };
 
 export function InstallmentForm({ categories, members, cards = [] }: Props) {
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 7) + "-01";
+  // Mes local (no UTC): de noche en Chile, toISOString() ya puede caer en el
+  // mes siguiente y precargaba mal el mes de inicio.
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [installmentsTotal, setInstallmentsTotal] = useState("");
@@ -208,7 +211,7 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
       >
         <div className="text-left">
           <p className="text-sm font-medium text-foreground">Gasto compartido</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Se divide entre los dos, uno lo paga</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Se divide con el resto del hogar — verás la deuda en Balances</p>
         </div>
         <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${isShared ? "bg-primary" : "bg-muted"}`}>
           <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isShared ? "translate-x-4" : "translate-x-0"}`} />
