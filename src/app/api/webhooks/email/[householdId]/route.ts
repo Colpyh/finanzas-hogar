@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
+import { revalidateTag } from "next/cache";
 import { createServiceClient } from "@/shared/lib/supabase/service";
 import { parseBciEmail } from "@/email-inbound/parser";
 import { htmlToText } from "@/email-inbound/html-to-text";
 import { normalizeInboundPayload } from "@/email-inbound/webhook/inbound";
 import { sendPushToHousehold } from "@/shared/lib/push";
+import { hhTag } from "@/shared/lib/cache-tags";
 
 export async function POST(
   req: Request,
@@ -138,6 +140,13 @@ export async function POST(
     });
     return NextResponse.json({ error: "insert_failed" }, { status: 500 });
   }
+
+  // updateTag() es solo para Server Actions — un Route Handler usa
+  // revalidateTag (misma tag namespace que cacheTag() en getPendingCount).
+  // { expire: 0 } fuerza expiración inmediata: un webhook externo necesita
+  // que el conteo se refresque YA, no con el semántica stale-while-revalidate
+  // de 'max' (que serviría el valor viejo hasta la próxima visita).
+  revalidateTag(hhTag(householdId, "pending"), { expire: 0 });
 
   // Fire-and-forget: push notification to all household members
   sendPushToHousehold(householdId, {

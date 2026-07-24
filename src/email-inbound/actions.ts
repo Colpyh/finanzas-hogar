@@ -99,6 +99,7 @@ export async function confirmPendingExpense(
   }
 
   updateTag(hhTag(household.id, "expenses"));
+  updateTag(hhTag(household.id, "pending"));
   revalidatePath("/gastos-pendientes");
   return {};
 }
@@ -132,6 +133,7 @@ export async function discardPendingExpense(
     return { error: "Este gasto pendiente ya fue procesado o no existe" };
   }
 
+  updateTag(hhTag(household.id, "pending"));
   revalidatePath("/gastos-pendientes");
   return {};
 }

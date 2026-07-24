@@ -10,6 +10,7 @@ const HOUSEHOLD = "550e8400-e29b-41d4-a716-446655440199";
 
 const mockSelect = jest.fn();
 jest.mock("@/shared/lib/db", () => ({ db: { select: mockSelect } }));
+jest.mock("next/cache", () => ({ cacheTag: jest.fn() }));
 
 // Chain que resuelve en orderBy con las filas provistas.
 function mockRows(rows: unknown[]) {

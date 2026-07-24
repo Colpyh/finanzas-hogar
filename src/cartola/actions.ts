@@ -2,11 +2,12 @@
 
 import { createHash } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { db } from "@/shared/lib/db";
 import { pendingExpense, expense } from "@/shared/lib/db/schema";
+import { hhTag } from "@/shared/lib/cache-tags";
 import { extractCartolaMovements } from "./gemini";
 import type { CartolaMovement } from "./types";
 
@@ -103,7 +104,10 @@ export async function importCartola(cartolaText: string): Promise<ImportCartolaR
 
   const duplicates = gastos.length - imported;
 
-  if (imported > 0) revalidatePath("/gastos-pendientes");
+  if (imported > 0) {
+    updateTag(hhTag(household.id, "pending"));
+    revalidatePath("/gastos-pendientes");
+  }
 
   return { imported, duplicates, nonExpenses };
 }

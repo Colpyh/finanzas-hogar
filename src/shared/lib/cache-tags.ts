@@ -20,7 +20,8 @@ export type CacheDomain =
   | "cards"      // tabla card
   | "categories" // tabla category
   | "income"     // tabla income
-  | "members";   // tabla household_member
+  | "members"    // tabla household_member
+  | "pending";   // tabla pending_expense (gastos por confirmar de email/cartola)
 
 export function hhTag(householdId: string, domain: CacheDomain): string {
   return `${householdId}:${domain}`;

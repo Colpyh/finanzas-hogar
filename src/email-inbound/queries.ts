@@ -1,7 +1,9 @@
 import "server-only";
+import { cacheTag } from "next/cache";
 import { db } from "@/shared/lib/db";
 import { pendingExpense, expense } from "@/shared/lib/db/schema";
 import { and, desc, eq, sql, inArray, isNull, getTableColumns } from "drizzle-orm";
+import { hhTag } from "@/shared/lib/cache-tags";
 
 /** Normaliza un merchant/descripción para comparar: minúsculas, sin espacios extra. */
 export function normalizeMerchant(value: string): string {
@@ -80,6 +82,8 @@ export async function suggestCategoryByMerchant(
 }
 
 export async function getPendingCount(householdId: string): Promise<number> {
+  'use cache'
+  cacheTag(householdId, hhTag(householdId, "pending"))
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(pendingExpense)

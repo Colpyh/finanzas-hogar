@@ -30,6 +30,8 @@ jest.mock("@/shared/lib/supabase/service", () => ({
   createServiceClient: jest.fn(),
 }));
 
+jest.mock("next/cache", () => ({ revalidateTag: jest.fn() }));
+
 jest.mock("@/email-inbound/parser", () => ({
   parseBciEmail: jest.fn(),
 }));
