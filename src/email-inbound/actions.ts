@@ -16,88 +16,105 @@ import {
 
 export async function confirmPendingExpense(
   input: ConfirmPendingExpenseInput
-): Promise<void> {
-  const parsed = confirmPendingExpenseSchema.parse(input);
+): Promise<{ error?: string }> {
+  let parsed: ConfirmPendingExpenseInput;
+  try {
+    parsed = confirmPendingExpenseSchema.parse(input);
+  } catch {
+    return { error: "Datos inválidos" };
+  }
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
-  await db.transaction(async (tx) => {
-    // Fetch pending with household + status guard
-    const [pending] = await tx
-      .select()
-      .from(pendingExpense)
-      .where(
-        and(
-          eq(pendingExpense.id, parsed.pendingExpenseId),
-          eq(pendingExpense.householdId, household.id),
-          eq(pendingExpense.status, "pending")
-        )
-      )
-      .limit(1);
-
-    if (!pending) {
-      throw new Error("Pending expense not found or already processed");
-    }
-    if (pending.parsedAmount === null || pending.parsedDate === null) {
-      throw new Error("Pending expense has no parsed amount or date");
-    }
-
-    // Auto-vincular la tarjeta por los últimos 4 dígitos del correo del banco,
-    // solo si hay exactamente UNA tarjeta activa con ese last4 (sin ambigüedad).
-    let matchedCardId: string | undefined;
-    if (pending.parsedCardLast4) {
-      const matches = await tx
-        .select({ id: card.id })
-        .from(card)
+  // Los throw DENTRO de la transacción son el mecanismo de rollback de
+  // Drizzle — se capturan afuera y se traducen a {error} para el caller.
+  try {
+    await db.transaction(async (tx) => {
+      // Fetch pending with household + status guard
+      const [pending] = await tx
+        .select()
+        .from(pendingExpense)
         .where(
           and(
-            eq(card.householdId, household.id),
-            eq(card.isActive, true),
-            eq(card.lastFour, pending.parsedCardLast4)
+            eq(pendingExpense.id, parsed.pendingExpenseId),
+            eq(pendingExpense.householdId, household.id),
+            eq(pendingExpense.status, "pending")
           )
         )
-        .limit(2);
-      if (matches.length === 1) matchedCardId = matches[0]!.id;
-    }
+        .limit(1);
 
-    // Create the expense
-    const inserted = await tx
-      .insert(expense)
-      .values({
-        householdId: household.id,
-        createdBy: user.id,
-        categoryId: parsed.categoryId,
-        type: "one_time",
-        description: parsed.description,
-        amount: pending.parsedAmount,
-        currency: "CLP",
-        expenseDate: pending.parsedDate,
-        ...(matchedCardId ? { cardId: matchedCardId } : {}),
-      })
-      .returning({ id: expense.id });
+      if (!pending) {
+        throw new Error("Este gasto pendiente ya fue procesado o no existe");
+      }
+      if (pending.parsedAmount === null || pending.parsedDate === null) {
+        throw new Error("Este gasto pendiente no tiene monto o fecha detectados");
+      }
 
-    const created = inserted[0];
-    if (!created) throw new Error("Failed to insert expense");
+      // Auto-vincular la tarjeta por los últimos 4 dígitos del correo del banco,
+      // solo si hay exactamente UNA tarjeta activa con ese last4 (sin ambigüedad).
+      let matchedCardId: string | undefined;
+      if (pending.parsedCardLast4) {
+        const matches = await tx
+          .select({ id: card.id })
+          .from(card)
+          .where(
+            and(
+              eq(card.householdId, household.id),
+              eq(card.isActive, true),
+              eq(card.lastFour, pending.parsedCardLast4)
+            )
+          )
+          .limit(2);
+        if (matches.length === 1) matchedCardId = matches[0]!.id;
+      }
 
-    // Flip pending → confirmed
-    await tx
-      .update(pendingExpense)
-      .set({ status: "confirmed", expenseId: created.id })
-      .where(eq(pendingExpense.id, pending.id));
-  });
+      // Create the expense
+      const inserted = await tx
+        .insert(expense)
+        .values({
+          householdId: household.id,
+          createdBy: user.id,
+          categoryId: parsed.categoryId,
+          type: "one_time",
+          description: parsed.description,
+          amount: pending.parsedAmount,
+          currency: "CLP",
+          expenseDate: pending.parsedDate,
+          ...(matchedCardId ? { cardId: matchedCardId } : {}),
+        })
+        .returning({ id: expense.id });
+
+      const created = inserted[0];
+      if (!created) throw new Error("No se pudo crear el gasto");
+
+      // Flip pending → confirmed
+      await tx
+        .update(pendingExpense)
+        .set({ status: "confirmed", expenseId: created.id })
+        .where(eq(pendingExpense.id, pending.id));
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "No se pudo confirmar el gasto" };
+  }
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-pendientes");
+  return {};
 }
 
 export async function discardPendingExpense(
   input: DiscardPendingExpenseInput
-): Promise<void> {
-  const parsed = discardPendingExpenseSchema.parse(input);
+): Promise<{ error?: string }> {
+  let parsed: DiscardPendingExpenseInput;
+  try {
+    parsed = discardPendingExpenseSchema.parse(input);
+  } catch {
+    return { error: "Datos inválidos" };
+  }
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const result = await db
     .update(pendingExpense)
@@ -112,8 +129,9 @@ export async function discardPendingExpense(
     .returning({ id: pendingExpense.id });
 
   if (result.length === 0) {
-    throw new Error("Pending expense not found or already processed");
+    return { error: "Este gasto pendiente ya fue procesado o no existe" };
   }
 
   revalidatePath("/gastos-pendientes");
+  return {};
 }

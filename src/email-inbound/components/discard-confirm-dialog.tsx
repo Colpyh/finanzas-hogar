@@ -32,11 +32,10 @@ export function DiscardConfirmDialog({ item, open, onClose, onOptimisticHide, on
     onClose();
     onOptimisticHide?.(itemId);
     startTransition(async () => {
-      try {
-        await discardPendingExpense({ pendingExpenseId: itemId });
-      } catch {
+      const result = await discardPendingExpense({ pendingExpenseId: itemId });
+      if (result?.error) {
         onRestore?.(itemId);
-        toast.error("No se pudo descartar — intentá de nuevo.");
+        toast.error(result.error);
       }
     });
   }

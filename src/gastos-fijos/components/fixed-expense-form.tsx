@@ -61,13 +61,13 @@ export function FixedExpenseForm({ categories, members, cards = [] }: Props) {
       return;
     }
     setLoading(true);
-    try {
-      await createFixedExpense(parsed.data);
-      router.push("/gastos-fijos");
-    } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
+    const result = await createFixedExpense(parsed.data);
+    if (result?.error) {
+      setErrors({ general: result.error });
       setLoading(false);
+      return;
     }
+    router.push("/gastos-fijos");
   }
 
   return (

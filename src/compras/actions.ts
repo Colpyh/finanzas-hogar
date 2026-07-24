@@ -13,59 +13,79 @@ import { syncSharedInstallmentCounter } from "./installment-sync";
 import { currentPeriodMonth, monthFromDate } from "@/shared/lib/db/helpers";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
 
-export async function createPurchase(rawData: unknown) {
+export async function createPurchase(rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
-  const data = createPurchaseSchema.parse(rawData);
+  let data: ReturnType<typeof createPurchaseSchema.parse>;
+  try {
+    data = createPurchaseSchema.parse(rawData);
+  } catch {
+    return { error: "Datos de la compra inválidos" };
+  }
 
-  const [created] = await db
-    .insert(expense)
-    .values({
-      ...data,
-      type: "one_time",
-      householdId: household.id,
-      createdBy: user.id,
-      responsibleId: data.responsibleId ?? null,
-      cardId: data.cardId ?? null,
-      isPrivate: data.isPrivate ?? false,
-      isShared: data.isShared ?? false,
-    })
-    .returning();
+  // Miembros ANTES de abrir la transacción: el pool serverless tiene max:1
+  // conexión — una query fuera de `tx` mientras la transacción tiene la única
+  // conexión abierta se colgaría esperando una conexión que nunca se libera.
+  const members = data.isShared ? await getHouseholdMembers(household.id) : null;
 
-  // Compra puntual compartida: no es recurrente (a diferencia de cuotas/fijos),
-  // así que registramos de una el pago de quien la pagó físicamente
-  // (responsable, o quien la cargó si no hay responsable) — el resto del
-  // hogar aparece con su parte pendiente en Balances desde el primer momento.
-  if (data.isShared && created) {
-    const members = await getHouseholdMembers(household.id);
-    const payerId = data.responsibleId ?? user.id;
-    const shareAmount = (parseFloat(data.amount) / members.length).toFixed(2);
+  // Atómico: si falla el insert del pago semilla, el gasto compartido no debe
+  // quedar creado sin su deuda registrada (quedaría invisible en Balances).
+  await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(expense)
+      .values({
+        ...data,
+        type: "one_time",
+        householdId: household.id,
+        createdBy: user.id,
+        responsibleId: data.responsibleId ?? null,
+        cardId: data.cardId ?? null,
+        isPrivate: data.isPrivate ?? false,
+        isShared: data.isShared ?? false,
+      })
+      .returning();
 
-    await db.insert(fixedExpensePayment).values({
-      expenseId: created.id,
-      householdId: household.id,
-      paidBy: payerId,
-      periodMonth: monthFromDate(data.expenseDate),
-      amount: shareAmount,
-      status: "paid",
-    });
+    // Compra puntual compartida: no es recurrente (a diferencia de cuotas/fijos),
+    // así que registramos de una el pago de quien la pagó físicamente
+    // (responsable, o quien la cargó si no hay responsable) — el resto del
+    // hogar aparece con su parte pendiente en Balances desde el primer momento.
+    if (data.isShared && created && members) {
+      const payerId = data.responsibleId ?? user.id;
+      const shareAmount = (parseFloat(data.amount) / members.length).toFixed(2);
 
+      await tx.insert(fixedExpensePayment).values({
+        expenseId: created.id,
+        householdId: household.id,
+        paidBy: payerId,
+        periodMonth: monthFromDate(data.expenseDate),
+        amount: shareAmount,
+        status: "paid",
+      });
+    }
+  });
+
+  if (data.isShared) {
     updateTag(hhTag(household.id, "payments"));
     revalidatePath("/balances");
   }
-
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
+  return {};
 }
 
-export async function createInstallment(rawData: unknown) {
+export async function createInstallment(rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
-  const data = createInstallmentSchema.parse(rawData);
+  let data: ReturnType<typeof createInstallmentSchema.parse>;
+  try {
+    data = createInstallmentSchema.parse(rawData);
+  } catch {
+    return { error: "Datos de la cuota inválidos" };
+  }
 
   await db
     .insert(expense)
@@ -90,12 +110,13 @@ export async function createInstallment(rawData: unknown) {
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
+  return {};
 }
 
 export async function markInstallmentPaid(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   // Incremento atómico en un solo UPDATE condicionado: el read-modify-write
   // en JS perdía incrementos con dos clicks concurrentes (ambos leían N y
@@ -132,7 +153,7 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
 export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const [current] = await db
     .select({
@@ -179,7 +200,7 @@ export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: s
 export async function registerInstallmentShare(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const [current] = await db
     .select({
@@ -222,23 +243,30 @@ export async function registerInstallmentShare(expenseId: string): Promise<{ err
   return {};
 }
 
-export async function updateExpense(expenseId: string, rawData: unknown) {
+export async function updateExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
-  const data = updateExpenseSchema.parse(rawData);
+  let data: ReturnType<typeof updateExpenseSchema.parse>;
+  try {
+    data = updateExpenseSchema.parse(rawData);
+  } catch {
+    return { error: "Datos del gasto inválidos" };
+  }
 
   const [updated] = await db
     .update(expense)
     .set(data)
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
-    .returning();
+    .returning({ id: expense.id });
+
+  if (!updated) return { error: "Gasto no encontrado" };
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);
-  return updated;
+  return {};
 }
 
 export async function updateInstallment(

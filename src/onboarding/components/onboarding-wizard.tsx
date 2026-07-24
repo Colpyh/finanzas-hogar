@@ -25,12 +25,9 @@ export function OnboardingWizard() {
   useEffect(() => {
     if (step === 2 && householdId && !inviteToken) {
       startTransition(async () => {
-        try {
-          const invite = await createInvite();
-          if (invite) setInviteToken(invite.token);
-        } catch {
-          // Non-blocking — user can still skip
-        }
+        const result = await createInvite();
+        if (result.token) setInviteToken(result.token);
+        // Non-blocking — el usuario puede omitir el paso si falla.
       });
     }
   }, [step, householdId, inviteToken]);

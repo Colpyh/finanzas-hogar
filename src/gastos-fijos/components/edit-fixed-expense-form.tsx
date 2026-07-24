@@ -42,17 +42,17 @@ export function EditFixedExpenseForm({ expense, cards = [] }: Props) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      try {
-        await updateFixedExpense(expense.id, {
-          description,
-          type: expenseType,
-          amount: expenseType === "variable" ? "0" : amount,
-          recurrenceDay: recurrenceDay ? Number(recurrenceDay) : undefined,
-          cardId,
-        });
+      const result = await updateFixedExpense(expense.id, {
+        description,
+        type: expenseType,
+        amount: expenseType === "variable" ? "0" : amount,
+        recurrenceDay: recurrenceDay ? Number(recurrenceDay) : undefined,
+        cardId,
+      });
+      if (result?.error) {
+        setError(result.error);
+      } else {
         router.push("/gastos-fijos");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al guardar");
       }
     });
   }

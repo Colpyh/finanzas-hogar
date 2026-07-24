@@ -2,7 +2,7 @@
 
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
@@ -16,12 +16,17 @@ import {
   updateFixedExpenseSchema,
 } from "./types";
 
-export async function createFixedExpense(rawData: unknown) {
+export async function createFixedExpense(rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
-  const data = createFixedExpenseSchema.parse(rawData);
+  let data: ReturnType<typeof createFixedExpenseSchema.parse>;
+  try {
+    data = createFixedExpenseSchema.parse(rawData);
+  } catch {
+    return { error: "Datos del gasto inválidos" };
+  }
 
   await db
     .insert(expense)
@@ -40,12 +45,13 @@ export async function createFixedExpense(rawData: unknown) {
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
+  return {};
 }
 
 export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   let data: ReturnType<typeof markPaidSchema.parse>;
   try {
@@ -55,11 +61,18 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
   }
   const periodMonth = data.periodMonth ?? currentPeriodMonth();
 
-  // Verify expense belongs to this household
+  // Verify expense belongs to this household (y no está borrado — un pago
+  // sobre un gasto soft-borrado quedaría como fila fantasma).
   const [exp] = await db
     .select({ id: expense.id })
     .from(expense)
-    .where(and(eq(expense.id, data.expenseId), eq(expense.householdId, household.id)))
+    .where(
+      and(
+        eq(expense.id, data.expenseId),
+        eq(expense.householdId, household.id),
+        isNull(expense.deletedAt)
+      )
+    )
     .limit(1);
   if (!exp) return { error: "Gasto no encontrado" };
 
@@ -89,7 +102,7 @@ export async function markFixedExpensePaid(rawData: unknown): Promise<{ error?: 
 export async function upgradeToPaid(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const periodMonth = month ?? currentPeriodMonth();
 
@@ -123,7 +136,7 @@ export async function upgradeToPaid(expenseId: string, month?: string): Promise<
 export async function toggleFixedExpenseActive(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const [current] = await db
     .select({ isActive: expense.isActive })
@@ -146,12 +159,17 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<{ err
   return {};
 }
 
-export async function updateFixedExpense(expenseId: string, rawData: unknown) {
+export async function updateFixedExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
-  const data = updateFixedExpenseSchema.parse(rawData);
+  let data: ReturnType<typeof updateFixedExpenseSchema.parse>;
+  try {
+    data = updateFixedExpenseSchema.parse(rawData);
+  } catch {
+    return { error: "Datos del gasto inválidos" };
+  }
 
   // Mismo guard que el borrado: desmarcar "compartido" saca el gasto de
   // getHouseholdDebtItems y una deuda sin saldar desaparecería en silencio.
@@ -163,7 +181,7 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
       .limit(1);
     if (current?.isShared) {
       const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
-      if (debtError) throw new Error(debtError);
+      if (debtError) return { error: debtError };
     }
   }
 
@@ -173,17 +191,17 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown) {
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
     .returning({ id: expense.id });
 
-  if (!updated) throw new Error("Gasto no encontrado");
+  if (!updated) return { error: "Gasto no encontrado" };
 
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/gastos-fijos");
-  return updated;
+  return {};
 }
 
 export async function markPaidForOther(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const members = await getHouseholdMembers(household.id);
   // Atajo pensado para 2 miembros: con 3+ hay varios "otros" y no se puede
@@ -234,7 +252,7 @@ export async function markPaidForOther(expenseId: string, month?: string): Promi
 export async function unmarkMyPayment(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const periodMonth = month ?? currentPeriodMonth();
 
@@ -260,7 +278,7 @@ export async function unmarkMyPayment(expenseId: string, month?: string): Promis
 export async function unmarkOtherPayment(expenseId: string, month?: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   const members = await getHouseholdMembers(household.id);
   if (members.length > 2) {
@@ -293,7 +311,7 @@ export async function unmarkOtherPayment(expenseId: string, month?: string): Pro
 export async function deleteFixedExpense(expenseId: string): Promise<{ error?: string }> {
   const user = await getUser();
   const household = await getUserHousehold(user.id);
-  if (!household) throw new Error("No household");
+  if (!household) return { error: "No tienes un hogar activo" };
 
   // Guard: no soft-borrar un gasto compartido con meses sin saldar (la deuda
   // desaparecería del balance en silencio).

@@ -54,41 +54,38 @@ describe("confirmPendingExpense", () => {
     });
   });
 
-  it("throws on invalid UUID input", async () => {
+  it("returns error on invalid UUID input", async () => {
     const { confirmPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      confirmPendingExpense({
-        pendingExpenseId: "not-a-uuid",
-        categoryId: UUID_CATEGORY,
-        description: "Test",
-      })
-    ).rejects.toThrow();
+    const result = await confirmPendingExpense({
+      pendingExpenseId: "not-a-uuid",
+      categoryId: UUID_CATEGORY,
+      description: "Test",
+    });
+    expect(result.error).toBeTruthy();
   });
 
-  it("throws on empty description", async () => {
+  it("returns error on empty description", async () => {
     const { confirmPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      confirmPendingExpense({
-        pendingExpenseId: UUID_PENDING,
-        categoryId: UUID_CATEGORY,
-        description: "",
-      })
-    ).rejects.toThrow();
+    const result = await confirmPendingExpense({
+      pendingExpenseId: UUID_PENDING,
+      categoryId: UUID_CATEGORY,
+      description: "",
+    });
+    expect(result.error).toBeTruthy();
   });
 
-  it("throws when pending expense not found", async () => {
+  it("returns error when pending expense not found", async () => {
     // tx.select().from().where().limit() returns empty array
     const chainMock = { from: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), limit: jest.fn().mockResolvedValue([]) };
     mockTxSelect.mockReturnValue(chainMock);
 
     const { confirmPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      confirmPendingExpense({
-        pendingExpenseId: UUID_PENDING,
-        categoryId: UUID_CATEGORY,
-        description: "MUNICH",
-      })
-    ).rejects.toThrow("Pending expense not found or already processed");
+    const result = await confirmPendingExpense({
+      pendingExpenseId: UUID_PENDING,
+      categoryId: UUID_CATEGORY,
+      description: "MUNICH",
+    });
+    expect(result.error).toBe("Este gasto pendiente ya fue procesado o no existe");
   });
 
   it("inserts expense and updates pending on success", async () => {
@@ -141,14 +138,13 @@ describe("discardPendingExpense", () => {
     jest.clearAllMocks();
   });
 
-  it("throws on invalid UUID input", async () => {
+  it("returns error on invalid UUID input", async () => {
     const { discardPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      discardPendingExpense({ pendingExpenseId: "not-a-uuid" })
-    ).rejects.toThrow();
+    const result = await discardPendingExpense({ pendingExpenseId: "not-a-uuid" });
+    expect(result.error).toBeTruthy();
   });
 
-  it("throws when pending expense not found (0 rows updated)", async () => {
+  it("returns error when pending expense not found (0 rows updated)", async () => {
     const updateChain = {
       set: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -157,9 +153,8 @@ describe("discardPendingExpense", () => {
     mockUpdate.mockReturnValue(updateChain);
 
     const { discardPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      discardPendingExpense({ pendingExpenseId: UUID_PENDING })
-    ).rejects.toThrow("Pending expense not found or already processed");
+    const result = await discardPendingExpense({ pendingExpenseId: UUID_PENDING });
+    expect(result.error).toBe("Este gasto pendiente ya fue procesado o no existe");
   });
 
   it("updates status to discarded and revalidates on success", async () => {

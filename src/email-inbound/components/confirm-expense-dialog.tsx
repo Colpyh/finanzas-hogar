@@ -102,12 +102,12 @@ export function ConfirmExpenseDialog({
     onOptimisticHide?.(itemId);
 
     startTransition(async () => {
-      try {
-        await confirmPendingExpense(payload);
-        toast.success("Gasto confirmado");
-      } catch {
+      const result = await confirmPendingExpense(payload);
+      if (result?.error) {
         onRestore?.(itemId);
-        toast.error("No se pudo confirmar el gasto — intentá de nuevo.");
+        toast.error(result.error);
+      } else {
+        toast.success("Gasto confirmado");
       }
     });
   }

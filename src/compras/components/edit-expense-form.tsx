@@ -43,16 +43,16 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
     setError(null);
     setSaved(false);
     startTransition(async () => {
-      try {
-        await updateExpense(expense.id, {
-          description,
-          ...(isInstallment ? {} : { amount, expenseDate: expenseDate || null }),
-          responsibleId: responsibleId ?? null,
-          cardId: cardId ?? null,
-        });
+      const result = await updateExpense(expense.id, {
+        description,
+        ...(isInstallment ? {} : { amount, expenseDate: expenseDate || null }),
+        responsibleId: responsibleId ?? null,
+        cardId: cardId ?? null,
+      });
+      if (result?.error) {
+        setError(result.error);
+      } else {
         setSaved(true);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al guardar");
       }
     });
   }

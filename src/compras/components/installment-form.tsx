@@ -72,14 +72,14 @@ export function InstallmentForm({ categories, members, cards = [] }: Props) {
     }
     submittingRef.current = true;
     setLoading(true);
-    try {
-      await createInstallment(parsed.data);
-      router.push("/compras?type=installment");
-    } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
+    const result = await createInstallment(parsed.data);
+    if (result?.error) {
+      setErrors({ general: result.error });
       submittingRef.current = false;
       setLoading(false);
+      return;
     }
+    router.push("/compras?type=installment");
   }
 
   return (

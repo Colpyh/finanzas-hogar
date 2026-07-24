@@ -62,27 +62,32 @@ describe("confirmPendingExpense", () => {
     });
   });
 
-  it("throws ZodError on invalid input (missing required fields)", async () => {
+  it("returns error on invalid input (missing required fields)", async () => {
     const { confirmPendingExpense } = await import("@/email-inbound/actions");
-    await expect(confirmPendingExpense({} as never)).rejects.toThrow();
+    const result = await confirmPendingExpense({} as never);
+    expect(result.error).toBeTruthy();
   });
 
-  it("throws ZodError on invalid UUID", async () => {
+  it("returns error on invalid UUID", async () => {
     const { confirmPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      confirmPendingExpense({ pendingExpenseId: "not-a-uuid", categoryId: UUID_CATEGORY, description: "Test" })
-    ).rejects.toThrow();
+    const result = await confirmPendingExpense({
+      pendingExpenseId: "not-a-uuid",
+      categoryId: UUID_CATEGORY,
+      description: "Test",
+    });
+    expect(result.error).toBeTruthy();
   });
 
-  it("throws when no household", async () => {
+  it("returns error when no household", async () => {
     const { getUserHousehold } = await import("@/onboarding/queries");
     (getUserHousehold as jest.Mock).mockResolvedValueOnce(null);
 
     const { confirmPendingExpense } = await import("@/email-inbound/actions");
-    await expect(confirmPendingExpense(VALID_INPUT)).rejects.toThrow("No household");
+    const result = await confirmPendingExpense(VALID_INPUT);
+    expect(result.error).toBe("No tienes un hogar activo");
   });
 
-  it("throws when pending expense not found in transaction", async () => {
+  it("returns error when pending expense not found in transaction", async () => {
     const chain = {
       from: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -91,9 +96,8 @@ describe("confirmPendingExpense", () => {
     mockTxSelect.mockReturnValue(chain);
 
     const { confirmPendingExpense } = await import("@/email-inbound/actions");
-    await expect(confirmPendingExpense(VALID_INPUT)).rejects.toThrow(
-      "Pending expense not found or already processed"
-    );
+    const result = await confirmPendingExpense(VALID_INPUT);
+    expect(result.error).toBe("Este gasto pendiente ya fue procesado o no existe");
   });
 
   it("inserts expense and updates pending on happy path, revalidates paths", async () => {
@@ -196,24 +200,22 @@ describe("discardPendingExpense", () => {
     jest.clearAllMocks();
   });
 
-  it("throws ZodError on invalid UUID", async () => {
+  it("returns error on invalid UUID", async () => {
     const { discardPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      discardPendingExpense({ pendingExpenseId: "not-a-uuid" })
-    ).rejects.toThrow();
+    const result = await discardPendingExpense({ pendingExpenseId: "not-a-uuid" });
+    expect(result.error).toBeTruthy();
   });
 
-  it("throws when no household", async () => {
+  it("returns error when no household", async () => {
     const { getUserHousehold } = await import("@/onboarding/queries");
     (getUserHousehold as jest.Mock).mockResolvedValueOnce(null);
 
     const { discardPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      discardPendingExpense({ pendingExpenseId: UUID_PENDING })
-    ).rejects.toThrow("No household");
+    const result = await discardPendingExpense({ pendingExpenseId: UUID_PENDING });
+    expect(result.error).toBe("No tienes un hogar activo");
   });
 
-  it("throws when pending expense not found (0 rows updated)", async () => {
+  it("returns error when pending expense not found (0 rows updated)", async () => {
     const updateChain = {
       set: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -222,9 +224,8 @@ describe("discardPendingExpense", () => {
     mockUpdate.mockReturnValue(updateChain);
 
     const { discardPendingExpense } = await import("@/email-inbound/actions");
-    await expect(
-      discardPendingExpense({ pendingExpenseId: UUID_PENDING })
-    ).rejects.toThrow("Pending expense not found or already processed");
+    const result = await discardPendingExpense({ pendingExpenseId: UUID_PENDING });
+    expect(result.error).toBe("Este gasto pendiente ya fue procesado o no existe");
   });
 
   it("updates to discarded and revalidates /gastos-pendientes on happy path", async () => {

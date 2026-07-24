@@ -132,22 +132,22 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
     }
     submittingRef.current = true;
     setLoading(true);
-    try {
-      await createPurchase(parsed.data);
-      try {
-        localStorage.setItem(DEFAULTS_KEY, JSON.stringify({ categoryId, cardId, responsibleId }));
-      } catch {
-        // sin localStorage no hay memoria de defaults, nada más
-      }
-      // Navegar al MES del gasto: una boleta vieja (ej. escaneada días después)
-      // cae en otro mes y el usuario no la veía en la lista → reintentaba y
-      // duplicaba. Aterrizar donde quedó lo guardado.
-      router.push(`/compras?month=${expenseDate.slice(0, 7)}-01`);
-    } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : "Error al guardar" });
+    const result = await createPurchase(parsed.data);
+    if (result?.error) {
+      setErrors({ general: result.error });
       submittingRef.current = false;
       setLoading(false);
+      return;
     }
+    try {
+      localStorage.setItem(DEFAULTS_KEY, JSON.stringify({ categoryId, cardId, responsibleId }));
+    } catch {
+      // sin localStorage no hay memoria de defaults, nada más
+    }
+    // Navegar al MES del gasto: una boleta vieja (ej. escaneada días después)
+    // cae en otro mes y el usuario no la veía en la lista → reintentaba y
+    // duplicaba. Aterrizar donde quedó lo guardado.
+    router.push(`/compras?month=${expenseDate.slice(0, 7)}-01`);
   }
 
   return (

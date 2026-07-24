@@ -33,28 +33,25 @@ export async function updateHousehold(rawData: unknown) {
   return updated;
 }
 
-export async function createInvite() {
+export async function createInvite(): Promise<{ error?: string; token?: string }> {
   const user = await getUser();
   const userHousehold = await getUserHousehold(user.id);
-  if (!userHousehold) throw new Error("No household");
-  if (userHousehold.role !== "owner") throw new Error("Solo el propietario puede invitar");
+  if (!userHousehold) return { error: "No tienes un hogar activo" };
+  if (userHousehold.role !== "owner") return { error: "Solo el propietario puede invitar" };
 
   // NFR-2: 256-bit entropy token
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-  const [invite] = await db
-    .insert(householdInvite)
-    .values({
-      householdId: userHousehold.id,
-      token,
-      createdBy: user.id,
-      expiresAt,
-    })
-    .returning();
+  await db.insert(householdInvite).values({
+    householdId: userHousehold.id,
+    token,
+    createdBy: user.id,
+    expiresAt,
+  });
 
   revalidatePath("/ajustes");
-  return invite;
+  return { token };
 }
 
 export async function generateInvite(): Promise<void> {
