@@ -1,5 +1,3 @@
-"use client";
-
 import { formatCurrency } from "@/shared/components/currency-display";
 
 type Props = {
