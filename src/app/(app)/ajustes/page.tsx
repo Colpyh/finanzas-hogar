@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getUser } from "@/auth/queries";
+import { getSessionUser } from "@/auth/queries";
 import { getUserHousehold } from "@/onboarding/queries";
 import { getHouseholdMembers } from "@/household/queries";
 import { getHouseholdCards, getCardUsageSummary, getCardLinkedExpenses } from "@/tarjetas/queries";
@@ -26,6 +26,14 @@ const MOCK_MEMBERS = [
   { id: "2", userId: "mock-2", displayName: "Cónyuge", role: "member" as const },
 ];
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[11.5px] font-bold text-muted-foreground uppercase mb-[9px]" style={{ letterSpacing: "0.04em" }}>
+      {children}
+    </p>
+  );
+}
+
 export default async function AjustesPage() {
   let householdName = "Hogar Demo";
   let members: { id: string; userId: string; displayName: string; role: "owner" | "member" }[] = MOCK_MEMBERS;
@@ -36,8 +44,11 @@ export default async function AjustesPage() {
   let bugReports: Awaited<ReturnType<typeof getAllBugReports>> = [];
   let categories: Awaited<ReturnType<typeof getCategories>> = [];
 
-  try {
-    const user = await getUser();
+  // Mocks solo sin sesión; un error real de queries con usuario logueado DEBE
+  // propagar al error boundary (mismo patrón que dashboard/compras/resumen) —
+  // mostrar mocks ahí sería mostrar miembros/tarjetas falsos como reales.
+  const user = await getSessionUser();
+  if (user) {
     const userHousehold = await getUserHousehold(user.id);
     if (userHousehold) {
       householdName = userHousehold.name;
@@ -83,16 +94,6 @@ export default async function AjustesPage() {
     if (isAdmin) {
       bugReports = await getAllBugReports();
     }
-  } catch {
-    // Sin sesión — datos de ejemplo
-  }
-
-  function SectionLabel({ children }: { children: React.ReactNode }) {
-    return (
-      <p className="text-[11.5px] font-bold text-muted-foreground uppercase mb-[9px]" style={{ letterSpacing: "0.04em" }}>
-        {children}
-      </p>
-    );
   }
 
   const cardStyle = {
