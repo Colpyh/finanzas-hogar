@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { deleteExpense } from "@/compras/actions";
+import { toast } from "sonner";
 
 type Props = { expenseId: string; description: string };
 
@@ -19,6 +20,7 @@ export function DeleteExpenseButton({ expenseId, description }: Props) {
     if (result?.error) {
       setLoading(false);
       setOpen(false);
+      toast.error(result.error);
     } else {
       router.push("/compras");
     }
