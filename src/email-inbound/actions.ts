@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { db } from "@/shared/lib/db";
 import { pendingExpense, expense, card } from "@/shared/lib/db/schema";
 import { and, eq } from "drizzle-orm";

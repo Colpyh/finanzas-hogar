@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
-import { getHouseholdMembers } from "@/household/queries";
+import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
 import { getPendingBalances } from "@/balances/queries";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { SettleButton } from "@/balances/components/settle-button";

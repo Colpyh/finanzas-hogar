@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { addCardSchema, updateCardSchema } from "./types";
 
 export async function addCard(rawData: unknown): Promise<{ error?: string }> {

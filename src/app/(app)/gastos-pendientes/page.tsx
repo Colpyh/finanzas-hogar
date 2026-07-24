@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import {
   listPendingByHousehold,
   getPendingCount,

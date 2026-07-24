@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { createClient } from "@/shared/lib/supabase/server";
 import { extractReceiptWithGemini } from "./gemini";
 import { itemsMatchTotal, type ExtractedReceipt } from "./types";

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { getExpenses } from "@/compras/queries";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 

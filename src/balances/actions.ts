@@ -6,8 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
-import { getHouseholdMembers } from "@/household/queries";
+import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
 import { syncSharedInstallmentCounter } from "@/compras/installment-sync";
 
 export async function settleBalanceItem(

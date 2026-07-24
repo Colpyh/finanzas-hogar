@@ -21,11 +21,8 @@ jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER, email: "user@test.com" }),
 }));
 
-jest.mock("@/onboarding/queries", () => ({
-  getUserHousehold: jest.fn().mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test" }),
-}));
-
 jest.mock("@/household/queries", () => ({
+  getUserHousehold: jest.fn().mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test" }),
   getHouseholdMembers: jest.fn().mockResolvedValue([
     { id: "m1", userId: UUID_USER, role: "owner", displayName: "User" },
     { id: "m2", userId: UUID_OTHER, role: "member", displayName: "Other" },
@@ -78,7 +75,7 @@ describe("settleBalanceItem", () => {
   });
 
   it("returns error when user has no household", async () => {
-    const { getUserHousehold } = await import("@/onboarding/queries");
+    const { getUserHousehold } = await import("@/household/queries");
     (getUserHousehold as jest.Mock).mockResolvedValueOnce(null);
 
     const { settleBalanceItem } = await import("@/balances/actions");

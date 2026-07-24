@@ -18,7 +18,7 @@ jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER, email: "user@test.com" }),
 }));
 
-jest.mock("@/onboarding/queries", () => ({
+jest.mock("@/household/queries", () => ({
   getUserHousehold: jest.fn().mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test" }),
 }));
 

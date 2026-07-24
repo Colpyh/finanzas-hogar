@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { monthToDate, formatMonthLabel } from "@/resumen/month-utils";
 import {

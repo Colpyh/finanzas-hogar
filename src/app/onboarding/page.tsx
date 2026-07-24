@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold, getInviteByToken } from "@/onboarding/queries";
+import { getInviteByToken } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { OnboardingWizard } from "@/onboarding/components/onboarding-wizard";
 import { InviteRedemption } from "@/onboarding/components/invite-redemption";
 import { signOut } from "@/auth/actions";

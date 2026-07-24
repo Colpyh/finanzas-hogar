@@ -6,7 +6,7 @@ import { expense } from "@/shared/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { getFixedExpensePayments } from "@/gastos-fijos/queries";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { getHouseholdCards, getCardUsageSummary } from "@/tarjetas/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { EditFixedExpenseForm } from "@/gastos-fijos/components/edit-fixed-expense-form";

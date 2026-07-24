@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getSessionUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { currentPeriodMonth } from "@/shared/lib/db/helpers";
 import { currentMonth, monthToDate, formatMonthLabel } from "@/resumen/month-utils";
 import {

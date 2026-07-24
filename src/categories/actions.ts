@@ -7,7 +7,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 
 const categorySchema = z.object({
   name: z.string().min(1).max(50),

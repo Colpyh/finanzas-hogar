@@ -23,14 +23,11 @@ jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER, email: "owner@test.com" }),
 }));
 
-jest.mock("@/onboarding/queries", () => ({
+jest.mock("@/household/queries", () => ({
   getUserHousehold: jest
     .fn()
     .mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test", role: "owner" }),
   userHouseholdTag: (userId: string) => `user-household-${userId}`,
-}));
-
-jest.mock("@/household/queries", () => ({
   getHouseholdMembers: jest.fn().mockResolvedValue([
     { id: "m1", userId: UUID_USER, role: "owner", displayName: "Owner" },
     { id: "m2", userId: UUID_OTHER, role: "member", displayName: "Other" },
@@ -78,7 +75,7 @@ describe("removeMember", () => {
   // La action devuelve { error } (no lanza): los mensajes de errores lanzados
   // en Server Actions se redactan en producción y el usuario nunca los ve.
   it("returns error when caller is not owner", async () => {
-    const { getUserHousehold } = await import("@/onboarding/queries");
+    const { getUserHousehold } = await import("@/household/queries");
     (getUserHousehold as jest.Mock).mockResolvedValueOnce({
       id: UUID_HOUSEHOLD,
       name: "Test",

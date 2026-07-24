@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { db } from "@/shared/lib/db";
 import { pushSubscription } from "@/shared/lib/db/schema";
 import { eq, and } from "drizzle-orm";

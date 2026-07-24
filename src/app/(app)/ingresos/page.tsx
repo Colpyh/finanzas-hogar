@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { getMonthlyIncome, getMonthlyIncomeTotal } from "@/ingresos/queries";
 import { formatCurrency } from "@/shared/components/currency-display";

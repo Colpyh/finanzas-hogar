@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { getUserHousehold } from "@/household/queries";
 import { getPendingCount } from "@/email-inbound/queries";
 import { UnauthorizedError } from "@/auth/types";
 import { AppProviders } from "./providers";

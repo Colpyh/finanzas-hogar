@@ -7,10 +7,9 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold, userHouseholdTag } from "@/onboarding/queries";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { updateHouseholdSchema } from "./types";
-import { getHouseholdMembers } from "./queries";
+import { getHouseholdMembers, getUserHousehold, userHouseholdTag } from "./queries";
 import { getPendingBalances } from "@/balances/queries";
 import { formatCurrency } from "@/shared/components/currency-display";
 

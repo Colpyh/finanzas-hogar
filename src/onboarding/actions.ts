@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { getUser } from "@/auth/queries";
 import { createHouseholdSchema, redeemInviteSchema } from "./types";
-import { userHouseholdTag } from "./queries";
+import { userHouseholdTag } from "@/household/queries";
 import { validateInviteRedemption } from "./invite-validation";
 
 export async function createHousehold(rawData: unknown) {

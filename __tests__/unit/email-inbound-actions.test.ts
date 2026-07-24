@@ -19,7 +19,7 @@ jest.mock("next/cache", () => ({ revalidatePath: mockRevalidatePath, updateTag: 
 jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER }),
 }));
-jest.mock("@/onboarding/queries", () => ({
+jest.mock("@/household/queries", () => ({
   getUserHousehold: jest.fn().mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test" }),
 }));
 

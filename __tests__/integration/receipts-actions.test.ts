@@ -12,7 +12,7 @@ jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER, email: "user@test.com" }),
 }));
 
-jest.mock("@/onboarding/queries", () => ({
+jest.mock("@/household/queries", () => ({
   getUserHousehold: jest.fn().mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test" }),
 }));
 
@@ -109,7 +109,7 @@ describe("analyzeReceipt", () => {
   });
 
   it("returns error when user has no household", async () => {
-    const { getUserHousehold } = await import("@/onboarding/queries");
+    const { getUserHousehold } = await import("@/household/queries");
     (getUserHousehold as jest.Mock).mockResolvedValueOnce(null);
 
     const { analyzeReceipt } = await import("@/receipts/actions");

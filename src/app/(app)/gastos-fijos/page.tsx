@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSessionUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
 import { getActiveFixedExpenses, getAllFixedPaymentsForPeriod } from "@/gastos-fijos/queries";
-import { getHouseholdMembers } from "@/household/queries";
+import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
 import { FixedExpenseList } from "@/gastos-fijos/components/fixed-expense-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";

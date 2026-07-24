@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getSessionUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
-import { getHouseholdMembers } from "@/household/queries";
+import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
 import { getHouseholdCards, getCardUsageSummary, getCardLinkedExpenses } from "@/tarjetas/queries";
 import type { CardLinkedExpense } from "@/tarjetas/queries";
 import { getCategories } from "@/categories/queries";
