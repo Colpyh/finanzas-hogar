@@ -6,7 +6,7 @@ import { MarkPaidDialog } from "./mark-paid-dialog";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { upgradeToPaid, markPaidForOther, unmarkOtherPayment, unmarkMyPayment } from "@/gastos-fijos/actions";
 import { formatCurrency } from "@/shared/components/currency-display";
-import { Pencil, Users } from "lucide-react";
+import { Pencil, Users, Check, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -222,44 +222,44 @@ export function FixedExpenseCard({
   if (isVariable && currentUserStatus === "none" && !isPaidThisMonth) {
     actionButtons = (
       <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Ingresar monto y pagar">
-        ✓
+        <Check size={13} />
       </ActionBtn>
     );
   } else if (!expense.isShared) {
     if (currentUserStatus === "paid") {
       actionButtons = (
         <ActionBtn onClick={() => setConfirmUnmarkMineOpen(true)} variant="success" title="Pagado — click para deshacer">
-          ✓
+          <Undo2 size={13} />
         </ActionBtn>
       );
     } else if (currentUserStatus === "reserved") {
       actionButtons = (
         <ActionBtn onClick={() => setConfirmUpgradeOpen(true)} variant="amber" title="Confirmar pago definitivo" disabled={upgrading}>
-          ✓
+          <Check size={13} />
         </ActionBtn>
       );
     } else {
       actionButtons = (
-        <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Marcar como pagado">✓</ActionBtn>
+        <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Marcar como pagado"><Check size={13} /></ActionBtn>
       );
     }
   } else {
     if (isSettled) {
       // Editar el pago del otro solo tiene sentido con 2 miembros; a 3+ es un
-      // ✓ estático (deshacer un pago ajeno específico se maneja aparte).
+      // check estático (deshacer un pago ajeno específico se maneja aparte).
       actionButtons = twoMembers ? (
         <ActionBtn onClick={() => setConfirmUnmarkOpen(true)} variant="success" title="Saldado — click para editar" disabled={unmarking}>
-          ✓
+          <Undo2 size={13} />
         </ActionBtn>
       ) : (
         <ActionBtn onClick={() => {}} variant="success" title="Pagado por todos" disabled>
-          ✓
+          <Check size={13} />
         </ActionBtn>
       );
     } else if (isPaidThisMonth && currentUserStatus === "paid") {
       actionButtons = (
         <>
-          <ActionBtn onClick={() => setConfirmUnmarkMineOpen(true)} variant="amber" title="Deshacer mi pago" disabled={unmarkingMine}>↩</ActionBtn>
+          <ActionBtn onClick={() => setConfirmUnmarkMineOpen(true)} variant="amber" title="Deshacer mi pago" disabled={unmarkingMine}><Undo2 size={13} /></ActionBtn>
           {twoMembers && (
             <ActionBtn onClick={() => setConfirmMarkBothOpen(true)} variant="amber" title="Marcar saldado por ambos" disabled={markingBoth}>
               <Users size={13} />
@@ -270,18 +270,18 @@ export function FixedExpenseCard({
     } else if (isPaidThisMonth && currentUserStatus === "none") {
       actionButtons = (
         <ActionBtn onClick={() => setDialogOpen(true)} variant="amber" title={`Pagado por ${paidByName ?? "otro"} — saldar mi parte`}>
-          ✓
+          <Check size={13} />
         </ActionBtn>
       );
     } else if (currentUserStatus === "reserved") {
       actionButtons = (
         <ActionBtn onClick={() => setConfirmUpgradeOpen(true)} variant="amber" title="Confirmar pago definitivo" disabled={upgrading}>
-          ✓
+          <Check size={13} />
         </ActionBtn>
       );
     } else {
       actionButtons = (
-        <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Registrar pago">✓</ActionBtn>
+        <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Registrar pago"><Check size={13} /></ActionBtn>
       );
     }
   }
