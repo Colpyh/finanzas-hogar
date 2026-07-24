@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getInviteByToken } from "@/onboarding/queries";
-import { getSession } from "@/auth/queries";
+import { getSessionUser } from "@/auth/queries";
 import { InviteRedemption } from "@/onboarding/components/invite-redemption";
 
 type Props = {
@@ -9,10 +9,12 @@ type Props = {
 
 export default async function InvitePage({ params }: Props) {
   const { token } = await params;
-  const session = await getSession();
+  // getSessionUser() valida el token contra el servidor de auth (no solo lee
+  // la cookie como getSession()) — consistente con el resto de la app.
+  const user = await getSessionUser();
 
   // If not authenticated, redirect to login with returnTo
-  if (!session) {
+  if (!user) {
     redirect(`/auth/login?returnTo=/invite/${token}`);
   }
 
