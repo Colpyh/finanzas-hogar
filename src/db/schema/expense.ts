@@ -21,7 +21,10 @@ export const expense = pgTable(
       .notNull()
       .references(() => household.id, { onDelete: "cascade" }),
     createdBy: uuid("created_by").notNull(), // references auth.users(id)
-    // Null = gasto del hogar completo. Uuid = gasto personal de ese miembro.
+    // VESTIGIAL: pensada como null=gasto del hogar completo / uuid=gasto
+    // personal, pero la privacidad terminó implementada con isPrivate +
+    // createdBy (ver visibleToUser en shared/lib/db/visibility.ts). Ningún
+    // insert ni query la lee o la escribe — no confundir con esas columnas.
     ownerId: uuid("owner_id"),
     // Null = sin responsable definido. Uuid = miembro que paga físicamente (tarjeta/cuenta).
     responsibleId: uuid("responsible_id"),
@@ -33,7 +36,7 @@ export const expense = pgTable(
     }).notNull(),
     description: text("description").notNull(),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-    currency: text("currency").notNull().default("ARS"),
+    currency: text("currency").notNull().default("CLP"),
 
     // Fixed expense fields
     recurrenceDay: smallint("recurrence_day"), // 1-31, day of month bill is due
