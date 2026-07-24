@@ -35,7 +35,7 @@ function expenseTypeLabel(e: CardLinkedExpense): string {
 
 function formatShortDate(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
-  return date.toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" });
+  return date.toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function LinkedExpenseRow({ expense: e }: { expense: CardLinkedExpense }) {

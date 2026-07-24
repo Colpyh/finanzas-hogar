@@ -26,7 +26,7 @@ export function buildWhatsappText(
   memberNames: Record<string, string>,
 ): string {
   const [year, m] = month.split("-");
-  const monthLabel = new Date(Number(year), Number(m) - 1).toLocaleString("es-CL", { month: "long", year: "numeric" });
+  const monthLabel = new Date(Number(year), Number(m) - 1).toLocaleString("es-419", { month: "long", year: "numeric" });
 
   const lines: string[] = [];
 
@@ -75,7 +75,7 @@ export function buildWhatsappText(
   if (purchases.length > 0) {
     lines.push(`*${CART} Compras recientes*`);
     for (const p of purchases) {
-      const date = new Date(p.expenseDate + "T00:00:00").toLocaleDateString("es-CL", { day: "numeric", month: "short" });
+      const date = new Date(p.expenseDate + "T00:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" });
       const who = p.responsibleId && memberNames[p.responsibleId] ? ` (${memberNames[p.responsibleId]})` : "";
       lines.push(`• ${p.description}${who}: ${fmt(p.amount)} — ${date}`);
     }

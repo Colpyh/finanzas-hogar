@@ -119,7 +119,7 @@ export default async function BalancesPage() {
                 const payerName = item.payerId === user.id
                   ? "Tú"
                   : memberMap.get(item.payerId) ?? "Otro";
-                const monthLabel = new Date(item.periodMonth + "T00:00:00").toLocaleDateString("es-CL", { month: "short", year: "numeric" });
+                const monthLabel = new Date(item.periodMonth + "T00:00:00").toLocaleDateString("es-419", { month: "short", year: "numeric" });
                 const dirLabel = `Pagó ${payerName} · ${monthLabel}`;
                 const amtColor = item.isOwed ? "#22c55e" : "#f59e0b";
                 const initial = payerName.charAt(0).toUpperCase();

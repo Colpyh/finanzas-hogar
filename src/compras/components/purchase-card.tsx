@@ -27,7 +27,7 @@ type Props = {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
-  return date.toLocaleDateString("es-CL", { day: "numeric", month: "short" });
+  return date.toLocaleDateString("es-419", { day: "numeric", month: "short" });
 }
 
 export function PurchaseCard({ expense }: Props) {
