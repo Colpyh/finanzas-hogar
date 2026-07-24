@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { updateExpense } from "@/compras/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,7 @@ type Props = {
 
 export function EditExpenseForm({ expense, members, cards }: Props) {
   const isInstallment = expense.type === "installment";
+  const router = useRouter();
 
   const [description, setDescription] = useState(expense.description);
   const [amount, setAmount] = useState(expense.amount ?? "");
@@ -35,13 +38,11 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
   const [responsibleId, setResponsibleId] = useState<string | null>(expense.responsibleId);
   const [cardId, setCardId] = useState<string | null>(expense.cardId);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSaved(false);
     startTransition(async () => {
       const result = await updateExpense(expense.id, {
         description,
@@ -52,7 +53,8 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
       if (result?.error) {
         setError(result.error);
       } else {
-        setSaved(true);
+        toast.success("Cambios guardados");
+        router.push("/compras");
       }
     });
   }
@@ -127,12 +129,22 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {saved && <p className="text-sm text-emerald-600 dark:text-emerald-400">Cambios guardados</p>}
 
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending && <Loader2 size={14} className="mr-1.5 animate-spin" />}
-        Guardar cambios
-      </Button>
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.back()}
+          disabled={isPending}
+          className="flex-1"
+        >
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending} className="flex-1">
+          {isPending && <Loader2 size={14} className="mr-1.5 animate-spin" />}
+          Guardar cambios
+        </Button>
+      </div>
     </form>
   );
 }

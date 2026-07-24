@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { updateFixedExpense, deleteFixedExpense } from "@/gastos-fijos/actions";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { CardPills } from "@/shared/components/card-pills";
@@ -52,6 +53,7 @@ export function EditFixedExpenseForm({ expense, cards = [] }: Props) {
       if (result?.error) {
         setError(result.error);
       } else {
+        toast.success("Cambios guardados");
         router.push("/gastos-fijos");
       }
     });
