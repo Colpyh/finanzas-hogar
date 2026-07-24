@@ -39,7 +39,6 @@ export function MarkPaidDialog({
   const [amount, setAmount] = useState(estimatedAmount === "0" ? "" : estimatedAmount);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(status: "reserved" | "paid") {
     setError(null);
@@ -80,7 +79,6 @@ export function MarkPaidDialog({
               min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              disabled={loading}
             />
             <p className="text-xs text-muted-foreground">
               Estimado: {formatCurrency(parseFloat(estimatedAmount) || 0)}
@@ -94,7 +92,6 @@ export function MarkPaidDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ej: Pagado con débito"
-              disabled={loading}
             />
           </div>
 
@@ -105,7 +102,6 @@ export function MarkPaidDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={loading}
             className="sm:mr-auto"
           >
             Cancelar
@@ -113,19 +109,17 @@ export function MarkPaidDialog({
           <Button
             variant="outline"
             onClick={() => handleSubmit("reserved")}
-            disabled={loading}
             className="gap-2 border-violet-300 text-violet-700 hover:bg-violet-50"
           >
             <PiggyBank size={15} />
-            {loading ? "Guardando..." : "Guardar en chanchito"}
+            Guardar en chanchito
           </Button>
           <Button
             onClick={() => handleSubmit("paid")}
-            disabled={loading}
             className="gap-2"
           >
             <CheckCircle2 size={15} />
-            {loading ? "Guardando..." : "Confirmar pago"}
+            Confirmar pago
           </Button>
         </DialogFooter>
       </DialogContent>
