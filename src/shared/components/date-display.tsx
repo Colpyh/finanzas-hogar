@@ -13,13 +13,3 @@ export function formatDate(
     ...options,
   });
 }
-
-type Props = {
-  value: Date | string;
-  options?: Intl.DateTimeFormatOptions;
-  className?: string;
-};
-
-export function DateDisplay({ value, options, className }: Props) {
-  return <span className={className}>{formatDate(value, options)}</span>;
-}

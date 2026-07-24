@@ -10,12 +10,3 @@ export function formatCurrency(amount: number): string {
     maximumFractionDigits: 0,
   });
 }
-
-type Props = {
-  amount: number;
-  className?: string;
-};
-
-export function CurrencyDisplay({ amount, className }: Props) {
-  return <span className={className}>{formatCurrency(amount)}</span>;
-}
