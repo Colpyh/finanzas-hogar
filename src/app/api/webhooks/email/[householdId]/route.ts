@@ -15,27 +15,49 @@ export async function POST(
   const { householdId } = await params;
   const url = new URL(req.url);
   const providedSecret = url.searchParams.get("secret") ?? "";
-  const expectedSecret = process.env.WEBHOOK_SECRET ?? "";
 
-  // 1. Constant-time secret comparison
-  if (
-    expectedSecret.length === 0 ||
-    providedSecret.length !== expectedSecret.length ||
-    !timingSafeEqual(
-      Buffer.from(providedSecret),
-      Buffer.from(expectedSecret)
-    )
-  ) {
+  const svc = createServiceClient();
+
+  // 1. Household lookup — el secreto es propio del hogar, hace falta saber
+  // cuál es antes de poder compararlo.
+  const { data: hh } = await svc
+    .from("household")
+    .select("id, webhook_secret")
+    .eq("id", householdId)
+    .maybeSingle();
+
+  // 2. Constant-time secret comparison. Un hogar inexistente y un secreto
+  // equivocado dan la MISMA respuesta (401) — no hay que revelarle a quien
+  // no tiene ningún secreto válido si el UUID corresponde a un hogar real.
+  // TRANSICIÓN: además del secreto propio del hogar, se acepta el
+  // WEBHOOK_SECRET global viejo, para no cortar el webhook real mientras se
+  // reconfigura CloudMailin con la URL nueva. Sacar este fallback una vez
+  // confirmado el cambio (ver docs/email-inbound-setup.md).
+  const legacySecret = process.env.WEBHOOK_SECRET ?? "";
+  const candidateSecrets = [hh?.webhook_secret, legacySecret].filter(
+    (s): s is string => !!s
+  );
+  const secretIsValid = candidateSecrets.some(
+    (expected) =>
+      providedSecret.length === expected.length &&
+      timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expected))
+  );
+
+  if (!secretIsValid) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // 2. Payload size guard (1MB) before JSON.parse
+  if (!hh) {
+    return NextResponse.json({ ok: true, skipped: "unknown_household" });
+  }
+
+  // 3. Payload size guard (1MB) before JSON.parse
   const raw = await req.text();
   if (raw.length > 1_000_000) {
     return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
   }
 
-  // 3. Parse and validate Postmark shape
+  // 4. Parse and validate Postmark shape
   let jsonBody: unknown;
   try {
     jsonBody = JSON.parse(raw);
@@ -47,19 +69,6 @@ export async function POST(
   const payload = normalizeInboundPayload(jsonBody);
   if (!payload) {
     return NextResponse.json({ ok: true, skipped: "parse_error" });
-  }
-
-  const svc = createServiceClient();
-
-  // 4. Household must exist
-  const { data: hh } = await svc
-    .from("household")
-    .select("id")
-    .eq("id", householdId)
-    .maybeSingle();
-
-  if (!hh) {
-    return NextResponse.json({ ok: true, skipped: "unknown_household" });
   }
 
   // 5. Only BCI emails proceed (200 OK so the provider doesn't retry)

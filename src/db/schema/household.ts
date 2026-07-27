@@ -5,6 +5,12 @@ export const household = pgTable("household", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   createdBy: uuid("created_by").notNull(), // references auth.users(id)
+  // Secreto propio del webhook de email (?secret=) — un valor distinto por
+  // hogar generado por Postgres (pgcrypto), no en app code, así también
+  // cubre los hogares ya existentes al migrar.
+  webhookSecret: text("webhook_secret")
+    .notNull()
+    .default(sql`encode(gen_random_bytes(32), 'hex')`),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

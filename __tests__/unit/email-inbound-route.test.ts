@@ -138,8 +138,20 @@ describe("POST /api/webhooks/email/[householdId]", () => {
     POST = routeModule.POST;
   });
 
-  // Scenario 1.2 — missing secret → 401
+  // Scenario 1.2 — missing secret → 401 (el lookup del hogar ahora pasa
+  // SIEMPRE, antes de comparar el secreto — hace falta mockear el household)
   it("returns 401 when secret is missing", async () => {
+    const svc = {
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: { id: UUID_HOUSEHOLD, webhook_secret: "household-own-secret" },
+        }),
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
     const req = makeRequest(BCI_PAYLOAD, null);
     const res = await POST(req, {
       params: Promise.resolve({ householdId: UUID_HOUSEHOLD }),
@@ -149,6 +161,17 @@ describe("POST /api/webhooks/email/[householdId]", () => {
 
   // Scenario 1.3 — wrong secret → 401
   it("returns 401 when secret is wrong", async () => {
+    const svc = {
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: { id: UUID_HOUSEHOLD, webhook_secret: "household-own-secret" },
+        }),
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
     const req = makeRequest(BCI_PAYLOAD, "wrongsecret");
     const res = await POST(req, {
       params: Promise.resolve({ householdId: UUID_HOUSEHOLD }),
@@ -156,8 +179,50 @@ describe("POST /api/webhooks/email/[householdId]", () => {
     expect(res.status).toBe(401);
   });
 
+  // Secreto propio del hogar (no el WEBHOOK_SECRET global viejo) → autoriza igual
+  it("returns 200 when the request uses the household's own webhook_secret", async () => {
+    let callCount = 0;
+    const svc = {
+      from: jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { id: UUID_HOUSEHOLD, webhook_secret: "household-own-secret" },
+            }),
+          };
+        }
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({ data: null }),
+        };
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
+    const req = makeRequest(NON_BCI_PAYLOAD, "household-own-secret");
+    const res = await POST(req, {
+      params: Promise.resolve({ householdId: UUID_HOUSEHOLD }),
+    });
+    expect(res.status).toBe(200);
+  });
+
   // Scenario 1.8 — payload > 1MB → 413
   it("returns 413 for payload exceeding 1MB", async () => {
+    const svc = {
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest
+          .fn()
+          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
     const largeBody = "x".repeat(1_100_000);
     const url = `https://example.com/api/webhooks/email/${UUID_HOUSEHOLD}?secret=${TEST_SECRET}`;
     const req = new Request(url, {
@@ -253,6 +318,17 @@ describe("POST /api/webhooks/email/[householdId]", () => {
 
   // Scenario 1.6 — malformed payload → 200 skipped
   it("returns 200 with skipped=parse_error for malformed payload", async () => {
+    const svc = {
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest
+          .fn()
+          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+      }),
+    };
+    createServiceClient.mockReturnValue(svc);
+
     const req = new Request(
       `https://example.com/api/webhooks/email/${UUID_HOUSEHOLD}?secret=${TEST_SECRET}`,
       {
