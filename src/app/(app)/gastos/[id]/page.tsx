@@ -104,6 +104,8 @@ export default async function GastoDetailPage({ params }: Props) {
             expenseDate: exp.expenseDate ?? null,
             responsibleId: exp.responsibleId ?? null,
             cardId: exp.cardId ?? null,
+            isPrivate: exp.isPrivate,
+            isShared: exp.isShared,
           }}
           members={memberOptions}
           cards={cardOptions}

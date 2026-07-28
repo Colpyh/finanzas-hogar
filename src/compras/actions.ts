@@ -222,7 +222,7 @@ export async function registerInstallmentShare(expenseId: string, month?: string
 export async function updateExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {
   const auth = await requireHousehold();
   if (!auth.ok) return { error: auth.error };
-  const { household } = auth;
+  const { user, household } = auth;
 
   let data: ReturnType<typeof updateExpenseSchema.parse>;
   try {
@@ -230,6 +230,31 @@ export async function updateExpense(expenseId: string, rawData: unknown): Promis
   } catch {
     return { error: "Datos del gasto inválidos" };
   }
+
+  const [current] = await db
+    .select({
+      type: expense.type,
+      isShared: expense.isShared,
+      amount: expense.amount,
+      expenseDate: expense.expenseDate,
+      responsibleId: expense.responsibleId,
+    })
+    .from(expense)
+    .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
+    .limit(1);
+
+  if (!current) return { error: "Gasto no encontrado" };
+
+  // Desmarcar "compartido" saca el gasto de getHouseholdDebtItems (filtra
+  // isShared=true) — sin este guard, una deuda sin saldar desaparecería del
+  // balance en silencio, igual que en updateInstallment/deleteExpense.
+  if (data.isShared === false && current.isShared) {
+    const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+    if (debtError) return { error: debtError };
+  }
+
+  const becomesShared = data.isShared === true && !current.isShared;
+  const members = becomesShared ? await getHouseholdMembers(household.id) : null;
 
   const [updated] = await db
     .update(expense)
@@ -239,6 +264,39 @@ export async function updateExpense(expenseId: string, rawData: unknown): Promis
 
   if (!updated) return { error: "Gasto no encontrado" };
 
+  // Compra puntual recién marcada compartida: a diferencia de cuotas/fijos
+  // no tiene registro mensual — hay que sembrar el pago de quien la pagó acá
+  // mismo, igual que createPurchase, o la deuda nunca aparecería en Balances.
+  if (becomesShared && current.type === "one_time" && members) {
+    // ?? solo cuando el campo no vino en el payload — si vino null a
+    // propósito (ej. "Sin asignar"), no hay que arrastrar el responsable
+    // anterior, sino caer directo a quien confirma el cambio.
+    const effectiveResponsibleId =
+      data.responsibleId !== undefined ? data.responsibleId : current.responsibleId;
+    const payerId = effectiveResponsibleId ?? user.id;
+    const amount = data.amount ?? current.amount;
+    const expenseDate = data.expenseDate !== undefined ? data.expenseDate : current.expenseDate;
+    if (amount && expenseDate) {
+      const shareAmount = splitShareForDb(amount, members.length);
+      try {
+        await db.insert(fixedExpensePayment).values({
+          expenseId,
+          householdId: household.id,
+          paidBy: payerId,
+          periodMonth: monthFromDate(expenseDate),
+          amount: shareAmount,
+          status: "paid",
+        });
+      } catch (err: unknown) {
+        if (!isUniqueViolation(err)) throw err;
+      }
+    }
+  }
+
+  if (becomesShared) {
+    updateTag(hhTag(household.id, "payments"));
+    revalidatePath("/balances");
+  }
   updateTag(hhTag(household.id, "expenses"));
   revalidatePath("/compras");
   revalidatePath(`/gastos/${expenseId}`);

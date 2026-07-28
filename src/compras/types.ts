@@ -51,14 +51,21 @@ export const createInstallmentSchema = z
     amount: (Number(data.installmentAmount) * data.installmentsTotal).toFixed(2),
   }));
 
-export const updateExpenseSchema = z.object({
-  description: z.string().min(1).max(200).optional(),
-  categoryId: z.string().uuid().optional(),
-  amount: amountField.optional(),
-  expenseDate: z.string().date().optional().nullable(),
-  responsibleId: z.string().uuid().optional().nullable(),
-  cardId: z.string().uuid().optional().nullable(),
-});
+export const updateExpenseSchema = z
+  .object({
+    description: z.string().min(1).max(200).optional(),
+    categoryId: z.string().uuid().optional(),
+    amount: amountField.optional(),
+    expenseDate: z.string().date().optional().nullable(),
+    responsibleId: z.string().uuid().optional().nullable(),
+    cardId: z.string().uuid().optional().nullable(),
+    isPrivate: z.boolean().optional(),
+    isShared: z.boolean().optional(),
+  })
+  .refine((data) => !(data.isPrivate && data.isShared), {
+    message: "Un gasto no puede ser privado y compartido a la vez",
+    path: ["isShared"],
+  });
 
 export const updateInstallmentSchema = z.object({
   description: z.string().min(1, "La descripción es requerida").max(200),

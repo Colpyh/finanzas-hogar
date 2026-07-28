@@ -277,3 +277,103 @@ describe("markAsMonthlyPayer / registerInstallmentShare — regularizar meses pa
     expect(values.periodMonth).toBe(currentPeriodMonth());
   });
 });
+
+describe("updateExpense — isPrivate/isShared editables después de creada", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const ONE_TIME_CURRENT = {
+    type: "one_time",
+    isShared: false,
+    amount: "10000.00",
+    expenseDate: "2026-07-15",
+    responsibleId: null,
+  };
+
+  it("bloquea desmarcar compartido si hay deuda sin saldar", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ ...ONE_TIME_CURRENT, isShared: true }])
+    );
+    const { pendingDebtGuard } = await import("@/balances/guards");
+    (pendingDebtGuard as jest.Mock).mockResolvedValueOnce("Este gasto tiene deudas sin saldar entre miembros.");
+
+    const { updateExpense } = await import("@/compras/actions");
+    const result = await updateExpense(UUID_EXPENSE, {
+      description: "Compra",
+      isPrivate: false,
+      isShared: false,
+    });
+
+    expect(result.error).toMatch(/deudas sin saldar/i);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("marcar compartido en una compra puntual siembra el pago del responsable", async () => {
+    mockSelect.mockReturnValueOnce(selectChain([ONE_TIME_CURRENT]));
+    mockUpdate.mockReturnValueOnce(updateReturningChain([{ id: UUID_EXPENSE }]));
+    const insertChain = { values: jest.fn().mockResolvedValue(undefined) };
+    mockInsert.mockReturnValueOnce(insertChain);
+
+    const { updateExpense } = await import("@/compras/actions");
+    const result = await updateExpense(UUID_EXPENSE, {
+      description: "Compra",
+      isPrivate: false,
+      isShared: true,
+    });
+
+    expect(result).toEqual({});
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.paidBy).toBe(UUID_USER); // sin responsable asignado -> quien confirma
+    expect(values.periodMonth).toBe("2026-07-01");
+    expect(values.status).toBe("paid");
+  });
+
+  it("responsibleId null explícito no arrastra el responsable anterior — cae a quien confirma", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ ...ONE_TIME_CURRENT, responsibleId: "550e8400-e29b-41d4-a716-446655440099" }])
+    );
+    mockUpdate.mockReturnValueOnce(updateReturningChain([{ id: UUID_EXPENSE }]));
+    const insertChain = { values: jest.fn().mockResolvedValue(undefined) };
+    mockInsert.mockReturnValueOnce(insertChain);
+
+    const { updateExpense } = await import("@/compras/actions");
+    await updateExpense(UUID_EXPENSE, {
+      description: "Compra",
+      isPrivate: false,
+      isShared: true,
+      responsibleId: null,
+    });
+
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.paidBy).toBe(UUID_USER);
+  });
+
+  it("ya compartida: guardar de nuevo isShared=true no vuelve a sembrar el pago", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ ...ONE_TIME_CURRENT, isShared: true }])
+    );
+    mockUpdate.mockReturnValueOnce(updateReturningChain([{ id: UUID_EXPENSE }]));
+
+    const { updateExpense } = await import("@/compras/actions");
+    const result = await updateExpense(UUID_EXPENSE, {
+      description: "Compra",
+      isPrivate: false,
+      isShared: true,
+    });
+
+    expect(result).toEqual({});
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("rechaza privado y compartido a la vez (validación de schema)", async () => {
+    const { updateExpense } = await import("@/compras/actions");
+    const result = await updateExpense(UUID_EXPENSE, {
+      description: "Compra",
+      isPrivate: true,
+      isShared: true,
+    });
+    expect(result.error).toBeTruthy();
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
+});
