@@ -50,7 +50,7 @@ export default async function AppLayout({
 
   if (!result.household) redirect("/onboarding");
 
-  const pendingCount = await getPendingCount(result.household.id).catch(() => 0);
+  const pendingCount = await getPendingCount(result.household.id, result.user.id).catch(() => 0);
 
   return (
     <AppProviders

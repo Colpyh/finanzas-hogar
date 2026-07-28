@@ -6,6 +6,12 @@
  */
 export {};
 
+import { PgDialect } from "drizzle-orm/pg-core";
+const dialect = new PgDialect();
+function sqlOf(condition: unknown) {
+  return dialect.sqlToQuery(condition as Parameters<typeof dialect.sqlToQuery>[0]);
+}
+
 const UUID_PENDING = "550e8400-e29b-41d4-a716-446655440020";
 const UUID_CATEGORY = "550e8400-e29b-41d4-a716-446655440021";
 const UUID_EXPENSE = "550e8400-e29b-41d4-a716-446655440022";
@@ -22,8 +28,14 @@ jest.mock("@/auth/queries", () => ({
   getUser: jest.fn().mockResolvedValue({ id: UUID_USER, email: "user@test.com" }),
 }));
 
+const UUID_OTHER_USER = "550e8400-e29b-41d4-a716-446655440026";
+
 jest.mock("@/household/queries", () => ({
   getUserHousehold: jest.fn().mockResolvedValue({ id: UUID_HOUSEHOLD, name: "Test" }),
+  getHouseholdMembers: jest.fn().mockResolvedValue([
+    { id: "m1", userId: UUID_USER, role: "owner", displayName: "User" },
+    { id: "m2", userId: UUID_OTHER_USER, role: "member", displayName: "Other" },
+  ]),
 }));
 
 const mockTxSelect = jest.fn();
@@ -193,6 +205,86 @@ describe("confirmPendingExpense", () => {
     const values = insertChain.values.mock.calls[0][0];
     expect(values.cardId).toBeUndefined();
   });
+
+  it("solo busca el pendiente entre los propios (created_by_user_id = quien confirma)", async () => {
+    const wheres: unknown[] = [];
+    const pendingChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn((cond: unknown) => {
+        wheres.push(cond);
+        return pendingChain;
+      }),
+      limit: jest.fn().mockResolvedValue([]),
+    };
+    mockTxSelect.mockReturnValueOnce(pendingChain);
+
+    const { confirmPendingExpense } = await import("@/email-inbound/actions");
+    await confirmPendingExpense(VALID_INPUT);
+
+    const { sql, params } = sqlOf(wheres[0]);
+    expect(sql).toContain(`"pending_expense"."created_by_user_id" = $`);
+    expect(params).toContain(UUID_USER);
+  });
+
+  it("persiste isPrivate/isShared del payload en el gasto creado", async () => {
+    const pendingChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([PENDING_ROW]),
+    };
+    mockTxSelect.mockReturnValueOnce(pendingChain);
+
+    const insertChain = {
+      values: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockResolvedValue([{ id: UUID_EXPENSE }]),
+    };
+    mockTxInsert.mockReturnValueOnce(insertChain);
+    mockTxUpdate.mockReturnValue({
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockResolvedValue([{ id: UUID_PENDING }]),
+    });
+
+    const { confirmPendingExpense } = await import("@/email-inbound/actions");
+    await confirmPendingExpense({ ...VALID_INPUT, isPrivate: true });
+
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.isPrivate).toBe(true);
+    expect(values.isShared).toBe(false);
+  });
+
+  it("compartido: además del gasto, siembra el pago de quien confirmó (aparece en Balances)", async () => {
+    const pendingChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([PENDING_ROW]),
+    };
+    mockTxSelect.mockReturnValueOnce(pendingChain);
+
+    const expenseInsertChain = {
+      values: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockResolvedValue([{ id: UUID_EXPENSE }]),
+    };
+    const paymentInsertChain = { values: jest.fn().mockResolvedValue(undefined) };
+    mockTxInsert
+      .mockReturnValueOnce(expenseInsertChain)
+      .mockReturnValueOnce(paymentInsertChain);
+    mockTxUpdate.mockReturnValue({
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockResolvedValue([{ id: UUID_PENDING }]),
+    });
+
+    const { confirmPendingExpense } = await import("@/email-inbound/actions");
+    const result = await confirmPendingExpense({ ...VALID_INPUT, isShared: true });
+
+    expect(result).toEqual({});
+    expect(mockTxInsert).toHaveBeenCalledTimes(2);
+    const paymentValues = paymentInsertChain.values.mock.calls[0][0];
+    expect(paymentValues.paidBy).toBe(UUID_USER);
+    expect(paymentValues.status).toBe("paid");
+    // 4000 / 2 miembros
+    expect(paymentValues.amount).toBe("2000.00");
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/balances");
+  });
 });
 
 describe("discardPendingExpense", () => {
@@ -241,5 +333,25 @@ describe("discardPendingExpense", () => {
 
     expect(mockUpdate).toHaveBeenCalled();
     expect(mockRevalidatePath).toHaveBeenCalledWith("/gastos-pendientes");
+  });
+
+  it("solo descarta pendientes propios (created_by_user_id = quien descarta)", async () => {
+    const wheres: unknown[] = [];
+    const updateChain = {
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn((cond: unknown) => {
+        wheres.push(cond);
+        return updateChain;
+      }),
+      returning: jest.fn().mockResolvedValue([]),
+    };
+    mockUpdate.mockReturnValue(updateChain);
+
+    const { discardPendingExpense } = await import("@/email-inbound/actions");
+    await discardPendingExpense({ pendingExpenseId: UUID_PENDING });
+
+    const { sql, params } = sqlOf(wheres[0]);
+    expect(sql).toContain(`"pending_expense"."created_by_user_id" = $`);
+    expect(params).toContain(UUID_USER);
   });
 });

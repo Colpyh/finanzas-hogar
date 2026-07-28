@@ -204,6 +204,34 @@ describe("control positivo: resumen/queries.ts filtra fixed_expense_payment.hous
   });
 });
 
+describe("aislamiento por miembro: pending_expense solo lo ve su dueño", () => {
+  it("email-inbound/queries.ts listPendingByHousehold filtra por created_by_user_id además de household_id", async () => {
+    const { builder, wheres } = makeBuilder([]);
+    mockSelect.mockReturnValueOnce(builder);
+
+    const { listPendingByHousehold } = await import("@/email-inbound/queries");
+    await listPendingByHousehold(HOUSEHOLD_A, USER_ID);
+
+    const { sql, params } = sqlOf(wheres[0]);
+    expect(sql).toContain(`"pending_expense"."household_id" = $`);
+    expect(sql).toContain(`"pending_expense"."created_by_user_id" = $`);
+    expect(params).toContain(HOUSEHOLD_A);
+    expect(params).toContain(USER_ID);
+  });
+
+  it("email-inbound/queries.ts getPendingCount filtra por created_by_user_id además de household_id", async () => {
+    const { builder, wheres } = makeBuilder([{ count: 0 }]);
+    mockSelect.mockReturnValueOnce(builder);
+
+    const { getPendingCount } = await import("@/email-inbound/queries");
+    await getPendingCount(HOUSEHOLD_A, USER_ID);
+
+    const { sql, params } = sqlOf(wheres[0]);
+    expect(sql).toContain(`"pending_expense"."created_by_user_id" = $`);
+    expect(params).toContain(USER_ID);
+  });
+});
+
 describe("distingue hogares distintos (no matchea con un household ajeno)", () => {
   it("getExpenseById arma el filtro con el household pasado, no con otro", async () => {
     const { builder, wheres } = makeBuilder([]);

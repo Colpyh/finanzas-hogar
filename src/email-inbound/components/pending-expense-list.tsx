@@ -13,12 +13,15 @@ type Props = {
   categories: Category[];
   /** id del pendiente → categoryId sugerida por historial (opcional). */
   suggestions?: Record<string, string>;
+  /** Cantidad de miembros del hogar — oculta "Gasto compartido" si es 1. */
+  memberCount?: number;
 };
 
 export function PendingExpenseList({
   items,
   categories,
   suggestions = {},
+  memberCount = 1,
 }: Props) {
   const [confirmItem, setConfirmItem] = useState<PendingExpenseRow | null>(null);
   const [discardItem, setDiscardItem] = useState<PendingExpenseRow | null>(null);
@@ -65,6 +68,7 @@ export function PendingExpenseList({
         item={confirmItem}
         categories={categories}
         suggestedCategoryId={confirmItem ? suggestions[confirmItem.id] : undefined}
+        memberCount={memberCount}
         open={confirmItem !== null}
         onClose={() => setConfirmItem(null)}
         onOptimisticHide={hide}

@@ -22,7 +22,7 @@ export async function POST(
   // cuál es antes de poder compararlo.
   const { data: hh } = await svc
     .from("household")
-    .select("id, webhook_secret")
+    .select("id, webhook_secret, email_forwarder_user_id")
     .eq("id", householdId)
     .maybeSingle();
 
@@ -126,6 +126,8 @@ export async function POST(
     .from("pending_expense")
     .insert({
       household_id: householdId,
+      // Dueño del pendiente — solo esta persona lo ve hasta confirmarlo.
+      created_by_user_id: hh.email_forwarder_user_id,
       // El JSON original del proveedor (no el normalizado) — para inspección
       raw_payload: jsonBody,
       payload_hash: payloadHash,

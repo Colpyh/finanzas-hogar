@@ -4,8 +4,11 @@ import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { requireHousehold } from "@/household/guards";
 import { db } from "@/shared/lib/db";
-import { pendingExpense, expense, card } from "@/shared/lib/db/schema";
+import { pendingExpense, expense, card, fixedExpensePayment } from "@/shared/lib/db/schema";
 import { and, eq } from "drizzle-orm";
+import { getHouseholdMembers } from "@/household/queries";
+import { splitShareForDb } from "@/shared/lib/split-share";
+import { monthFromDate } from "@/shared/lib/db/helpers";
 import {
   confirmPendingExpenseSchema,
   discardPendingExpenseSchema,
@@ -16,7 +19,7 @@ import {
 export async function confirmPendingExpense(
   input: ConfirmPendingExpenseInput
 ): Promise<{ error?: string }> {
-  let parsed: ConfirmPendingExpenseInput;
+  let parsed: ReturnType<typeof confirmPendingExpenseSchema.parse>;
   try {
     parsed = confirmPendingExpenseSchema.parse(input);
   } catch {
@@ -26,11 +29,18 @@ export async function confirmPendingExpense(
   if (!auth.ok) return { error: auth.error };
   const { user, household } = auth;
 
+  // Miembros ANTES de abrir la transacción (mismo motivo que createPurchase:
+  // pool serverless con pocas conexiones, una query fuera de `tx` mientras la
+  // transacción tiene la única conexión abierta se colgaría).
+  const members = parsed.isShared ? await getHouseholdMembers(household.id) : null;
+
   // Los throw DENTRO de la transacción son el mecanismo de rollback de
   // Drizzle — se capturan afuera y se traducen a {error} para el caller.
   try {
     await db.transaction(async (tx) => {
-      // Fetch pending with household + status guard
+      // Fetch pending with household + status guard. createdByUserId: solo
+      // el dueño del pendiente puede confirmarlo — el resto del hogar ni
+      // siquiera lo ve en la lista, pero esto cierra el mismo hueco por API.
       const [pending] = await tx
         .select()
         .from(pendingExpense)
@@ -38,7 +48,8 @@ export async function confirmPendingExpense(
           and(
             eq(pendingExpense.id, parsed.pendingExpenseId),
             eq(pendingExpense.householdId, household.id),
-            eq(pendingExpense.status, "pending")
+            eq(pendingExpense.status, "pending"),
+            eq(pendingExpense.createdByUserId, user.id)
           )
         )
         .limit(1);
@@ -80,12 +91,29 @@ export async function confirmPendingExpense(
           amount: pending.parsedAmount,
           currency: "CLP",
           expenseDate: pending.parsedDate,
+          isPrivate: parsed.isPrivate,
+          isShared: parsed.isShared,
           ...(matchedCardId ? { cardId: matchedCardId } : {}),
         })
         .returning({ id: expense.id });
 
       const created = inserted[0];
       if (!created) throw new Error("No se pudo crear el gasto");
+
+      // Compartido: registrar de una el pago de quien confirmó — el resto
+      // del hogar aparece con su parte pendiente en Balances desde ya
+      // (mismo patrón que createPurchase para compras compartidas).
+      if (parsed.isShared && members) {
+        const shareAmount = splitShareForDb(pending.parsedAmount, members.length);
+        await tx.insert(fixedExpensePayment).values({
+          expenseId: created.id,
+          householdId: household.id,
+          paidBy: user.id,
+          periodMonth: monthFromDate(pending.parsedDate),
+          amount: shareAmount,
+          status: "paid",
+        });
+      }
 
       // Flip pending → confirmed
       await tx
@@ -97,6 +125,10 @@ export async function confirmPendingExpense(
     return { error: err instanceof Error ? err.message : "No se pudo confirmar el gasto" };
   }
 
+  if (parsed.isShared) {
+    updateTag(hhTag(household.id, "payments"));
+    revalidatePath("/balances");
+  }
   updateTag(hhTag(household.id, "expenses"));
   updateTag(hhTag(household.id, "pending"));
   revalidatePath("/gastos-pendientes");
@@ -114,7 +146,7 @@ export async function discardPendingExpense(
   }
   const auth = await requireHousehold();
   if (!auth.ok) return { error: auth.error };
-  const { household } = auth;
+  const { user, household } = auth;
 
   const result = await db
     .update(pendingExpense)
@@ -123,7 +155,8 @@ export async function discardPendingExpense(
       and(
         eq(pendingExpense.id, parsed.pendingExpenseId),
         eq(pendingExpense.householdId, household.id),
-        eq(pendingExpense.status, "pending")
+        eq(pendingExpense.status, "pending"),
+        eq(pendingExpense.createdByUserId, user.id)
       )
     )
     .returning({ id: pendingExpense.id });

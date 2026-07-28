@@ -12,6 +12,7 @@ export function normalizeMerchant(value: string): string {
 
 export async function listPendingByHousehold(
   householdId: string,
+  userId: string,
   opts?: { limit?: number; offset?: number }
 ) {
   const { rawPayload, ...cols } = getTableColumns(pendingExpense);
@@ -22,7 +23,8 @@ export async function listPendingByHousehold(
     .where(
       and(
         eq(pendingExpense.householdId, householdId),
-        eq(pendingExpense.status, "pending")
+        eq(pendingExpense.status, "pending"),
+        eq(pendingExpense.createdByUserId, userId)
       )
     )
     .orderBy(desc(pendingExpense.createdAt))
@@ -81,7 +83,7 @@ export async function suggestCategoryByMerchant(
   return best;
 }
 
-export async function getPendingCount(householdId: string): Promise<number> {
+export async function getPendingCount(householdId: string, userId: string): Promise<number> {
   'use cache'
   cacheTag(householdId, hhTag(householdId, "pending"))
   const [row] = await db
@@ -90,7 +92,8 @@ export async function getPendingCount(householdId: string): Promise<number> {
     .where(
       and(
         eq(pendingExpense.householdId, householdId),
-        eq(pendingExpense.status, "pending")
+        eq(pendingExpense.status, "pending"),
+        eq(pendingExpense.createdByUserId, userId)
       )
     );
   return row?.count ?? 0;

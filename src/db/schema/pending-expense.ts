@@ -20,6 +20,12 @@ export const pendingExpense = pgTable(
       .notNull()
       .references(() => household.id, { onDelete: "cascade" }),
 
+    // Dueño de este pendiente (household.emailForwarderUserId al momento de
+    // la ingesta) — solo esa persona lo ve hasta confirmarlo. Null = el
+    // hogar no tenía forwarder configurado cuando llegó este correo.
+    // References auth.users(id).
+    createdByUserId: uuid("created_by_user_id"),
+
     // Full Postmark payload — never discard
     rawPayload: jsonb("raw_payload").notNull(),
 

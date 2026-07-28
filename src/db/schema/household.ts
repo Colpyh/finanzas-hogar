@@ -11,6 +11,11 @@ export const household = pgTable("household", {
   webhookSecret: text("webhook_secret")
     .notNull()
     .default(sql`encode(gen_random_bytes(32), 'hex')`),
+  // Miembro que reenvía las notificaciones del banco por email — determina
+  // el dueño de cada pending_expense generado por el webhook (visible solo
+  // para esa persona hasta que confirma). Null = nadie configurado todavía.
+  // References auth.users(id).
+  emailForwarderUserId: uuid("email_forwarder_user_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

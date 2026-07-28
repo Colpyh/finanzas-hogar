@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/household/queries";
+import { getUserHousehold, getHouseholdMembers } from "@/household/queries";
 import {
   listPendingByHousehold,
   getPendingCount,
@@ -33,6 +33,7 @@ export default async function GastosPendientesPage({
   let items: PendingExpenseRow[] = MOCK_ITEMS;
   let categories: { id: string; name: string }[] = MOCK_CATEGORIES;
   let count = 0;
+  let memberCount = 1;
   // Categoría sugerida por pendiente (id → categoryId), según historial de gastos.
   const suggestions: Record<string, string> = {};
 
@@ -40,8 +41,8 @@ export default async function GastosPendientesPage({
     const user = await getUser();
     const household = await getUserHousehold(user.id);
     if (household) {
-      [items, categories, count] = await Promise.all([
-        listPendingByHousehold(household.id, {
+      const [pendingItems, cats, pendingCount, members] = await Promise.all([
+        listPendingByHousehold(household.id, user.id, {
           limit: PAGE_SIZE,
           offset: (page - 1) * PAGE_SIZE,
         }),
@@ -54,8 +55,13 @@ export default async function GastosPendientesPage({
               eq(category.householdId, household.id)
             )
           ),
-        getPendingCount(household.id),
+        getPendingCount(household.id, user.id),
+        getHouseholdMembers(household.id),
       ]);
+      items = pendingItems;
+      categories = cats;
+      count = pendingCount;
+      memberCount = members.length || 1;
 
       const merchants = items
         .map((i) => i.parsedMerchant)
@@ -99,6 +105,7 @@ export default async function GastosPendientesPage({
         items={items}
         categories={categories}
         suggestions={suggestions}
+        memberCount={memberCount}
       />
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-3 mt-4">
