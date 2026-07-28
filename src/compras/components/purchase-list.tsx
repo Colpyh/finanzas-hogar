@@ -31,9 +31,9 @@ type Expense = {
   myShareAmount?: string;
 };
 
-type Props = { expenses: Expense[]; tab: "compras" | "cuotas" };
+type Props = { expenses: Expense[]; tab: "compras" | "cuotas"; month: string };
 
-export function PurchaseList({ expenses, tab }: Props) {
+export function PurchaseList({ expenses, tab, month }: Props) {
   if (expenses.length === 0) {
     return (
       <EmptyState
@@ -47,7 +47,7 @@ export function PurchaseList({ expenses, tab }: Props) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
         {expenses.map((exp) => (
-          <InstallmentCard key={exp.id} expense={exp} />
+          <InstallmentCard key={exp.id} expense={exp} month={month} />
         ))}
       </div>
     );

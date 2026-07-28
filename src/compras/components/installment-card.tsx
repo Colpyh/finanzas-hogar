@@ -12,6 +12,8 @@ import { Users } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
+  /** Mes que muestra la página (selector de mes) — a qué período aplican los botones de esta card. */
+  month: string;
   expense: {
     id: string;
     description: string;
@@ -38,7 +40,7 @@ type OptimisticState = {
   settled?: boolean;
 } | null;
 
-export function InstallmentCard({ expense }: Props) {
+export function InstallmentCard({ expense, month }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmShareOpen, setConfirmShareOpen] = useState(false);
@@ -75,7 +77,7 @@ export function InstallmentCard({ expense }: Props) {
     startLoading(async () => {
       // Para compartidas: solo registra en balance sin tocar el contador
       const result = isShared
-        ? await markAsMonthlyPayer(expense.id)
+        ? await markAsMonthlyPayer(expense.id, month)
         : await markInstallmentPaid(expense.id);
       if (result?.error) {
         setOptimistic(null);
@@ -89,7 +91,7 @@ export function InstallmentCard({ expense }: Props) {
     setError(null);
     setOptimistic({ status: "paid" });
     startShare(async () => {
-      const result = await registerInstallmentShare(expense.id);
+      const result = await registerInstallmentShare(expense.id, month);
       if (result?.error) {
         setOptimistic(null);
         setError(result.error);
@@ -102,7 +104,7 @@ export function InstallmentCard({ expense }: Props) {
     setError(null);
     setOptimistic({ settled: true, status: "paid" });
     startMarkBoth(async () => {
-      const result = await markPaidForOther(expense.id);
+      const result = await markPaidForOther(expense.id, month);
       if (result?.error) {
         setOptimistic(null);
         setError(result.error);
@@ -114,7 +116,7 @@ export function InstallmentCard({ expense }: Props) {
     setConfirmUnmarkOpen(false);
     setError(null);
     startUnmark(async () => {
-      const result = await unmarkOtherPayment(expense.id);
+      const result = await unmarkOtherPayment(expense.id, month);
       if (result?.error) setError(result.error);
     });
   }

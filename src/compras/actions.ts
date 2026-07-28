@@ -164,7 +164,8 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
  */
 async function registerSharedInstallmentPayment(
   expenseId: string,
-  conflictMessage: string
+  conflictMessage: string,
+  month?: string
 ): Promise<{ error?: string }> {
   const auth = await requireHousehold();
   if (!auth.ok) return { error: auth.error };
@@ -183,7 +184,10 @@ async function registerSharedInstallmentPayment(
 
   const members = await getHouseholdMembers(household.id);
   const shareAmount = splitShareForDb(current.installmentAmount, members.length);
-  const periodMonth = currentPeriodMonth();
+  // Permite regularizar meses pasados que se olvidaron registrar — la
+  // página de Compras tiene su propio selector de mes (igual que Gastos
+  // Fijos), sin esto siempre pisaba el mes actual.
+  const periodMonth = month ?? currentPeriodMonth();
 
   try {
     await db.insert(fixedExpensePayment).values({
@@ -206,13 +210,13 @@ async function registerSharedInstallmentPayment(
 }
 
 /** Solo registra el pago mensual en balance, sin tocar el contador de cuotas. */
-export async function markAsMonthlyPayer(expenseId: string): Promise<{ error?: string }> {
-  return registerSharedInstallmentPayment(expenseId, "Ya registraste tu pago este mes");
+export async function markAsMonthlyPayer(expenseId: string, month?: string): Promise<{ error?: string }> {
+  return registerSharedInstallmentPayment(expenseId, "Ya registraste tu pago este mes", month);
 }
 
 /** Registra la parte del deudor sin incrementar el contador de cuotas. */
-export async function registerInstallmentShare(expenseId: string): Promise<{ error?: string }> {
-  return registerSharedInstallmentPayment(expenseId, "Ya registraste tu parte este mes");
+export async function registerInstallmentShare(expenseId: string, month?: string): Promise<{ error?: string }> {
+  return registerSharedInstallmentPayment(expenseId, "Ya registraste tu parte este mes", month);
 }
 
 export async function updateExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {

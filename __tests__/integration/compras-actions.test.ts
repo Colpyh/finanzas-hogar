@@ -231,3 +231,49 @@ describe("toggleExpensePaid (validation)", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
+
+describe("markAsMonthlyPayer / registerInstallmentShare — regularizar meses pasados", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const SHARED_INSTALLMENT = { installmentAmount: "34925.00", isShared: true };
+
+  it("markAsMonthlyPayer registra el periodMonth explícito, no el mes actual", async () => {
+    mockSelect.mockReturnValueOnce(selectChain([SHARED_INSTALLMENT]));
+    const insertChain = { values: jest.fn().mockResolvedValue(undefined) };
+    mockInsert.mockReturnValueOnce(insertChain);
+
+    const { markAsMonthlyPayer } = await import("@/compras/actions");
+    const result = await markAsMonthlyPayer(UUID_EXPENSE, "2026-06-01");
+
+    expect(result).toEqual({});
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.periodMonth).toBe("2026-06-01");
+  });
+
+  it("registerInstallmentShare registra el periodMonth explícito, no el mes actual", async () => {
+    mockSelect.mockReturnValueOnce(selectChain([SHARED_INSTALLMENT]));
+    const insertChain = { values: jest.fn().mockResolvedValue(undefined) };
+    mockInsert.mockReturnValueOnce(insertChain);
+
+    const { registerInstallmentShare } = await import("@/compras/actions");
+    await registerInstallmentShare(UUID_EXPENSE, "2026-06-01");
+
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.periodMonth).toBe("2026-06-01");
+  });
+
+  it("sin mes explícito, sigue usando el mes actual (compatibilidad)", async () => {
+    mockSelect.mockReturnValueOnce(selectChain([SHARED_INSTALLMENT]));
+    const insertChain = { values: jest.fn().mockResolvedValue(undefined) };
+    mockInsert.mockReturnValueOnce(insertChain);
+
+    const { markAsMonthlyPayer } = await import("@/compras/actions");
+    await markAsMonthlyPayer(UUID_EXPENSE);
+
+    const { currentPeriodMonth } = await import("@/shared/lib/db/helpers");
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.periodMonth).toBe(currentPeriodMonth());
+  });
+});

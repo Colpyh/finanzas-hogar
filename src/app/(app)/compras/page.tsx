@@ -324,7 +324,7 @@ export default async function ComprasPage({ searchParams }: Props) {
 
       {/* Content */}
       <div className="space-y-4">
-        <PurchaseList expenses={filtered} tab={activeTab} />
+        <PurchaseList expenses={filtered} tab={activeTab} month={month} />
 
         {isAuthenticated && totalPages > 1 && (
           <div className="flex items-center justify-between gap-2 pt-2">
