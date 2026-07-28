@@ -249,7 +249,16 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
                 <span className="text-xs font-semibold num shrink-0">{formatCurrency(item.total)}</span>
                 <button
                   type="button"
-                  onClick={() => setReceiptItems((prev) => prev.filter((_, j) => j !== i))}
+                  onClick={() => {
+                    setReceiptItems((prev) => prev.filter((_, j) => j !== i));
+                    // Al sacar un ítem, restar su valor del monto total en vez de
+                    // recalcularlo desde cero — así no se pisa un ajuste manual
+                    // que el usuario ya haya hecho en el campo de arriba.
+                    setAmount((prev) => {
+                      const current = parseFloat(prev) || 0;
+                      return String(Math.max(0, current - item.total));
+                    });
+                  }}
                   className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   aria-label="Quitar ítem"
                   disabled={loading}
