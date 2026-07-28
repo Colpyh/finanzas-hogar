@@ -29,11 +29,6 @@ jest.mock("@/household/queries", () => ({
   ]),
 }));
 
-const mockSyncCounter = jest.fn().mockResolvedValue(undefined);
-jest.mock("@/compras/installment-sync", () => ({
-  syncSharedInstallmentCounter: mockSyncCounter,
-}));
-
 const mockSelect = jest.fn();
 const mockInsert = jest.fn();
 

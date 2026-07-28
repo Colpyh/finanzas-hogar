@@ -62,7 +62,9 @@ export const updateExpenseSchema = z.object({
 
 export const updateInstallmentSchema = z.object({
   description: z.string().min(1, "La descripción es requerida").max(200),
-  installmentsPaid: z.number().int().min(0),
+  // Ausente para cuotas compartidas: ese contador se deriva, no se edita a
+  // mano (ver shared/lib/db/installments.ts).
+  installmentsPaid: z.number().int().min(0).optional(),
   isShared: z.boolean().optional(),
 });
 

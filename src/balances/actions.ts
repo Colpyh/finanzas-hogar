@@ -9,7 +9,6 @@ import { getHouseholdMembers } from "@/household/queries";
 import { requireHousehold } from "@/household/guards";
 import { isUniqueViolation } from "@/shared/lib/db/helpers";
 import { splitShareForDb } from "@/shared/lib/split-share";
-import { syncSharedInstallmentCounter } from "@/compras/installment-sync";
 
 export async function settleBalanceItem(
   expenseId: string,
@@ -71,9 +70,6 @@ export async function settleBalanceItem(
     if (isUniqueViolation(err)) return { error: "Este ítem ya está saldado" };
     throw err;
   }
-
-  // Si al saldar quedó completo el mes de una cuota compartida, cierra el período.
-  await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
 
   updateTag(hhTag(household.id, "payments"));
   updateTag(hhTag(household.id, "expenses"));

@@ -8,6 +8,7 @@ import { PurchaseList } from "@/compras/components/purchase-list";
 import { MonthSelector } from "@/shared/components/month-selector";
 import { parseMonthParam } from "@/shared/lib/db/helpers";
 import { splitShareForDb } from "@/shared/lib/split-share";
+import { getSharedInstallmentsPaidCounts, effectiveInstallmentsPaid } from "@/shared/lib/db/installments";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus, Download, Search, X } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
@@ -138,6 +139,12 @@ export default async function ComprasPage({ searchParams }: Props) {
       const memberCount = members.length || 1;
       const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? ""]));
 
+      // installmentsPaid de cuotas compartidas se deriva (ver src/shared/lib/db/installments.ts)
+      const hasSharedInstallments = dbExpenses.some((e) => e.isShared && e.type === "installment");
+      const sharedInstallmentCounts = hasSharedInstallments
+        ? await getSharedInstallmentsPaidCounts(household.id, memberCount)
+        : new Map<string, number>();
+
       // Agrupar pagos del mes por expenseId
       const paymentsByExpense = new Map<string, typeof sharedPayments[number]["payment"][]>();
       for (const { payment } of sharedPayments) {
@@ -170,7 +177,7 @@ export default async function ComprasPage({ searchParams }: Props) {
           amount: e.amount ?? null,
           expenseDate: e.expenseDate ?? null,
           installmentAmount: e.installmentAmount ?? null,
-          installmentsPaid: e.installmentsPaid ?? null,
+          installmentsPaid: e.type === "installment" ? effectiveInstallmentsPaid(e, sharedInstallmentCounts) : null,
           installmentsTotal: e.installmentsTotal ?? null,
           categoryId: e.categoryId ?? null,
           categoryName: undefined,

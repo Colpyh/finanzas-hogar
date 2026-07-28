@@ -5,6 +5,8 @@ import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { visibleToUser } from "@/shared/lib/db/visibility";
 import { aggregateTotals, calcPercentage } from "@/dashboard/aggregation";
+import { getHouseholdMembers } from "@/household/queries";
+import { getSharedInstallmentsPaidCounts, effectiveInstallmentsPaid } from "@/shared/lib/db/installments";
 import type {
   MonthlySummary,
   FixedVsVariableBreakdown,
@@ -39,10 +41,12 @@ export async function getMonthlySummary(
     // installments: activas este mes (con categoría, para byCategory)
     db
       .select({
+        id: expense.id,
         categoryId: expense.categoryId,
         installmentAmount: expense.installmentAmount,
         installmentsPaid: expense.installmentsPaid,
         installmentsTotal: expense.installmentsTotal,
+        isShared: expense.isShared,
       })
       .from(expense)
       .where(
@@ -82,8 +86,13 @@ export async function getMonthlySummary(
     0
   );
 
+  const hasSharedInstallments = allInstallments.some((row) => row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
+
   const activeInstallmentsFiltered = allInstallments.filter(
-    (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+    (row) => effectiveInstallmentsPaid(row, sharedInstallmentCounts) < (row.installmentsTotal ?? 0)
   );
   const installmentsTotal = activeInstallmentsFiltered.reduce(
     (acc, row) => acc + Number(row.installmentAmount ?? 0),
@@ -158,9 +167,11 @@ export async function getFixedVsVariableBreakdown(
     // installmentsTotal for the month
     db
       .select({
+        id: expense.id,
         installmentAmount: expense.installmentAmount,
         installmentsPaid: expense.installmentsPaid,
         installmentsTotal: expense.installmentsTotal,
+        isShared: expense.isShared,
       })
       .from(expense)
       .where(
@@ -191,8 +202,13 @@ export async function getFixedVsVariableBreakdown(
     0
   );
 
+  const hasSharedInstallments = allInstallments.some((row) => row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
+
   const installmentsAmount = allInstallments
-    .filter((row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0))
+    .filter((row) => effectiveInstallmentsPaid(row, sharedInstallmentCounts) < (row.installmentsTotal ?? 0))
     .reduce((acc, row) => acc + Number(row.installmentAmount ?? 0), 0);
 
   const oneTimeTotal = allOneTime
@@ -220,7 +236,7 @@ export async function getInstallmentBurden(
   userId: string
 ): Promise<InstallmentBurden> {
   'use cache'
-  cacheTag(householdId, hhTag(householdId, "expenses"))
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const rows = await db
     .select({
       id: expense.id,
@@ -228,6 +244,7 @@ export async function getInstallmentBurden(
       installmentAmount: expense.installmentAmount,
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
+      isShared: expense.isShared,
     })
     .from(expense)
     .where(
@@ -240,8 +257,13 @@ export async function getInstallmentBurden(
       )
     );
 
+  const hasSharedInstallments = rows.some((row) => row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
+
   const active = rows.filter(
-    (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+    (row) => effectiveInstallmentsPaid(row, sharedInstallmentCounts) < (row.installmentsTotal ?? 0)
   );
 
   const monthlyLockIn = active.reduce(
@@ -255,7 +277,7 @@ export async function getInstallmentBurden(
       id: row.id,
       description: row.description,
       amount: Number(row.installmentAmount ?? 0),
-      remaining: (row.installmentsTotal ?? 0) - (row.installmentsPaid ?? 0),
+      remaining: (row.installmentsTotal ?? 0) - effectiveInstallmentsPaid(row, sharedInstallmentCounts),
     })),
   };
 }

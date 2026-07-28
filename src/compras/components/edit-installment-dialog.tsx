@@ -47,7 +47,9 @@ export function EditInstallmentDialog({ expense }: Props) {
     startTransition(async () => {
       const result = await updateInstallment(expense.id, {
         description,
-        installmentsPaid,
+        // Compartidas: installmentsPaid se deriva de los pagos reales, no se
+        // edita a mano (ver shared/lib/db/installments.ts).
+        ...(isShared ? {} : { installmentsPaid }),
         isShared,
       });
       if (result?.error) {
@@ -89,15 +91,21 @@ export function EditInstallmentDialog({ expense }: Props) {
                 (máx. {expense.installmentsTotal})
               </span>
             </label>
-            <input
-              type="number"
-              min={0}
-              max={expense.installmentsTotal}
-              value={installmentsPaid}
-              onChange={(e) => setInstallmentsPaid(Number(e.target.value))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              required
-            />
+            {isShared ? (
+              <p className="text-sm text-muted-foreground px-3 py-2 rounded-lg border border-border bg-muted/30">
+                {installmentsPaid} — se calcula solo según los pagos registrados por cada miembro
+              </p>
+            ) : (
+              <input
+                type="number"
+                min={0}
+                max={expense.installmentsTotal}
+                value={installmentsPaid}
+                onChange={(e) => setInstallmentsPaid(Number(e.target.value))}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                required
+              />
+            )}
           </div>
 
           <button

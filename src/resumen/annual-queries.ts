@@ -5,6 +5,8 @@ import { expense, income, card, fixedExpensePayment } from "@/shared/lib/db/sche
 import { eq, and, isNull, lte } from "drizzle-orm";
 import { elapsedMonths } from "./month-utils";
 import { effectiveBillingMonth } from "@/shared/lib/billing";
+import { getHouseholdMembers } from "@/household/queries";
+import { getSharedInstallmentsPaidCounts, effectiveInstallmentsPaid } from "@/shared/lib/db/installments";
 
 export type MonthlyDataPoint = {
   month: string; // 'YYYY-MM-01'
@@ -80,10 +82,12 @@ export async function getAnnualSummary(
   // Active installments per month
   const installmentRows = await db
     .select({
+      id: expense.id,
       installmentAmount: expense.installmentAmount,
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
       startMonth: expense.startMonth,
+      isShared: expense.isShared,
     })
     .from(expense)
     .where(
@@ -94,6 +98,11 @@ export async function getAnnualSummary(
         lte(expense.startMonth, newest)
       )
     );
+
+  const hasSharedInstallments = installmentRows.some((row) => row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
 
   // Income: los sueldos (type=salary) se cargan una vez y se propagan hacia
   // adelante (el más reciente por miembro con periodMonth <= mes); los ingresos
@@ -148,7 +157,7 @@ export async function getAnnualSummary(
       .filter((r) => {
         if (!r.startMonth) return false;
         if (r.startMonth > month) return false;
-        const paid = r.installmentsPaid ?? 0;
+        const paid = effectiveInstallmentsPaid(r, sharedInstallmentCounts);
         const total = r.installmentsTotal ?? 0;
         const elapsed = elapsedMonths(r.startMonth, month);
         return elapsed < total && paid < total;

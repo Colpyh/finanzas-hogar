@@ -6,6 +6,8 @@ import { or, isNull, isNotNull, eq, and, asc, inArray, lte } from "drizzle-orm";
 import type { CategoryBudgetStatus } from "./types";
 import { effectiveBillingMonth } from "@/shared/lib/billing";
 import { visibleToUser } from "@/shared/lib/db/visibility";
+import { getHouseholdMembers } from "@/household/queries";
+import { getSharedInstallmentsPaidCounts, effectiveInstallmentsPaid } from "@/shared/lib/db/installments";
 
 export async function getCategories(householdId: string) {
   return db
@@ -21,7 +23,7 @@ export async function getCategoryBudgetStatus(
   userId: string
 ): Promise<CategoryBudgetStatus[]> {
   "use cache";
-  cacheTag(householdId, hhTag(householdId, "categories"), hhTag(householdId, "expenses"), hhTag(householdId, "cards"));
+  cacheTag(householdId, hhTag(householdId, "categories"), hhTag(householdId, "expenses"), hhTag(householdId, "cards"), hhTag(householdId, "payments"));
 
   const monthPrefix = month.slice(0, 7);
 
@@ -68,10 +70,12 @@ export async function getCategoryBudgetStatus(
       ),
     db
       .select({
+        id: expense.id,
         installmentAmount: expense.installmentAmount,
         installmentsPaid: expense.installmentsPaid,
         installmentsTotal: expense.installmentsTotal,
         categoryId: expense.categoryId,
+        isShared: expense.isShared,
       })
       .from(expense)
       .where(
@@ -85,6 +89,11 @@ export async function getCategoryBudgetStatus(
         )
       ),
   ]);
+
+  const hasSharedInstallments = installmentRows.some((row) => row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
 
   const spentMap: Record<string, number> = {};
 
@@ -103,7 +112,7 @@ export async function getCategoryBudgetStatus(
     }
   }
   for (const r of installmentRows) {
-    if (r.categoryId && (r.installmentsPaid ?? 0) < (r.installmentsTotal ?? 0)) {
+    if (r.categoryId && effectiveInstallmentsPaid(r, sharedInstallmentCounts) < (r.installmentsTotal ?? 0)) {
       spentMap[r.categoryId] = (spentMap[r.categoryId] ?? 0) + Number(r.installmentAmount ?? 0);
     }
   }

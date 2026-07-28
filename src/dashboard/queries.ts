@@ -14,6 +14,8 @@ import {
 import { getNextMonth, monthToDate } from "@/resumen/month-utils";
 import { effectiveBillingMonth } from "@/shared/lib/billing";
 import { card } from "@/shared/lib/db/schema";
+import { getHouseholdMembers } from "@/household/queries";
+import { getSharedInstallmentsPaidCounts, effectiveInstallmentsPaid } from "@/shared/lib/db/installments";
 import type {
   DashboardSummary,
   FixedBillWithStatus,
@@ -55,10 +57,12 @@ export async function getDashboardSummary(
     // installmentsTotal: sum of active installment amounts for this month
     db
       .select({
+        id: expense.id,
         installmentAmount: expense.installmentAmount,
         installmentsPaid: expense.installmentsPaid,
         installmentsTotal: expense.installmentsTotal,
         responsibleId: expense.responsibleId,
+        isShared: expense.isShared,
       })
       .from(expense)
       .where(
@@ -116,8 +120,13 @@ export async function getDashboardSummary(
     return acc + myShare(amount, row.responsibleId, userId, memberCount);
   }, 0);
 
+  const hasSharedInstallments = allInstallments.some((row) => row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, memberCount)
+    : new Map<string, number>();
+
   const activeInstallments = allInstallments.filter(
-    (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+    (row) => effectiveInstallmentsPaid(row, sharedInstallmentCounts) < (row.installmentsTotal ?? 0)
   );
   const installmentsTotal = activeInstallments.reduce(
     (acc, row) => acc + Number(row.installmentAmount ?? 0),
@@ -192,7 +201,7 @@ export async function getActiveInstallments(
   userId: string
 ): Promise<ActiveInstallment[]> {
   'use cache'
-  cacheTag(householdId, hhTag(householdId, "expenses"))
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const rows = await db
     .select({
       id: expense.id,
@@ -201,6 +210,7 @@ export async function getActiveInstallments(
       installmentsPaid: expense.installmentsPaid,
       installmentsTotal: expense.installmentsTotal,
       responsibleId: expense.responsibleId,
+      isShared: expense.isShared,
     })
     .from(expense)
     .where(
@@ -213,15 +223,20 @@ export async function getActiveInstallments(
       )
     );
 
+  const hasSharedInstallments = rows.some((row) => row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
+
   return rows
     .filter(
-      (row) => (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+      (row) => effectiveInstallmentsPaid(row, sharedInstallmentCounts) < (row.installmentsTotal ?? 0)
     )
     .map((row) => ({
       id: row.id,
       description: row.description,
       amount: Number(row.installmentAmount ?? 0),
-      installmentsPaid: row.installmentsPaid ?? 0,
+      installmentsPaid: effectiveInstallmentsPaid(row, sharedInstallmentCounts),
       installmentsTotal: row.installmentsTotal ?? 0,
       responsibleId: row.responsibleId ?? null,
     }));

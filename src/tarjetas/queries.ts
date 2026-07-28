@@ -4,6 +4,8 @@ import { hhTag } from "@/shared/lib/cache-tags";
 import { card, expense } from "@/shared/lib/db/schema";
 import { eq, and, isNull, isNotNull, gte, lte, desc } from "drizzle-orm";
 import { billingPeriodForMonth } from "@/shared/lib/billing";
+import { getHouseholdMembers } from "@/household/queries";
+import { getSharedInstallmentsPaidCounts, effectiveInstallmentsPaid } from "@/shared/lib/db/installments";
 
 export type CardPaymentDue = {
   cardId: string;
@@ -37,6 +39,7 @@ export async function getCardUsageSummary(
 
   const rows = await db
     .select({
+      id: expense.id,
       cardId: expense.cardId,
       type: expense.type,
       amount: expense.amount,
@@ -46,6 +49,7 @@ export async function getCardUsageSummary(
       expenseDate: expense.expenseDate,
       startMonth: expense.startMonth,
       isActive: expense.isActive,
+      isShared: expense.isShared,
     })
     .from(expense)
     .where(
@@ -55,6 +59,11 @@ export async function getCardUsageSummary(
         isNotNull(expense.cardId)
       )
     );
+
+  const hasSharedInstallments = rows.some((row) => row.type === "installment" && row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
 
   const usage = new Map<string, number>();
 
@@ -68,9 +77,9 @@ export async function getCardUsageSummary(
       row.type === "installment" &&
       row.startMonth &&
       row.startMonth <= month &&
-      (row.installmentsPaid ?? 0) < (row.installmentsTotal ?? 0)
+      effectiveInstallmentsPaid(row, sharedInstallmentCounts) < (row.installmentsTotal ?? 0)
     ) {
-      const remaining = (row.installmentsTotal ?? 0) - (row.installmentsPaid ?? 0);
+      const remaining = (row.installmentsTotal ?? 0) - effectiveInstallmentsPaid(row, sharedInstallmentCounts);
       contribution = remaining * Number(row.installmentAmount ?? 0);
     } else if (row.type === "fixed" && row.isActive) {
       contribution = Number(row.amount ?? 0);
@@ -189,7 +198,7 @@ export type CardLinkedExpense = {
  */
 export async function getCardLinkedExpenses(householdId: string): Promise<CardLinkedExpense[]> {
   'use cache'
-  cacheTag(householdId, hhTag(householdId, "expenses"))
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
   const rows = await db
     .select({
       id: expense.id,
@@ -202,6 +211,7 @@ export async function getCardLinkedExpenses(householdId: string): Promise<CardLi
       installmentsTotal: expense.installmentsTotal,
       expenseDate: expense.expenseDate,
       paidAt: expense.paidAt,
+      isShared: expense.isShared,
     })
     .from(expense)
     .where(
@@ -213,22 +223,30 @@ export async function getCardLinkedExpenses(householdId: string): Promise<CardLi
     )
     .orderBy(desc(expense.createdAt));
 
+  const hasSharedInstallments = rows.some((row) => row.type === "installment" && row.isShared);
+  const sharedInstallmentCounts = hasSharedInstallments
+    ? await getSharedInstallmentsPaidCounts(householdId, (await getHouseholdMembers(householdId)).length)
+    : new Map<string, number>();
+
   return rows
     .filter((r) => r.cardId != null)
-    .map((r) => ({
-      id: r.id,
-      cardId: r.cardId!,
-      description: r.description,
-      type: r.type,
-      amount: Number((r.type === "installment" ? r.installmentAmount : r.amount) ?? 0),
-      expenseDate: r.expenseDate ?? null,
-      installmentsPaid: r.installmentsPaid ?? 0,
-      installmentsTotal: r.installmentsTotal ?? 0,
-      isCompleted:
-        r.type === "installment"
-          ? (r.installmentsTotal ?? 0) > 0 && (r.installmentsPaid ?? 0) >= (r.installmentsTotal ?? 0)
-          : r.type === "one_time"
-            ? r.paidAt != null
-            : false, // fijos/variables son recurrentes — nunca "finalizan"
-    }));
+    .map((r) => {
+      const paid = effectiveInstallmentsPaid(r, sharedInstallmentCounts);
+      return {
+        id: r.id,
+        cardId: r.cardId!,
+        description: r.description,
+        type: r.type,
+        amount: Number((r.type === "installment" ? r.installmentAmount : r.amount) ?? 0),
+        expenseDate: r.expenseDate ?? null,
+        installmentsPaid: paid,
+        installmentsTotal: r.installmentsTotal ?? 0,
+        isCompleted:
+          r.type === "installment"
+            ? (r.installmentsTotal ?? 0) > 0 && paid >= (r.installmentsTotal ?? 0)
+            : r.type === "one_time"
+              ? r.paidAt != null
+              : false, // fijos/variables son recurrentes — nunca "finalizan"
+      };
+    });
 }

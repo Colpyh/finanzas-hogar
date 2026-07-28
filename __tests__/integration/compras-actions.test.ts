@@ -31,10 +31,6 @@ jest.mock("@/balances/guards", () => ({
   pendingDebtGuard: jest.fn().mockResolvedValue(null),
 }));
 
-jest.mock("@/compras/installment-sync", () => ({
-  syncSharedInstallmentCounter: jest.fn().mockResolvedValue(undefined),
-}));
-
 const mockSelect = jest.fn();
 const mockUpdate = jest.fn();
 const mockInsert = jest.fn();
@@ -99,6 +95,85 @@ describe("markInstallmentPaid (atomic counter)", () => {
     const { markInstallmentPaid } = await import("@/compras/actions");
     const result = await markInstallmentPaid(UUID_EXPENSE);
     expect(result).toEqual({ error: "Todas las cuotas ya fueron pagadas" });
+  });
+
+  it("rejects shared installments — se registran desde markAsMonthlyPayer/Balances, no acá", async () => {
+    // WHERE incluye isShared=false: una compartida nunca matchea el UPDATE.
+    mockUpdate.mockReturnValueOnce(updateReturningChain([]));
+    mockSelect.mockReturnValueOnce(selectChain([{ paid: 3, total: 12, isShared: true }]));
+
+    const { markInstallmentPaid } = await import("@/compras/actions");
+    const result = await markInstallmentPaid(UUID_EXPENSE);
+    expect(result).toEqual({ error: "Las cuotas compartidas se registran desde Balances" });
+  });
+});
+
+describe("updateInstallment — installmentsPaid derivado para compartidas", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  function updateSetCaptureChain() {
+    const setCalls: Record<string, unknown>[] = [];
+    const chain = {
+      set: jest.fn((obj: Record<string, unknown>) => {
+        setCalls.push(obj);
+        return { where: jest.fn().mockResolvedValue(undefined) };
+      }),
+    };
+    return { chain, setCalls };
+  }
+
+  it("no persiste installmentsPaid cuando el gasto YA es compartido", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ installmentsTotal: 12, isShared: true }])
+    );
+    const { chain, setCalls } = updateSetCaptureChain();
+    mockUpdate.mockReturnValueOnce(chain);
+
+    const { updateInstallment } = await import("@/compras/actions");
+    const result = await updateInstallment(UUID_EXPENSE, {
+      description: "Cuota compartida",
+      installmentsPaid: 5,
+      isShared: true,
+    });
+
+    expect(result).toEqual({});
+    expect(setCalls[0]).not.toHaveProperty("installmentsPaid");
+  });
+
+  it("no persiste installmentsPaid al pasar de no-compartida a compartida", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ installmentsTotal: 12, isShared: false }])
+    );
+    const { chain, setCalls } = updateSetCaptureChain();
+    mockUpdate.mockReturnValueOnce(chain);
+
+    const { updateInstallment } = await import("@/compras/actions");
+    await updateInstallment(UUID_EXPENSE, {
+      description: "Ahora compartida",
+      installmentsPaid: 5,
+      isShared: true,
+    });
+
+    expect(setCalls[0]).not.toHaveProperty("installmentsPaid");
+  });
+
+  it("sigue persistiendo installmentsPaid para gastos NO compartidos", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ installmentsTotal: 12, isShared: false }])
+    );
+    const { chain, setCalls } = updateSetCaptureChain();
+    mockUpdate.mockReturnValueOnce(chain);
+
+    const { updateInstallment } = await import("@/compras/actions");
+    await updateInstallment(UUID_EXPENSE, {
+      description: "Cuota normal",
+      installmentsPaid: 5,
+      isShared: false,
+    });
+
+    expect(setCalls[0]?.installmentsPaid).toBe(5);
   });
 });
 

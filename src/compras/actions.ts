@@ -8,7 +8,6 @@ import { hhTag } from "@/shared/lib/cache-tags";
 import { getHouseholdMembers } from "@/household/queries";
 import { requireHousehold } from "@/household/guards";
 import { pendingDebtGuard } from "@/balances/guards";
-import { syncSharedInstallmentCounter } from "./installment-sync";
 import { currentPeriodMonth, monthFromDate, isUniqueViolation } from "@/shared/lib/db/helpers";
 import { splitShareForDb } from "@/shared/lib/split-share";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
@@ -121,6 +120,9 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
   // Incremento atómico en un solo UPDATE condicionado: el read-modify-write
   // en JS perdía incrementos con dos clicks concurrentes (ambos leían N y
   // escribían N+1), y el guard previo era check-then-act con la misma race.
+  // isShared=false en el WHERE: las compartidas se derivan de
+  // fixed_expense_payment (ver shared/lib/db/installments.ts), no se
+  // incrementan por acá aunque alguien llame esta acción directo.
   const updated = await db
     .update(expense)
     .set({ installmentsPaid: sql`coalesce(${expense.installmentsPaid}, 0) + 1` })
@@ -128,6 +130,7 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
       and(
         eq(expense.id, expenseId),
         eq(expense.householdId, household.id),
+        eq(expense.isShared, false),
         isNull(expense.deletedAt),
         sql`coalesce(${expense.installmentsPaid}, 0) < coalesce(${expense.installmentsTotal}, 0)`
       )
@@ -136,11 +139,12 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
 
   if (updated.length === 0) {
     const [current] = await db
-      .select({ paid: expense.installmentsPaid, total: expense.installmentsTotal })
+      .select({ paid: expense.installmentsPaid, total: expense.installmentsTotal, isShared: expense.isShared })
       .from(expense)
       .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
       .limit(1);
     if (!current) return { error: "Gasto no encontrado" };
+    if (current.isShared) return { error: "Las cuotas compartidas se registran desde Balances" };
     return { error: "Todas las cuotas ya fueron pagadas" };
   }
 
@@ -150,8 +154,10 @@ export async function markInstallmentPaid(expenseId: string): Promise<{ error?: 
 }
 
 /**
- * Registra el pago mensual de una cuota compartida, sin tocar el contador de
- * cuotas (eso lo hace syncSharedInstallmentCounter cuando el mes cierra).
+ * Registra el pago mensual de una cuota compartida. NO toca installmentsPaid:
+ * para compartidas ese contador se deriva de fixed_expense_payment en cada
+ * lectura (ver shared/lib/db/installments.ts) — nunca se guarda ni se
+ * incrementa a mano, así deshacer un pago no lo desincroniza.
  * markAsMonthlyPayer y registerInstallmentShare eran esta misma función
  * copiada dos veces — solo difieren en el mensaje de conflicto (quién soy yo
  * en el pago: el titular o el deudor que salda su parte).
@@ -192,9 +198,6 @@ async function registerSharedInstallmentPayment(
     if (isUniqueViolation(err)) return { error: conflictMessage };
     throw err;
   }
-
-  // Si con este pago el mes quedó completo, cierra la cuota del período.
-  await syncSharedInstallmentCounter(expenseId, household.id, periodMonth, members.length);
 
   updateTag(hhTag(household.id, "payments"));
   updateTag(hhTag(household.id, "expenses"));
@@ -256,7 +259,10 @@ export async function updateInstallment(
 
   const data = updateInstallmentSchema.parse(rawData);
 
-  if (data.installmentsPaid > (current.installmentsTotal ?? 0)) {
+  if (
+    data.installmentsPaid !== undefined &&
+    data.installmentsPaid > (current.installmentsTotal ?? 0)
+  ) {
     return { error: "Las cuotas pagadas no pueden superar el total" };
   }
 
@@ -268,11 +274,18 @@ export async function updateInstallment(
     if (debtError) return { error: debtError };
   }
 
+  // Compartidas: installmentsPaid se DERIVA de fixed_expense_payment (ver
+  // shared/lib/db/installments.ts) — no se persiste manualmente, así este
+  // form no puede desincronizar el conteo real.
+  const willBeShared = data.isShared ?? current.isShared;
+
   await db
     .update(expense)
     .set({
       description: data.description,
-      installmentsPaid: data.installmentsPaid,
+      ...(!willBeShared && data.installmentsPaid !== undefined
+        ? { installmentsPaid: data.installmentsPaid }
+        : {}),
       ...(data.isShared !== undefined ? { isShared: data.isShared } : {}),
     })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));

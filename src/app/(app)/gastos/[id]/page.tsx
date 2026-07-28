@@ -10,6 +10,7 @@ import { EditExpenseForm } from "@/compras/components/edit-expense-form";
 import { InstallmentProgress } from "@/compras/components/installment-progress";
 import { ReceiptDetail } from "@/receipts/components/receipt-detail";
 import { formatCurrency } from "@/shared/components/currency-display";
+import { getSharedInstallmentsPaidCounts, effectiveInstallmentsPaid } from "@/shared/lib/db/installments";
 import { ChevronLeft } from "lucide-react";
 
 type Props = { params: Promise<{ id: string }> };
@@ -33,6 +34,11 @@ export default async function GastoDetailPage({ params }: Props) {
 
   const isInstallment = exp.type === "installment";
   const isCreator = exp.createdBy === user.id;
+
+  const sharedInstallmentCounts = isInstallment && exp.isShared
+    ? await getSharedInstallmentsPaidCounts(household.id, members.length || 1)
+    : new Map<string, number>();
+  const installmentsPaid = effectiveInstallmentsPaid(exp, sharedInstallmentCounts);
 
   const cardOptions = cards.map((c) => ({
     id: c.id,
@@ -70,7 +76,7 @@ export default async function GastoDetailPage({ params }: Props) {
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Progreso</span>
             <InstallmentProgress
-              paid={exp.installmentsPaid ?? 0}
+              paid={installmentsPaid}
               total={exp.installmentsTotal ?? 0}
             />
           </div>
