@@ -106,15 +106,9 @@ describe("POST /api/webhooks/email/[householdId]", () => {
   let createServiceClient: jest.Mock;
   let parseBciEmail: jest.Mock;
 
-  beforeAll(() => {
-    process.env.WEBHOOK_SECRET = TEST_SECRET;
-  });
-
   beforeEach(async () => {
     jest.resetModules();
     jest.clearAllMocks();
-
-    process.env.WEBHOOK_SECRET = TEST_SECRET;
 
     // Re-import after resetModules
     const serviceModule = await import("@/shared/lib/supabase/service");
@@ -218,7 +212,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
         eq: jest.fn().mockReturnThis(),
         maybeSingle: jest
           .fn()
-          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } }),
       }),
     };
     createServiceClient.mockReturnValue(svc);
@@ -235,8 +229,10 @@ describe("POST /api/webhooks/email/[householdId]", () => {
     expect(res.status).toBe(413);
   });
 
-  // Scenario 1.7 — unknown household → 200 skipped
-  it("returns 200 with skipped=unknown_household for unknown householdId", async () => {
+  // Sin secreto global de respaldo, un hogar inexistente no tiene ningún
+  // secreto propio contra el cual comparar — da 401, igual que un secreto
+  // equivocado (no se revela si el UUID corresponde a un hogar real).
+  it("returns 401 for an unknown householdId (no fallback secret to match against)", async () => {
     const svc = {
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnThis(),
@@ -252,9 +248,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
         householdId: "00000000-0000-0000-0000-000000000000",
       }),
     });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.skipped).toBe("unknown_household");
+    expect(res.status).toBe(401);
   });
 
   // Scenario 1.4 — non-BCI email → 200 skipped
@@ -265,7 +259,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
         eq: jest.fn().mockReturnThis(),
         maybeSingle: jest
           .fn()
-          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } }),
       }),
     };
     createServiceClient.mockReturnValue(svc);
@@ -292,7 +286,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest
               .fn()
-              .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+              .mockResolvedValue({ data: { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } }),
           };
         }
         // duplicate check
@@ -324,7 +318,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
         eq: jest.fn().mockReturnThis(),
         maybeSingle: jest
           .fn()
-          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } }),
       }),
     };
     createServiceClient.mockReturnValue(svc);
@@ -357,7 +351,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest
               .fn()
-              .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+              .mockResolvedValue({ data: { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } }),
           };
         }
         if (callCount === 2) {
@@ -409,7 +403,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest
               .fn()
-              .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+              .mockResolvedValue({ data: { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } }),
           };
         }
         if (callCount === 2) {
@@ -455,7 +449,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
           maybeSingle: jest.fn().mockResolvedValue({
-            data: callCount === 1 ? { id: UUID_HOUSEHOLD } : null,
+            data: callCount === 1 ? { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } : null,
           }),
         };
       }),
@@ -488,7 +482,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
-              data: callCount === 1 ? { id: UUID_HOUSEHOLD } : null,
+              data: callCount === 1 ? { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } : null,
             }),
           };
         }
@@ -527,7 +521,7 @@ describe("POST /api/webhooks/email/[householdId]", () => {
         eq: jest.fn().mockReturnThis(),
         maybeSingle: jest
           .fn()
-          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD } }),
+          .mockResolvedValue({ data: { id: UUID_HOUSEHOLD, webhook_secret: TEST_SECRET } }),
       }),
     };
     createServiceClient.mockReturnValue(svc);

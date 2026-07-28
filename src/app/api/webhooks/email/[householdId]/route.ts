@@ -26,29 +26,21 @@ export async function POST(
     .eq("id", householdId)
     .maybeSingle();
 
-  // 2. Constant-time secret comparison. Un hogar inexistente y un secreto
-  // equivocado dan la MISMA respuesta (401) — no hay que revelarle a quien
-  // no tiene ningún secreto válido si el UUID corresponde a un hogar real.
-  // TRANSICIÓN: además del secreto propio del hogar, se acepta el
-  // WEBHOOK_SECRET global viejo, para no cortar el webhook real mientras se
-  // reconfigura CloudMailin con la URL nueva. Sacar este fallback una vez
-  // confirmado el cambio (ver docs/email-inbound-setup.md).
-  const legacySecret = process.env.WEBHOOK_SECRET ?? "";
-  const candidateSecrets = [hh?.webhook_secret, legacySecret].filter(
-    (s): s is string => !!s
-  );
-  const secretIsValid = candidateSecrets.some(
-    (expected) =>
-      providedSecret.length === expected.length &&
-      timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expected))
-  );
+  // 2. Constant-time secret comparison contra el secreto PROPIO del hogar.
+  // Un hogar inexistente y un secreto equivocado dan la MISMA respuesta
+  // (401) — no hay que revelarle a quien no tiene ningún secreto válido si
+  // el UUID corresponde a un hogar real.
+  const expectedSecret = hh?.webhook_secret ?? "";
+  const secretIsValid =
+    expectedSecret.length > 0 &&
+    providedSecret.length === expectedSecret.length &&
+    timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expectedSecret));
 
-  if (!secretIsValid) {
+  // !hh es redundante en runtime (si el hogar no existe, expectedSecret
+  // queda vacío y secretIsValid ya es false) — pero narrowea el tipo para
+  // el resto de la función sin duplicar la respuesta 401.
+  if (!secretIsValid || !hh) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
-  if (!hh) {
-    return NextResponse.json({ ok: true, skipped: "unknown_household" });
   }
 
   // 3. Payload size guard (1MB) before JSON.parse

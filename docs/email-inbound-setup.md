@@ -7,14 +7,17 @@ Pipeline: Gmail → Postmark (inbound) → `POST /api/webhooks/email/[householdI
 Add to Vercel and `.env.local`:
 
 ```
-WEBHOOK_SECRET=<64-char random string>
 SUPABASE_SERVICE_ROLE_KEY=<from Supabase dashboard>
 ```
 
-Generate the secret:
+The webhook secret is **not** an env var — it's generated per-household by
+Postgres (`household.webhook_secret`, via pgcrypto) when the household is
+created. Every household gets its own distinct secret, so leaking one
+household's webhook URL can't be used to inject `pending_expense` rows into
+another household. To find a household's secret, query it directly:
 
-```sh
-openssl rand -hex 32
+```sql
+select webhook_secret from household where id = '<householdId>';
 ```
 
 ## Step 1 — Postmark account
@@ -28,13 +31,13 @@ openssl rand -hex 32
 Set the **Inbound Webhook URL** on the Postmark Inbound Server to:
 
 ```
-https://<your-app>.vercel.app/api/webhooks/email/<householdId>?secret=<WEBHOOK_SECRET>
+https://<your-app>.vercel.app/api/webhooks/email/<householdId>?secret=<webhook_secret>
 ```
 
 Where:
 - `<your-app>` is your Vercel deployment URL
 - `<householdId>` is the UUID of your household (find it in the Supabase dashboard under the `household` table, or copy it from your app URL after onboarding)
-- `<WEBHOOK_SECRET>` is the same value you set in the `WEBHOOK_SECRET` env var
+- `<webhook_secret>` is that same household's `webhook_secret` column (see "Required env vars" above for the query)
 
 ## Step 3 — Supabase service role key
 
@@ -74,7 +77,7 @@ Forwarding is now active. Every future BCI email received by Gmail will be forwa
 
 | Symptom | Check |
 |---------|-------|
-| No row created, Postmark shows non-2xx | Verify `WEBHOOK_SECRET` matches the `?secret=` query param in the webhook URL |
+| No row created, Postmark shows non-2xx | Verify the household's `webhook_secret` (DB column) matches the `?secret=` query param in the webhook URL |
 | Row created but `parsed_source = 'unknown'` | The BCI email format may have changed; check `raw_payload` in the Supabase dashboard and update the parser |
 | Forwarding not working | Confirm the Gmail verification step (Step 5) was completed |
 | `SUPABASE_SERVICE_ROLE_KEY is not set` error | Add the env var to Vercel and redeploy |
