@@ -7,7 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { getHouseholdMembers } from "@/household/queries";
 import { requireHousehold } from "@/household/guards";
-import { pendingDebtGuard } from "@/balances/guards";
+import { pendingDebtGuard, getPendingDebtSummary, type PendingDebtSummary } from "@/balances/guards";
 import { currentPeriodMonth, isUniqueViolation } from "@/shared/lib/db/helpers";
 import { splitShareForDb } from "@/shared/lib/split-share";
 import {
@@ -156,7 +156,11 @@ export async function toggleFixedExpenseActive(expenseId: string): Promise<{ err
   return {};
 }
 
-export async function updateFixedExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {
+export async function updateFixedExpense(
+  expenseId: string,
+  rawData: unknown,
+  options?: { force?: boolean }
+): Promise<{ error?: string; pendingDebt?: PendingDebtSummary }> {
   const auth = await requireHousehold();
   if (!auth.ok) return { error: auth.error };
   const { user, household } = auth;
@@ -170,15 +174,17 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown): P
 
   // Mismo guard que el borrado: desmarcar "compartido" saca el gasto de
   // getHouseholdDebtItems y una deuda sin saldar desaparecería en silencio.
-  if (data.isShared === false) {
+  // En vez de bloquear directo, devolvemos el detalle para que el caller
+  // confirme explícitamente; options.force se usa tras esa confirmación.
+  if (data.isShared === false && !options?.force) {
     const [current] = await db
       .select({ isShared: expense.isShared })
       .from(expense)
       .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
       .limit(1);
     if (current?.isShared) {
-      const debtError = await pendingDebtGuard(household.id, user.id, expenseId, "desmarcarlo como compartido");
-      if (debtError) return { error: debtError };
+      const debt = await getPendingDebtSummary(household.id, user.id, expenseId);
+      if (debt) return { pendingDebt: debt };
     }
   }
 

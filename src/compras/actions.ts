@@ -7,7 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { getHouseholdMembers } from "@/household/queries";
 import { requireHousehold } from "@/household/guards";
-import { pendingDebtGuard } from "@/balances/guards";
+import { pendingDebtGuard, getPendingDebtSummary, type PendingDebtSummary } from "@/balances/guards";
 import { currentPeriodMonth, monthFromDate, isUniqueViolation } from "@/shared/lib/db/helpers";
 import { splitShareForDb } from "@/shared/lib/split-share";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
@@ -219,7 +219,11 @@ export async function registerInstallmentShare(expenseId: string, month?: string
   return registerSharedInstallmentPayment(expenseId, "Ya registraste tu parte este mes", month);
 }
 
-export async function updateExpense(expenseId: string, rawData: unknown): Promise<{ error?: string }> {
+export async function updateExpense(
+  expenseId: string,
+  rawData: unknown,
+  options?: { force?: boolean }
+): Promise<{ error?: string; pendingDebt?: PendingDebtSummary }> {
   const auth = await requireHousehold();
   if (!auth.ok) return { error: auth.error };
   const { user, household } = auth;
@@ -246,11 +250,13 @@ export async function updateExpense(expenseId: string, rawData: unknown): Promis
   if (!current) return { error: "Gasto no encontrado" };
 
   // Desmarcar "compartido" saca el gasto de getHouseholdDebtItems (filtra
-  // isShared=true) — sin este guard, una deuda sin saldar desaparecería del
-  // balance en silencio, igual que en updateInstallment/deleteExpense.
-  if (data.isShared === false && current.isShared) {
-    const debtError = await pendingDebtGuard(household.id, user.id, expenseId, "desmarcarlo como compartido");
-    if (debtError) return { error: debtError };
+  // isShared=true) — sin confirmación, una deuda sin saldar desaparecería
+  // del balance en silencio. En vez de bloquear directo, devolvemos el
+  // detalle para que el caller muestre "¿desmarcar igual?" — options.force
+  // se usa una vez que el usuario ya confirmó explícitamente.
+  if (data.isShared === false && current.isShared && !options?.force) {
+    const debt = await getPendingDebtSummary(household.id, user.id, expenseId);
+    if (debt) return { pendingDebt: debt };
   }
 
   const becomesShared = data.isShared === true && !current.isShared;
@@ -306,7 +312,8 @@ export async function updateExpense(expenseId: string, rawData: unknown): Promis
 export async function updateInstallment(
   expenseId: string,
   rawData: unknown,
-): Promise<{ error?: string }> {
+  options?: { force?: boolean }
+): Promise<{ error?: string; pendingDebt?: PendingDebtSummary }> {
   const auth = await requireHousehold();
   if (!auth.ok) return { error: auth.error };
   const { user, household } = auth;
@@ -329,11 +336,12 @@ export async function updateInstallment(
   }
 
   // Desmarcar "compartido" saca el gasto de getHouseholdDebtItems (filtra
-  // isShared=true) — sin este guard, una deuda sin saldar desaparecería del
-  // balance en silencio, igual que borrar sin pendingDebtGuard.
-  if (data.isShared === false && current.isShared) {
-    const debtError = await pendingDebtGuard(household.id, user.id, expenseId, "desmarcarlo como compartido");
-    if (debtError) return { error: debtError };
+  // isShared=true) — sin confirmación, una deuda sin saldar desaparecería
+  // del balance en silencio. Devolvemos el detalle en vez de bloquear
+  // directo; options.force se usa tras la confirmación explícita del usuario.
+  if (data.isShared === false && current.isShared && !options?.force) {
+    const debt = await getPendingDebtSummary(household.id, user.id, expenseId);
+    if (debt) return { pendingDebt: debt };
   }
 
   // Compartidas: installmentsPaid se DERIVA de fixed_expense_payment (ver

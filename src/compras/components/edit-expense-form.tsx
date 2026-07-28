@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponsiblePills } from "@/shared/components/responsible-pills";
 import { CardPills } from "@/shared/components/card-pills";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
+import { formatCurrency } from "@/shared/components/currency-display";
 import { Loader2 } from "lucide-react";
 
 type Member = { userId: string; displayName: string };
@@ -42,27 +44,43 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
   const [isPrivate, setIsPrivate] = useState(expense.isPrivate ?? false);
   const [isShared, setIsShared] = useState(expense.isShared ?? false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDebt, setPendingDebt] = useState<{ totalAmount: number; debtorNames: string[] } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isForcing, startForceTransition] = useTransition();
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function save(force: boolean) {
     setError(null);
-    startTransition(async () => {
-      const result = await updateExpense(expense.id, {
-        description,
-        ...(isInstallment ? {} : { amount, expenseDate: expenseDate || null }),
-        responsibleId: responsibleId ?? null,
-        cardId: cardId ?? null,
-        isPrivate,
-        isShared,
-      });
+    const run = force ? startForceTransition : startTransition;
+    run(async () => {
+      const result = await updateExpense(
+        expense.id,
+        {
+          description,
+          ...(isInstallment ? {} : { amount, expenseDate: expenseDate || null }),
+          responsibleId: responsibleId ?? null,
+          cardId: cardId ?? null,
+          isPrivate,
+          isShared,
+        },
+        force ? { force: true } : undefined
+      );
+      if (result?.pendingDebt) {
+        setPendingDebt(result.pendingDebt);
+        return;
+      }
       if (result?.error) {
         setError(result.error);
       } else {
+        setPendingDebt(null);
         toast.success("Cambios guardados");
         router.push("/compras");
       }
     });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    save(false);
   }
 
   return (
@@ -194,6 +212,21 @@ export function EditExpenseForm({ expense, members, cards }: Props) {
           Guardar cambios
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={pendingDebt !== null}
+        onOpenChange={(open) => !open && setPendingDebt(null)}
+        title="Deuda sin saldar"
+        description={
+          pendingDebt
+            ? `Este gasto tiene una parte sin saldar de ${pendingDebt.debtorNames.join(", ")} (${formatCurrency(pendingDebt.totalAmount)}). Si lo desmarcás como compartido, esa deuda desaparece del balance y no se puede deshacer.`
+            : undefined
+        }
+        confirmText="Desmarcar igual"
+        variant="destructive"
+        loading={isForcing}
+        onConfirm={() => save(true)}
+      />
     </form>
   );
 }

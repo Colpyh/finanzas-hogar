@@ -12,6 +12,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { updateInstallment } from "@/compras/actions";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
+import { formatCurrency } from "@/shared/components/currency-display";
 
 type Props = {
   expense: {
@@ -29,7 +31,9 @@ export function EditInstallmentDialog({ expense }: Props) {
   const [installmentsPaid, setInstallmentsPaid] = useState(expense.installmentsPaid);
   const [isShared, setIsShared] = useState(expense.isShared ?? false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDebt, setPendingDebt] = useState<{ totalAmount: number; debtorNames: string[] } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [forcing, startForceTransition] = useTransition();
 
   function handleOpen(value: boolean) {
     if (value) {
@@ -37,27 +41,42 @@ export function EditInstallmentDialog({ expense }: Props) {
       setInstallmentsPaid(expense.installmentsPaid);
       setIsShared(expense.isShared ?? false);
       setError(null);
+      setPendingDebt(null);
     }
     setOpen(value);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function save(force: boolean) {
     setError(null);
-    startTransition(async () => {
-      const result = await updateInstallment(expense.id, {
-        description,
-        // Compartidas: installmentsPaid se deriva de los pagos reales, no se
-        // edita a mano (ver shared/lib/db/installments.ts).
-        ...(isShared ? {} : { installmentsPaid }),
-        isShared,
-      });
+    const run = force ? startForceTransition : startTransition;
+    run(async () => {
+      const result = await updateInstallment(
+        expense.id,
+        {
+          description,
+          // Compartidas: installmentsPaid se deriva de los pagos reales, no se
+          // edita a mano (ver shared/lib/db/installments.ts).
+          ...(isShared ? {} : { installmentsPaid }),
+          isShared,
+        },
+        force ? { force: true } : undefined
+      );
+      if (result?.pendingDebt) {
+        setPendingDebt(result.pendingDebt);
+        return;
+      }
       if (result?.error) {
         setError(result.error);
       } else {
+        setPendingDebt(null);
         setOpen(false);
       }
     });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    save(false);
   }
 
   return (
@@ -136,6 +155,21 @@ export function EditInstallmentDialog({ expense }: Props) {
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <ConfirmDialog
+        open={pendingDebt !== null}
+        onOpenChange={(o) => !o && setPendingDebt(null)}
+        title="Deuda sin saldar"
+        description={
+          pendingDebt
+            ? `Esta cuota tiene una parte sin saldar de ${pendingDebt.debtorNames.join(", ")} (${formatCurrency(pendingDebt.totalAmount)}). Si la desmarcás como compartida, esa deuda desaparece del balance y no se puede deshacer.`
+            : undefined
+        }
+        confirmText="Desmarcar igual"
+        variant="destructive"
+        loading={forcing}
+        onConfirm={() => save(true)}
+      />
     </Dialog>
   );
 }

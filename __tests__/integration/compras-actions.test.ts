@@ -29,6 +29,7 @@ jest.mock("@/household/queries", () => ({
 
 jest.mock("@/balances/guards", () => ({
   pendingDebtGuard: jest.fn().mockResolvedValue(null),
+  getPendingDebtSummary: jest.fn().mockResolvedValue(null),
 }));
 
 const mockSelect = jest.fn();
@@ -291,12 +292,15 @@ describe("updateExpense — isPrivate/isShared editables después de creada", ()
     responsibleId: null,
   };
 
-  it("bloquea desmarcar compartido si hay deuda sin saldar", async () => {
+  it("devuelve pendingDebt (sin bloquear con error) si hay deuda sin saldar al desmarcar compartido", async () => {
     mockSelect.mockReturnValueOnce(
       selectChain([{ ...ONE_TIME_CURRENT, isShared: true }])
     );
-    const { pendingDebtGuard } = await import("@/balances/guards");
-    (pendingDebtGuard as jest.Mock).mockResolvedValueOnce("Este gasto tiene deudas sin saldar entre miembros.");
+    const { getPendingDebtSummary } = await import("@/balances/guards");
+    (getPendingDebtSummary as jest.Mock).mockResolvedValueOnce({
+      totalAmount: 1740,
+      debtorNames: ["Fer"],
+    });
 
     const { updateExpense } = await import("@/compras/actions");
     const result = await updateExpense(UUID_EXPENSE, {
@@ -305,16 +309,29 @@ describe("updateExpense — isPrivate/isShared editables después de creada", ()
       isShared: false,
     });
 
-    expect(result.error).toMatch(/deudas sin saldar/i);
+    expect(result).toEqual({ pendingDebt: { totalAmount: 1740, debtorNames: ["Fer"] } });
+    expect(result.error).toBeUndefined();
     expect(mockUpdate).not.toHaveBeenCalled();
-    // El mensaje debe hablar de "desmarcar compartido", no de "eliminar"
-    // (acá solo se está editando el flag, no borrando el gasto).
-    expect(pendingDebtGuard).toHaveBeenCalledWith(
-      UUID_HOUSEHOLD,
-      UUID_USER,
-      UUID_EXPENSE,
-      "desmarcarlo como compartido"
+    expect(getPendingDebtSummary).toHaveBeenCalledWith(UUID_HOUSEHOLD, UUID_USER, UUID_EXPENSE);
+  });
+
+  it("con force:true, desmarca compartido igual habiendo deuda sin saldar", async () => {
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ ...ONE_TIME_CURRENT, isShared: true }])
     );
+    mockUpdate.mockReturnValueOnce(updateReturningChain([{ id: UUID_EXPENSE }]));
+    const { getPendingDebtSummary } = await import("@/balances/guards");
+
+    const { updateExpense } = await import("@/compras/actions");
+    const result = await updateExpense(
+      UUID_EXPENSE,
+      { description: "Compra", isPrivate: false, isShared: false },
+      { force: true }
+    );
+
+    expect(result).toEqual({});
+    expect(getPendingDebtSummary).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("marcar compartido en una compra puntual siembra el pago del responsable", async () => {
