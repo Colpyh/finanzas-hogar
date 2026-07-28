@@ -249,7 +249,7 @@ export async function updateExpense(expenseId: string, rawData: unknown): Promis
   // isShared=true) — sin este guard, una deuda sin saldar desaparecería del
   // balance en silencio, igual que en updateInstallment/deleteExpense.
   if (data.isShared === false && current.isShared) {
-    const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+    const debtError = await pendingDebtGuard(household.id, user.id, expenseId, "desmarcarlo como compartido");
     if (debtError) return { error: debtError };
   }
 
@@ -332,7 +332,7 @@ export async function updateInstallment(
   // isShared=true) — sin este guard, una deuda sin saldar desaparecería del
   // balance en silencio, igual que borrar sin pendingDebtGuard.
   if (data.isShared === false && current.isShared) {
-    const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+    const debtError = await pendingDebtGuard(household.id, user.id, expenseId, "desmarcarlo como compartido");
     if (debtError) return { error: debtError };
   }
 

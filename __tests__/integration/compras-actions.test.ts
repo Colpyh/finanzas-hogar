@@ -307,6 +307,14 @@ describe("updateExpense — isPrivate/isShared editables después de creada", ()
 
     expect(result.error).toMatch(/deudas sin saldar/i);
     expect(mockUpdate).not.toHaveBeenCalled();
+    // El mensaje debe hablar de "desmarcar compartido", no de "eliminar"
+    // (acá solo se está editando el flag, no borrando el gasto).
+    expect(pendingDebtGuard).toHaveBeenCalledWith(
+      UUID_HOUSEHOLD,
+      UUID_USER,
+      UUID_EXPENSE,
+      "desmarcarlo como compartido"
+    );
   });
 
   it("marcar compartido en una compra puntual siembra el pago del responsable", async () => {

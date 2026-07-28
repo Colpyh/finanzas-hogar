@@ -12,13 +12,14 @@ import { getPendingBalances } from "./queries";
 export async function pendingDebtGuard(
   householdId: string,
   currentUserId: string,
-  expenseId: string
+  expenseId: string,
+  action: string = "eliminarlo"
 ): Promise<string | null> {
   const members = await getHouseholdMembers(householdId);
   const memberMap = new Map(members.map((m) => [m.userId, m.displayName ?? "Usuario"]));
   const balances = await getPendingBalances(householdId, members.length, memberMap, currentUserId);
   const hasDebt = balances.some((b) => b.items.some((i) => i.expenseId === expenseId));
   return hasDebt
-    ? "Este gasto tiene deudas sin saldar entre miembros. Salda el balance antes de eliminarlo."
+    ? `Este gasto tiene deudas sin saldar entre miembros. Salda el balance antes de ${action}.`
     : null;
 }

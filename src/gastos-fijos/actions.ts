@@ -177,7 +177,7 @@ export async function updateFixedExpense(expenseId: string, rawData: unknown): P
       .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)))
       .limit(1);
     if (current?.isShared) {
-      const debtError = await pendingDebtGuard(household.id, user.id, expenseId);
+      const debtError = await pendingDebtGuard(household.id, user.id, expenseId, "desmarcarlo como compartido");
       if (debtError) return { error: debtError };
     }
   }
