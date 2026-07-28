@@ -6,7 +6,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: colpyh
-  version: "1.6"
+  version: "1.7"
 ---
 
 ## Stack
@@ -43,12 +43,24 @@ src/
 
 ### AUTH — Patrón obligatorio en Server Actions y Pages
 
+`getUserHousehold(userId)` vive en `src/household/queries.ts` (movido desde `onboarding/queries.ts` en jul 2026 — lo usan ~30 archivos fuera de onboarding, invertía el grafo de dependencias).
+
+En **Server Actions**, usar el guard centralizado en vez de repetir `getUser()`+`getUserHousehold()`:
+
 ```ts
-const user = await getUser();                      // cookies() internamente
-const household = await getUserHousehold(user.id); // null si no tiene hogar
-if (!household) throw new Error("No household");   // o return { error: "..." }
-// usar household.id para todas las queries
+import { requireHousehold } from "@/household/guards";
+
+export async function myAction(rawData: unknown): Promise<{ error?: string }> {
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };   // discriminante ok:boolean, NUNCA `if (auth.error)`
+  const { user, household } = auth;
+  // ...
+}
 ```
+
+`ok: true | false` como discriminante — con `{ error: string }` el narrowing de TS no descarta un string vacío falsy, así que `if (auth.error)` no angosta el tipo de forma confiable.
+
+En **Pages/queries**, seguir usando el patrón manual (`getUser()` + `getUserHousehold(user.id)`).
 
 ### CACHING — Next.js 16 `use cache`
 
@@ -125,15 +137,14 @@ style={{ background: "rgba(124,58,237,0.08)", boxShadow: "inset 2.5px 0 0 #7c3ae
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { getUser } from "@/auth/queries";
-import { getUserHousehold } from "@/onboarding/queries";
+import { requireHousehold } from "@/household/guards";
 
 export async function myAction(rawData: unknown): Promise<{ error?: string }> {
-  try {
-    const user = await getUser();
-    const household = await getUserHousehold(user.id);
-    if (!household) return { error: "No tienes un hogar activo" };
+  const auth = await requireHousehold();
+  if (!auth.ok) return { error: auth.error };
+  const { user, household } = auth;
 
+  try {
     // validar con Zod
     // mutar en DB con Drizzle
 
@@ -201,13 +212,19 @@ db.select().from(expense).where(
 
 - **Gastos VARIABLES** (luz, agua): el monto real del mes vive en `fixed_expense_payment.amount`, NUNCA en `expense.amount` (que es 0/default). Y el monto del mes es el **MÁXIMO de los pagos, no la suma** (`variableMonthAmount` en `src/shared/lib/variable-expense.ts`): la fila de settlement (parte del deudor al saldar) es una fracción de la misma boleta — sumarla infla el total 1.5×. Corolario: cualquier query de "gasto por mes" (incl. `getAnnualSummary`) debe sacar fijos+variables de `fixed_expense_payment.amount` por `periodMonth`, NO de un total de fijos constante (deja el gráfico plano y omite los variables). Los ingresos de sueldo se PROPAGAN hacia adelante (último por miembro con `periodMonth <= mes`), no son por mes exacto — replicar `getMonthlyIncome`.
 - **Balance entre miembros = ACUMULADO** (no mensual). `getPendingBalances(householdId, memberCount, memberMap, currentUserId)` suma la deuda de TODOS los meses no saldados; persiste hasta saldar por item (expense+mes) con `settleBalanceItem`. Internamente los ítems de deuda están cacheados a nivel hogar (`getHouseholdDebtItems`, `cacheTag(householdId)`); solo el signo del neto y la agrupación se calculan por usuario, post-caché.
-- **Guard de deuda pendiente**: `pendingDebtGuard(householdId, userId, expenseId)` (`src/balances/guards.ts`) bloquea `deleteExpense`/`deleteFixedExpense` si el gasto tiene meses sin saldar; `removeMember` tiene el guard equivalente por miembro. El balance solo ve gastos/miembros vivos — borrar sin guard hace desaparecer deuda en silencio.
-- **Cuotas COMPARTIDAS — cierre de mes**: `markAsMonthlyPayer`/`registerInstallmentShare`/`settleBalanceItem` llaman `syncSharedInstallmentCounter` tras un insert de pago exitoso — incrementa `installmentsPaid` (atómico, SQL) cuando todos los miembros registraron su parte del mes. Los incrementos de contador se hacen SIEMPRE con SQL atómico (`coalesce(...) + 1` + condición `< total`), nunca read-modify-write en JS.
+- **Guard de deuda pendiente**: `pendingDebtGuard(householdId, userId, expenseId, action?)` (`src/balances/guards.ts`) bloquea `deleteExpense`/`deleteFixedExpense` si el gasto tiene meses sin saldar (`action` parametriza el mensaje: default "eliminarlo"); `removeMember` tiene el guard equivalente por miembro. Para **editar** (desmarcar "compartido"/marcar privado) se usa en cambio `getPendingDebtSummary(householdId, userId, expenseId)` — NO bloquea, devuelve `{ totalAmount, debtorNames } | null` para que el caller muestre un `ConfirmDialog` explícito ("¿desmarcar igual? La deuda de $X con [nombre] desaparece del balance") en vez de cortar en seco; `updateExpense`/`updateInstallment`/`updateFixedExpense` aceptan `{ force: true }` como 3er argumento una vez confirmado. El balance solo ve gastos/miembros vivos — cualquier transición a no-compartido/borrado sin este chequeo hace desaparecer deuda en silencio.
+- **Cuotas COMPARTIDAS — `installmentsPaid` es DERIVADO, no una columna mantenida** (rediseño jul 2026): para `isShared=true`, `installmentsPaid` NUNCA se lee de la columna ni se incrementa a mano — se calcula en cada lectura con `getSharedInstallmentsPaidCounts(householdId, memberCount)` (`src/shared/lib/db/installments.ts`): `COUNT` de `periodMonth` distintos donde TODOS los miembros tienen fila `paid` en `fixed_expense_payment`. Usar `effectiveInstallmentsPaid(row, sharedCounts)` para resolver el valor a mostrar (deriva si `isShared`, columna si no). El viejo `syncSharedInstallmentCounter` (columna incrementada a mano) se ELIMINÓ — tenía un bug de fondo: `unmarkMyPayment`/`unmarkOtherPayment` borraban filas de `fixed_expense_payment` sin decrementar el contador, sobreconteo permanente. Para cuotas NO compartidas, `installmentsPaid` sigue siendo la columna simple (`markInstallmentPaid`, +1 atómico con `coalesce(...)+1` + condición `< total`, nunca read-modify-write en JS) — ahí no hay "deshacer" que la desincronice.
+  - `markAsMonthlyPayer`/`registerInstallmentShare` (`compras/actions.ts`) y `markPaidForOther`/`unmarkOtherPayment` (`gastos-fijos/actions.ts`, reusadas por la UI de compras) aceptan `month?: string` (default mes actual) — la página de Compras tiene su propio `MonthSelector`; sin threadear el mes, el botón siempre pisaba HOY sin importar qué mes se estuviera viendo (no había forma de regularizar un mes pasado olvidado).
+  - `EditInstallmentDialog` muestra `installmentsPaid` de solo lectura cuando `isShared` (ya no es un input editable — evita que el form desincronice el conteo a mano).
 - **Compras one_time — estado de pago**: columna `expense.paidAt` (nullable). `isPaid = !cardId || card.kind === "debit" || paidAt != null`. `toggleExpensePaid` valida type=one_time + tarjeta de crédito presente + no borrado.
 - **Tarjetas — `card.kind`** (`credit` default | `debit`): débito NO tiene ciclo de facturación — las actions fuerzan `closingDay/paymentDueDay = null` (con eso todas las queries atribuyen al mes calendario y `getCardPaymentsDue` las excluye solas) y sus compras nacen pagadas.
 - **Email inbound (BCI)**: correos del banco → **CloudMailin** (proveedor ACTIVO desde jul 2026; filtro de Gmail reenvía los de `bci.cl` a la dirección `...@cloudmailin.net`, formato "JSON Normalized") → webhook `/api/webhooks/email/{householdId}?secret=` → `normalizeInboundPayload` (acepta CloudMailin Y Postmark) → `parseBciEmail` → `pending_expense` + push. Al confirmar, se auto-vincula la tarjeta si hay exactamente UNA activa con esos últimos 4 dígitos y se **sugiere la categoría** por merchant (`suggestCategoryByMerchant` en `email-inbound/queries.ts`: match exacto por descripción normalizada contra el historial, gana la más usada; sin historial no sugiere nada → confirmación en 1 tap). El parser soporta los DOS formatos de BCI (con y sin dos puntos, regexes anclados a inicio de línea); correos BCI que no son compra (transferencias) se descartan como `not_purchase` salvo que el asunto contenga "uso de tu tarjeta".
+  - **Secreto por hogar** (jul 2026): `household.webhook_secret` — columna generada por Postgres (`default(sql\`encode(gen_random_bytes(32),'hex')\`)`, pgcrypto), NO env var. Ya NO existe fallback a un `WEBHOOK_SECRET` global (eliminado tras confirmar el corte con CloudMailin) — un hogar inexistente y un secreto equivocado dan la MISMA respuesta 401, sin revelar cuál pasó.
+  - **Privacidad del pendiente**: `pending_expense.created_by_user_id` = `household.email_forwarder_user_id` al momento de la ingesta (quién reenvía correos del banco HOY — valor único por hogar, no soporta 2 forwarders simultáneos; si el otro miembro también empieza a reenviar sus propios correos, hay que rediseñar a secreto/URL por-miembro). `listPendingByHousehold`/`getPendingCount` filtran por dueño; `confirmPendingExpense`/`discardPendingExpense` tienen el mismo guard server-side (no solo ocultar en la UI). El modal de confirmar tiene los toggles privado/compartido (antes no existían) — si se marca compartido, siembra el pago del confirmante (mismo patrón que `createPurchase`, ya que un `one_time` no tiene registro mensual como cuotas/fijos).
 - **Reparto compartido (N miembros)**: `getPendingBalances` y `getDashboardSummary`/`myShare()` reciben `memberCount` y dividen dinámicamente; el modelo de deuda ya es N-aware (un ítem por deudor). `settleBalanceItem(expenseId, periodMonth, debtorId)` recibe el DEUDOR explícito (valida que sea del hogar) — NUNCA inferir "el otro" con `members.find()` (rompe a 3+). En Balances el neto es POR MIEMBRO y la key de lista es `expenseId-mes-debtorId` (el mismo gasto genera N ítems). Los atajos "saldado por ambos"/"deshacer pago del otro" de gastos fijos se OCULTAN a 3+ (`memberCount > 2`, prop en `FixedExpenseCard`) y las actions `markPaidForOther`/`unmarkOtherPayment` tienen guarda que redirige a Balances. OJO pendiente: el reparto histórico usa el count ACTUAL — meses viejos se recalculan retroactivamente si el hogar crece (persistir reparto por período sigue pendiente).
 - **Billing period**: `billingPeriodForMonth` clampea inicio Y fin al largo real del mes (`Math.min(closingDay, últimoDía)`). Sin el clamp del inicio, closingDay=30 + febrero dejaba compras del 1-2 de marzo fuera de todo período.
+- **Categorías globales**: `category.householdId` es NULLABLE — `NULL` = categoría de sistema visible para TODOS los hogares (comentario en el schema). Cualquier query que arme un mapa de categorías (nombre, budget) debe filtrar con `or(isNull(category.householdId), eq(category.householdId, householdId))`, NUNCA solo `eq(...)` — un query que omita el `isNull` deja cualquier gasto categorizado con una categoría default mostrando "Sin categoría" (bug real en `resumen/queries.ts::getMonthlySummary`, ya corregido; `categories/queries.ts` sí lo hacía bien desde el principio, usarlo de referencia).
+- **Editar privado/compartido después de creado**: `updateExpense` (compras one_time) también acepta `isPrivate`/`isShared` — antes solo se elegían al crear. Al marcar compartido en un `one_time` ya existente, siembra `fixed_expense_payment` (mismo patrón que `createPurchase`); si el `responsibleId` viene `null` explícito en el payload (vs. `undefined` = no tocado), NO hay que arrastrar el responsable anterior con `??` — hay que chequear `!== undefined` para no confundir "sin asignar a propósito" con "campo no enviado".
 
 ## Foto de boleta (receipts)
 
@@ -235,6 +252,12 @@ db.select().from(expense).where(
 - **Listas colapsables**: `INITIAL_VISIBLE` + estado `expanded` + botón "Ver más/todas" (dashboard widgets, categorías en ajustes).
 - **Animaciones de entrada**: CSS puro (`@keyframes` + `animation-delay`), NO librerías de animación. Ver `.widget-enter` en globals.css + `AnimatedWidgets` (server component).
 
+## Testing
+
+- Sin BD de test real — todo se testea mockeando `@/shared/lib/db` (`jest.mock`). Para verificar que una query REALMENTE filtra por la columna correcta (no solo que el mock fue llamado), capturar la condición real que la query arma con `eq`/`and` de drizzle-orm (SIN mockear esas funciones) y convertirla a SQL con `new PgDialect().sqlToQuery(condition)` (`drizzle-orm/pg-core`) — permite `expect(sql).toContain('"tabla"."columna" = $')` y `expect(params).toContain(valor)`. Ver `__tests__/integration/household-isolation.test.ts` (builder mock encadenable `from/where/limit/...` que devuelve un thenable).
+- Tras escribir un guard/filtro de seguridad o de integridad de datos, verificar con un **test de mutación**: comentar/revertir la línea del fix, correr el test, confirmar que FALLA, y recién ahí restaurar. Evita tests vacuos que pasan sin importar el código real.
+- `cacheTag()` de `next/cache` TIRA ERROR si se llama fuera de un contexto real de "use cache" (chequea `process.env.__NEXT_USE_CACHE`) — cualquier test que importe (aunque sea indirectamente) una función con `'use cache'` necesita `jest.mock("next/cache", () => ({ cacheTag: jest.fn() }))`.
+
 ## Comandos útiles
 
 ```bash
@@ -258,6 +281,8 @@ npm run dev
 | `src/shared/lib/db/helpers.ts` | `currentPeriodMonth()`, `parseMonthParam()` |
 | `src/shared/lib/billing.ts` | `effectiveBillingMonth()` para tarjetas con fecha de corte |
 | `src/auth/queries.ts` | `getUser()` — Supabase session |
-| `src/onboarding/queries.ts` | `getUserHousehold(userId)` |
+| `src/household/queries.ts` | `getUserHousehold(userId)`, `getHouseholdMembers` |
+| `src/household/guards.ts` | `requireHousehold()` — guard combinado auth+household |
+| `src/shared/lib/db/installments.ts` | `getSharedInstallmentsPaidCounts`, `effectiveInstallmentsPaid` |
 | `src/resumen/month-utils.ts` | `currentMonth()`, `monthToDate()`, `elapsedMonths()` |
 | `src/app/globals.css` | Design tokens CSS (dark mode, colores, sombras) |
