@@ -202,6 +202,28 @@ describe("control positivo: resumen/queries.ts filtra fixed_expense_payment.hous
     expect(sql).toContain(`"fixed_expense_payment"."household_id" = $`);
     expect(params).toContain(HOUSEHOLD_A);
   });
+
+  it("getMonthlySummary incluye categorías globales (household_id null) además de las propias del hogar", async () => {
+    const paymentsBuilder = makeBuilder([]);
+    const installmentsBuilder = makeBuilder([]);
+    const oneTimeBuilder = makeBuilder([]);
+    const categoriesBuilder = makeBuilder([]);
+    mockSelect
+      .mockReturnValueOnce(paymentsBuilder.builder)
+      .mockReturnValueOnce(installmentsBuilder.builder)
+      .mockReturnValueOnce(oneTimeBuilder.builder)
+      .mockReturnValueOnce(categoriesBuilder.builder);
+
+    const { getMonthlySummary } = await import("@/resumen/queries");
+    await getMonthlySummary(HOUSEHOLD_A, "2026-07-01", USER_ID);
+
+    // Bug real: filtrar solo por eq(household_id) excluía las categorías del
+    // sistema (household_id null) — todo terminaba mostrando "Sin categoría".
+    const { sql, params } = sqlOf(categoriesBuilder.wheres[0]);
+    expect(sql).toContain(`"category"."household_id" is null`);
+    expect(sql).toContain(`"category"."household_id" = $`);
+    expect(params).toContain(HOUSEHOLD_A);
+  });
 });
 
 describe("aislamiento por miembro: pending_expense solo lo ve su dueño", () => {

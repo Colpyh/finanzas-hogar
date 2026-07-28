@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
 import { expense, fixedExpensePayment, category } from "@/shared/lib/db/schema";
-import { eq, and, isNull, lte } from "drizzle-orm";
+import { eq, and, or, isNull, lte } from "drizzle-orm";
 import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { visibleToUser } from "@/shared/lib/db/visibility";
@@ -74,11 +74,12 @@ export async function getMonthlySummary(
           visibleToUser(userId)
         )
       ),
-    // category names and budgets (solo las del hogar)
+    // category names and budgets — incluye las globales (household_id null,
+    // visibles para todo hogar) además de las propias del hogar.
     db
       .select({ id: category.id, name: category.name, monthlyBudget: category.monthlyBudget })
       .from(category)
-      .where(eq(category.householdId, householdId)),
+      .where(or(isNull(category.householdId), eq(category.householdId, householdId))),
   ]);
 
   const fixedTotal = fixedPaymentRows.reduce(
