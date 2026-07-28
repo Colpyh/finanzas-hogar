@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -250,13 +251,28 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
                 <button
                   type="button"
                   onClick={() => {
-                    setReceiptItems((prev) => prev.filter((_, j) => j !== i));
+                    const removedItem = item;
+                    const removedIndex = i;
+                    setReceiptItems((prev) => prev.filter((_, j) => j !== removedIndex));
                     // Al sacar un ítem, restar su valor del monto total en vez de
                     // recalcularlo desde cero — así no se pisa un ajuste manual
                     // que el usuario ya haya hecho en el campo de arriba.
                     setAmount((prev) => {
                       const current = parseFloat(prev) || 0;
-                      return String(Math.max(0, current - item.total));
+                      return String(Math.max(0, current - removedItem.total));
+                    });
+                    toast(`Ítem quitado: ${removedItem.description}`, {
+                      action: {
+                        label: "Deshacer",
+                        onClick: () => {
+                          setReceiptItems((prev) => {
+                            const next = [...prev];
+                            next.splice(removedIndex, 0, removedItem);
+                            return next;
+                          });
+                          setAmount((prev) => String((parseFloat(prev) || 0) + removedItem.total));
+                        },
+                      },
                     });
                   }}
                   className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
