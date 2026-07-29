@@ -4,6 +4,7 @@ import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
 import { getPendingBalances } from "@/balances/queries";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { SettleButton } from "@/balances/components/settle-button";
+import { ItemDetailToggle } from "@/balances/components/item-detail-toggle";
 
 export const metadata: Metadata = { title: "Balances" };
 
@@ -151,15 +152,18 @@ export default async function BalancesPage() {
                         </span>
                       </div>
                     </div>
-                    <SettleButton
-                      expenseId={item.expenseId}
-                      description={item.description}
-                      shareAmount={item.shareAmount}
-                      periodMonth={item.periodMonth}
-                      debtorId={item.debtorId}
-                      debtorName={memberMap.get(item.debtorId) ?? "el deudor"}
-                      iAmCreditor={item.payerId === user.id}
-                    />
+                    <div className="flex items-center justify-between gap-2 flex-wrap mt-2">
+                      <ItemDetailToggle categoryName={item.categoryName} type={item.type} />
+                      <SettleButton
+                        expenseId={item.expenseId}
+                        description={item.description}
+                        shareAmount={item.shareAmount}
+                        periodMonth={item.periodMonth}
+                        debtorId={item.debtorId}
+                        debtorName={memberMap.get(item.debtorId) ?? "el deudor"}
+                        iAmCreditor={item.payerId === user.id}
+                      />
+                    </div>
                   </div>
                 );
               })}

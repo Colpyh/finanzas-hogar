@@ -1,6 +1,6 @@
 import { db } from "@/shared/lib/db";
-import { expense, fixedExpensePayment } from "@/shared/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { expense, fixedExpensePayment, category } from "@/shared/lib/db/schema";
+import { eq, and, isNull, or } from "drizzle-orm";
 import { cacheTag } from "next/cache";
 import { hhTag } from "@/shared/lib/cache-tags";
 import { splitShare } from "@/shared/lib/split-share";
@@ -8,7 +8,8 @@ import { splitShare } from "@/shared/lib/split-share";
 export type BalanceItem = {
   expenseId: string;
   description: string;
-  type: "fixed" | "installment";
+  type: "fixed" | "variable" | "installment" | "one_time";
+  categoryName: string;
   totalAmount: number;
   shareAmount: number;
   payerId: string;
@@ -50,7 +51,7 @@ async function getHouseholdDebtItems(
   memberIds: string[]
 ): Promise<BalanceItem[]> {
   'use cache'
-  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"))
+  cacheTag(householdId, hhTag(householdId, "expenses"), hhTag(householdId, "payments"), hhTag(householdId, "categories"))
   const expenses = await db
     .select({
       id: expense.id,
@@ -58,6 +59,7 @@ async function getHouseholdDebtItems(
       description: expense.description,
       amount: expense.amount,
       installmentAmount: expense.installmentAmount,
+      categoryId: expense.categoryId,
     })
     .from(expense)
     .where(
@@ -70,6 +72,15 @@ async function getHouseholdDebtItems(
     );
 
   if (expenses.length === 0) return [];
+
+  // Incluye las categorías globales (household_id null) además de las
+  // propias del hogar — omitirlas deja "Sin categoría" en cualquier gasto
+  // categorizado con una default (mismo bug que tuvo resumen/queries.ts).
+  const categories = await db
+    .select({ id: category.id, name: category.name })
+    .from(category)
+    .where(or(isNull(category.householdId), eq(category.householdId, householdId)));
+  const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
 
   // All payments for shared expenses, across every month (no period filter).
   // isPrivate=false: un gasto compartido+privado (estado contradictorio; el
@@ -136,7 +147,8 @@ async function getHouseholdDebtItems(
         items.push({
           expenseId: exp.id,
           description: exp.description,
-          type: exp.type as "fixed" | "installment",
+          type: exp.type,
+          categoryName: categoryMap.get(exp.categoryId) ?? "Sin categoría",
           totalAmount,
           shareAmount,
           payerId: payer.paidBy,

@@ -103,11 +103,13 @@ describe("filtros indirectos vía JOIN (fixed_expense_payment leída sin su prop
 
   it("balances/queries.ts getPendingBalances filtra ambas queries (expenses directo + allPayments vía join) por el household correcto", async () => {
     const expensesBuilder = makeBuilder([
-      { id: EXPENSE_ID, type: "fixed", description: "Arriendo", amount: "100000", installmentAmount: null },
+      { id: EXPENSE_ID, type: "fixed", description: "Arriendo", amount: "100000", installmentAmount: null, categoryId: null },
     ]);
+    const categoriesBuilder = makeBuilder([]);
     const paymentsBuilder = makeBuilder([]);
     mockSelect
       .mockReturnValueOnce(expensesBuilder.builder)
+      .mockReturnValueOnce(categoriesBuilder.builder)
       .mockReturnValueOnce(paymentsBuilder.builder);
 
     const { getPendingBalances } = await import("@/balances/queries");
@@ -120,6 +122,14 @@ describe("filtros indirectos vía JOIN (fixed_expense_payment leída sin su prop
     const paymentsWhere = sqlOf(paymentsBuilder.wheres[0]);
     expect(paymentsWhere.sql).toContain(`"expense"."household_id" = $`);
     expect(paymentsWhere.params).toContain(HOUSEHOLD_A);
+
+    // Mismo bug que tuvo resumen/queries.ts: sin el isNull, las categorías
+    // globales (household_id null) quedan afuera y el detalle muestra
+    // "Sin categoría" para cualquier gasto con una categoría default.
+    const categoriesWhere = sqlOf(categoriesBuilder.wheres[0]);
+    expect(categoriesWhere.sql).toContain(`"category"."household_id" is null`);
+    expect(categoriesWhere.sql).toContain(`"category"."household_id" = $`);
+    expect(categoriesWhere.params).toContain(HOUSEHOLD_A);
   });
 });
 
