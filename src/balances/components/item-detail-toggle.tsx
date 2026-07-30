@@ -11,6 +11,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 type Props = {
+  description: string;
   categoryName: string;
   type: "fixed" | "variable" | "installment" | "one_time";
   /** Signed URL (1h) de la boleta escaneada — null si no tiene. */
@@ -22,7 +23,7 @@ type Props = {
  * de un flex row con `flex-wrap` — el bloque expandido lleva `w-full` para
  * saltar a su propia línea sin competir por ancho con el botón "Saldar".
  */
-export function ItemDetailToggle({ categoryName, type, receiptUrl }: Props) {
+export function ItemDetailToggle({ description, categoryName, type, receiptUrl }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -37,6 +38,9 @@ export function ItemDetailToggle({ categoryName, type, receiptUrl }: Props) {
       </button>
       {open && (
         <div className="w-full text-[12px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 space-y-1.5">
+          <p>
+            Descripción: <span className="text-foreground font-medium">{description}</span>
+          </p>
           <p>
             Categoría: <span className="text-foreground font-medium">{categoryName}</span>
           </p>

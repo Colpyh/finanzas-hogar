@@ -169,6 +169,7 @@ export default async function BalancesPage() {
                     </div>
                     <div className="flex items-center justify-between gap-2 flex-wrap mt-2">
                       <ItemDetailToggle
+                        description={item.description}
                         categoryName={item.categoryName}
                         type={item.type}
                         receiptUrl={item.receiptImagePath ? (receiptUrlMap.get(item.receiptImagePath) ?? null) : null}
