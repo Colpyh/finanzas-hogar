@@ -172,6 +172,7 @@ export default async function BalancesPage() {
                         description={item.description}
                         categoryName={item.categoryName}
                         type={item.type}
+                        notes={item.notes}
                         receiptUrl={item.receiptImagePath ? (receiptUrlMap.get(item.receiptImagePath) ?? null) : null}
                       />
                       <SettleButton

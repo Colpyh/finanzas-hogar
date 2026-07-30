@@ -88,6 +88,7 @@ export async function confirmPendingExpense(
           amount: parsed.amount,
           currency: "CLP",
           expenseDate: parsed.expenseDate,
+          notes: parsed.notes ?? null,
           isPrivate: parsed.isPrivate,
           isShared: parsed.isShared,
           ...(matchedCardId ? { cardId: matchedCardId } : {}),

@@ -12,6 +12,7 @@ export type BalanceItem = {
   categoryName: string;
   /** Ruta en el bucket privado `receipts` — null si no tiene boleta escaneada. */
   receiptImagePath: string | null;
+  notes: string | null;
   totalAmount: number;
   shareAmount: number;
   payerId: string;
@@ -63,6 +64,7 @@ async function getHouseholdDebtItems(
       installmentAmount: expense.installmentAmount,
       categoryId: expense.categoryId,
       receiptImagePath: expense.receiptImagePath,
+      notes: expense.notes,
     })
     .from(expense)
     .where(
@@ -153,6 +155,7 @@ async function getHouseholdDebtItems(
           type: exp.type,
           categoryName: categoryMap.get(exp.categoryId) ?? "Sin categoría",
           receiptImagePath: exp.receiptImagePath ?? null,
+          notes: exp.notes ?? null,
           totalAmount,
           shareAmount,
           payerId: payer.paidBy,

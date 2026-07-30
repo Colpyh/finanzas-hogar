@@ -37,6 +37,7 @@ export const expense = pgTable(
     description: text("description").notNull(),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
     currency: text("currency").notNull().default("CLP"),
+    notes: text("notes"), // opcional — hoy solo se carga desde confirmPendingExpense
 
     // Fixed expense fields
     recurrenceDay: smallint("recurrence_day"), // 1-31, day of month bill is due

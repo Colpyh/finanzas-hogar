@@ -179,6 +179,31 @@ describe("confirmPendingExpense", () => {
     expect(values.expenseDate).toBe("2026-07-20");
   });
 
+  it("persiste las notas en el gasto creado", async () => {
+    const pendingChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([PENDING_ROW]),
+    };
+    mockTxSelect.mockReturnValue(pendingChain);
+
+    const insertChain = {
+      values: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockResolvedValue([{ id: UUID_EXPENSE }]),
+    };
+    mockTxInsert.mockReturnValueOnce(insertChain);
+    mockTxUpdate.mockReturnValue({
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockResolvedValue([{ id: UUID_PENDING }]),
+    });
+
+    const { confirmPendingExpense } = await import("@/email-inbound/actions");
+    await confirmPendingExpense({ ...VALID_INPUT, notes: "Pagado en cuotas por la app del banco" });
+
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.notes).toBe("Pagado en cuotas por la app del banco");
+  });
+
   it("auto-links the card when parsedCardLast4 matches exactly one card", async () => {
     const UUID_CARD = "550e8400-e29b-41d4-a716-446655440025";
     const pendingChain = {

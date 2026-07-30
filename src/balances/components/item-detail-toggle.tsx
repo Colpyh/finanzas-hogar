@@ -14,6 +14,7 @@ type Props = {
   description: string;
   categoryName: string;
   type: "fixed" | "variable" | "installment" | "one_time";
+  notes?: string | null;
   /** Signed URL (1h) de la boleta escaneada — null si no tiene. */
   receiptUrl?: string | null;
 };
@@ -23,7 +24,7 @@ type Props = {
  * de un flex row con `flex-wrap` — el bloque expandido lleva `w-full` para
  * saltar a su propia línea sin competir por ancho con el botón "Saldar".
  */
-export function ItemDetailToggle({ description, categoryName, type, receiptUrl }: Props) {
+export function ItemDetailToggle({ description, categoryName, type, notes, receiptUrl }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -47,6 +48,11 @@ export function ItemDetailToggle({ description, categoryName, type, receiptUrl }
           <p>
             Tipo: <span className="text-foreground font-medium">{TYPE_LABELS[type] ?? type}</span>
           </p>
+          {notes && (
+            <p>
+              Notas: <span className="text-foreground font-medium">{notes}</span>
+            </p>
+          )}
           {receiptUrl && (
             <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="block pt-0.5">
               <img
