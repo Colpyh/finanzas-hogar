@@ -19,11 +19,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { confirmPendingExpense } from "@/email-inbound/actions";
-import { formatCurrency } from "@/shared/components/currency-display";
 import { toast } from "sonner";
 import type { PendingExpenseRow } from "@/shared/lib/db/schema";
 
 type Category = { id: string; name: string };
+
+/** Mismo patrón que purchase-form.tsx: toISOString() cae en el día
+ * siguiente en huso horario negativo (Chile) — usar getters locales. */
+function todayISO(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 type Props = {
   item: PendingExpenseRow | null;
@@ -53,10 +61,13 @@ export function ConfirmExpenseDialog({
   const [description, setDescription] = useState(
     item?.parsedMerchant ?? ""
   );
+  const [amount, setAmount] = useState(item?.parsedAmount ?? "");
+  const [expenseDate, setExpenseDate] = useState(item?.parsedDate ?? todayISO());
   const [notes, setNotes] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [categoryError, setCategoryError] = useState(false);
+  const [amountError, setAmountError] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   // Al abrir para un pendiente, RESETEAR todo el form: sembrar categoría
@@ -67,12 +78,15 @@ export function ConfirmExpenseDialog({
     if (open) {
       setCategoryId(suggestedCategoryId ?? "");
       setDescription(item?.parsedMerchant ?? "");
+      setAmount(item?.parsedAmount ?? "");
+      setExpenseDate(item?.parsedDate ?? todayISO());
       setNotes("");
       setIsPrivate(false);
       setIsShared(false);
       setCategoryError(false);
+      setAmountError(false);
     }
-  }, [open, suggestedCategoryId, item?.parsedMerchant]);
+  }, [open, suggestedCategoryId, item?.parsedMerchant, item?.parsedAmount, item?.parsedDate]);
 
   // Sync description when item changes
   const effectiveDescription =
@@ -82,22 +96,31 @@ export function ConfirmExpenseDialog({
     if (!next) {
       setCategoryId("");
       setDescription(item?.parsedMerchant ?? "");
+      setAmount(item?.parsedAmount ?? "");
+      setExpenseDate(item?.parsedDate ?? todayISO());
       setNotes("");
       setIsPrivate(false);
       setIsShared(false);
       setCategoryError(false);
+      setAmountError(false);
       onClose();
     }
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    let hasError = false;
     if (!categoryId) {
       setCategoryError(true);
-      return;
+      hasError = true;
     }
-    if (!item) return;
+    if (!amount || Number(amount) <= 0) {
+      setAmountError(true);
+      hasError = true;
+    }
+    if (hasError || !item) return;
     setCategoryError(false);
+    setAmountError(false);
 
     // Optimista: cerrar y ocultar la card YA — la action corre detrás.
     const itemId = item.id;
@@ -105,6 +128,8 @@ export function ConfirmExpenseDialog({
       pendingExpenseId: itemId,
       categoryId,
       description: effectiveDescription || item.parsedMerchant || "Gasto",
+      amount,
+      expenseDate,
       notes: notes || undefined,
       isPrivate,
       isShared,
@@ -189,26 +214,39 @@ export function ConfirmExpenseDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-            {item?.parsedAmount && (
-              <div>
-                <span className="block text-xs">Monto</span>
-                <span className="font-medium text-foreground">
-                  {formatCurrency(Number(item.parsedAmount))}
-                </span>
-              </div>
-            )}
-            {item?.parsedDate && (
-              <div>
-                <span className="block text-xs">Fecha</span>
-                <span className="font-medium text-foreground">
-                  {item.parsedDate
-                    .split("-")
-                    .reverse()
-                    .join("/")}
-                </span>
-              </div>
-            )}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="amount">
+                Monto <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Ej: 4000"
+                className={amountError ? "border-destructive" : ""}
+              />
+              {amountError && (
+                <p className="text-xs text-destructive">El monto es requerido</p>
+              )}
+              {!item?.parsedAmount && !amountError && (
+                <p className="text-xs text-muted-foreground">
+                  No se detectó automáticamente — completalo vos
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="expenseDate">Fecha</Label>
+              <Input
+                id="expenseDate"
+                type="date"
+                value={expenseDate}
+                onChange={(e) => setExpenseDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <button

@@ -60,6 +60,8 @@ describe("confirmPendingExpense", () => {
       pendingExpenseId: "not-a-uuid",
       categoryId: UUID_CATEGORY,
       description: "Test",
+      amount: "4000.00",
+      expenseDate: "2026-04-19",
     });
     expect(result.error).toBeTruthy();
   });
@@ -70,6 +72,8 @@ describe("confirmPendingExpense", () => {
       pendingExpenseId: UUID_PENDING,
       categoryId: UUID_CATEGORY,
       description: "",
+      amount: "4000.00",
+      expenseDate: "2026-04-19",
     });
     expect(result.error).toBeTruthy();
   });
@@ -84,6 +88,8 @@ describe("confirmPendingExpense", () => {
       pendingExpenseId: UUID_PENDING,
       categoryId: UUID_CATEGORY,
       description: "MUNICH",
+      amount: "4000.00",
+      expenseDate: "2026-04-19",
     });
     expect(result.error).toBe("Este gasto pendiente ya fue procesado o no existe");
   });
@@ -124,6 +130,8 @@ describe("confirmPendingExpense", () => {
       pendingExpenseId: UUID_PENDING,
       categoryId: UUID_CATEGORY,
       description: "MUNICH",
+      amount: "4000.00",
+      expenseDate: "2026-04-19",
     });
 
     expect(mockTxInsert).toHaveBeenCalled();

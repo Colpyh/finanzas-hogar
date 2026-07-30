@@ -55,6 +55,8 @@ const VALID_INPUT = {
   pendingExpenseId: UUID_PENDING,
   categoryId: UUID_CATEGORY,
   description: "MUNICH",
+  amount: "4000.00",
+  expenseDate: "2026-04-19",
 };
 
 const PENDING_ROW = {
@@ -86,6 +88,8 @@ describe("confirmPendingExpense", () => {
       pendingExpenseId: "not-a-uuid",
       categoryId: UUID_CATEGORY,
       description: "Test",
+      amount: "4000.00",
+      expenseDate: "2026-04-19",
     });
     expect(result.error).toBeTruthy();
   });
@@ -139,6 +143,40 @@ describe("confirmPendingExpense", () => {
     expect(mockTxUpdate).toHaveBeenCalled();
     expect(mockRevalidatePath).toHaveBeenCalledWith("/gastos-pendientes");
     expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirma un pendiente sin monto/fecha detectados usando lo que completó el usuario a mano", async () => {
+    // El parser no reconoció el formato del correo — ambos quedaron null.
+    const selectChain = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([
+        { ...PENDING_ROW, parsedAmount: null, parsedDate: null },
+      ]),
+    };
+    mockTxSelect.mockReturnValue(selectChain);
+
+    const insertChain = {
+      values: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockResolvedValue([{ id: UUID_EXPENSE }]),
+    };
+    mockTxInsert.mockReturnValue(insertChain);
+    mockTxUpdate.mockReturnValue({
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockResolvedValue([{ id: UUID_PENDING }]),
+    });
+
+    const { confirmPendingExpense } = await import("@/email-inbound/actions");
+    const result = await confirmPendingExpense({
+      ...VALID_INPUT,
+      amount: "12345.00",
+      expenseDate: "2026-07-20",
+    });
+
+    expect(result).toEqual({});
+    const values = insertChain.values.mock.calls[0][0];
+    expect(values.amount).toBe("12345.00");
+    expect(values.expenseDate).toBe("2026-07-20");
   });
 
   it("auto-links the card when parsedCardLast4 matches exactly one card", async () => {

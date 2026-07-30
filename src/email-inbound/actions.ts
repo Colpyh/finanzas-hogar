@@ -57,9 +57,6 @@ export async function confirmPendingExpense(
       if (!pending) {
         throw new Error("Este gasto pendiente ya fue procesado o no existe");
       }
-      if (pending.parsedAmount === null || pending.parsedDate === null) {
-        throw new Error("Este gasto pendiente no tiene monto o fecha detectados");
-      }
 
       // Auto-vincular la tarjeta por los últimos 4 dígitos del correo del banco,
       // solo si hay exactamente UNA tarjeta activa con ese last4 (sin ambigüedad).
@@ -88,9 +85,9 @@ export async function confirmPendingExpense(
           categoryId: parsed.categoryId,
           type: "one_time",
           description: parsed.description,
-          amount: pending.parsedAmount,
+          amount: parsed.amount,
           currency: "CLP",
-          expenseDate: pending.parsedDate,
+          expenseDate: parsed.expenseDate,
           isPrivate: parsed.isPrivate,
           isShared: parsed.isShared,
           ...(matchedCardId ? { cardId: matchedCardId } : {}),
@@ -104,12 +101,12 @@ export async function confirmPendingExpense(
       // del hogar aparece con su parte pendiente en Balances desde ya
       // (mismo patrón que createPurchase para compras compartidas).
       if (parsed.isShared && members) {
-        const shareAmount = splitShareForDb(pending.parsedAmount, members.length);
+        const shareAmount = splitShareForDb(parsed.amount, members.length);
         await tx.insert(fixedExpensePayment).values({
           expenseId: created.id,
           householdId: household.id,
           paidBy: user.id,
-          periodMonth: monthFromDate(pending.parsedDate),
+          periodMonth: monthFromDate(parsed.expenseDate),
           amount: shareAmount,
           status: "paid",
         });
