@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PurchaseForm } from "@/compras/components/purchase-form";
 import { analyzeReceipt, type AnalyzeReceiptResult } from "@/receipts/actions";
+import { compressImage } from "@/receipts/lib/compress-image";
 import { Camera, Loader2, RotateCcw } from "lucide-react";
 
 type Category = { id: string; name: string };
@@ -11,24 +12,6 @@ type Member = { userId: string; displayName: string };
 type Card = { id: string; name: string; lastFour: string | null; color: string; creditLimit: number | null; used: number };
 
 type Props = { categories: Category[]; members: Member[]; cards: Card[] };
-
-/**
- * Reduce la foto a máx 1280px por lado y la recomprime a JPEG (~150-300KB):
- * suficiente para que la IA lea la boleta, liviano para subir y almacenar.
- */
-async function compressImage(file: File): Promise<{ base64: string; dataUrl: string }> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas no disponible");
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-  return { base64: dataUrl.split(",")[1] ?? "", dataUrl };
-}
 
 export function ReceiptCapture({ categories, members, cards }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);

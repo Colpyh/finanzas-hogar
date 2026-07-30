@@ -18,8 +18,10 @@ import { CardPills } from "@/shared/components/card-pills";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { createPurchaseSchema } from "@/compras/types";
 import { createPurchase } from "@/compras/actions";
+import { uploadReceiptImage } from "@/receipts/actions";
+import { compressImage } from "@/receipts/lib/compress-image";
 import type { ReceiptItem } from "@/receipts/types";
-import { X } from "lucide-react";
+import { ImagePlus, Loader2, X } from "lucide-react";
 
 type Category = { id: string; name: string };
 type Member = { userId: string; displayName: string };
@@ -88,6 +90,32 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
   // Guard SINCRÓNICO contra doble-submit: el estado `loading` no alcanza a
   // deshabilitar el botón ante un doble tap rápido (React re-renderiza después).
   const submittingRef = useRef(false);
+  // Imagen simple de respaldo (sin IA) — solo en el alta manual, no cuando ya
+  // viene de la boleta escaneada (esa trae su propia imagen en `receipt`).
+  const [attachedImage, setAttachedImage] = useState<{ path: string; previewUrl: string } | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAttachImage(file: File) {
+    setImageError(null);
+    setImageUploading(true);
+    try {
+      // Sin IA de por medio no hace falta legibilidad de texto — se puede
+      // comprimir más que en el flujo de "Foto de boleta" (1280px/0.82).
+      const { base64, dataUrl } = await compressImage(file, { maxSize: 1000, quality: 0.72 });
+      const res = await uploadReceiptImage(base64, "image/jpeg");
+      if (res.error || !res.imagePath) {
+        setImageError(res.error ?? "No se pudo subir la imagen");
+        return;
+      }
+      setAttachedImage({ path: res.imagePath, previewUrl: dataUrl });
+    } catch {
+      setImageError("No se pudo procesar la imagen — probá de nuevo.");
+    } finally {
+      setImageUploading(false);
+    }
+  }
 
   // Sin prefill, arrancar con los últimos valores usados (en effect para no
   // divergir del HTML del servidor en la hidratación).
@@ -130,7 +158,9 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
             receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
             receiptImagePath: receipt.imagePath,
           }
-        : {}),
+        : attachedImage
+          ? { receiptImagePath: attachedImage.path }
+          : {}),
     });
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -219,6 +249,59 @@ export function PurchaseForm({ categories, members, cards = [], initial, receipt
           className="h-11"
         />
       </div>
+
+      {!receipt && (
+        <div className="space-y-1.5">
+          <Label>Foto de respaldo (opcional)</Label>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleAttachImage(f);
+              e.target.value = "";
+            }}
+          />
+          {attachedImage ? (
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2">
+              {/* eslint-disable-next-line @next/next/no-img-element -- dataURL local, no optimizable */}
+              <img
+                src={attachedImage.previewUrl}
+                alt="Respaldo del gasto"
+                className="w-12 h-12 rounded-lg object-cover shrink-0"
+              />
+              <p className="flex-1 text-xs text-muted-foreground">Imagen adjuntada</p>
+              <button
+                type="button"
+                onClick={() => setAttachedImage(null)}
+                className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                aria-label="Quitar imagen"
+                disabled={loading}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={loading || imageUploading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-card px-4 py-3 text-sm text-muted-foreground hover:bg-muted/40 transition-colors"
+            >
+              {imageUploading ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <ImagePlus size={15} />
+              )}
+              {imageUploading ? "Subiendo..." : "Adjuntar imagen"}
+            </button>
+          )}
+          {imageError && <p className="text-xs text-destructive">{imageError}</p>}
+        </div>
+      )}
 
       {receipt && receiptItems.length > 0 && (
         <div className="space-y-1.5">
