@@ -5,6 +5,7 @@ import { getPendingBalances } from "@/balances/queries";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { SettleButton } from "@/balances/components/settle-button";
 import { ItemDetailToggle } from "@/balances/components/item-detail-toggle";
+import { createClient } from "@/shared/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Balances" };
 
@@ -36,6 +37,20 @@ export default async function BalancesPage() {
       isOwed: b.net > 0,
     }))
   );
+
+  // Signed URLs (batch) para las compras con boleta escaneada — bucket
+  // privado, 1h de validez, mismo patrón que ReceiptDetail.
+  const receiptPaths = Array.from(
+    new Set(allItems.map((i) => i.receiptImagePath).filter((p): p is string => p !== null))
+  );
+  const receiptUrlMap = new Map<string, string>();
+  if (receiptPaths.length > 0) {
+    const supabase = await createClient();
+    const { data } = await supabase.storage.from("receipts").createSignedUrls(receiptPaths, 3600);
+    for (const row of data ?? []) {
+      if (row.signedUrl && row.path) receiptUrlMap.set(row.path, row.signedUrl);
+    }
+  }
 
   // Payer avatar color — deterministic from name
   function avatarGradient(name: string): string {
@@ -153,7 +168,11 @@ export default async function BalancesPage() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 flex-wrap mt-2">
-                      <ItemDetailToggle categoryName={item.categoryName} type={item.type} />
+                      <ItemDetailToggle
+                        categoryName={item.categoryName}
+                        type={item.type}
+                        receiptUrl={item.receiptImagePath ? (receiptUrlMap.get(item.receiptImagePath) ?? null) : null}
+                      />
                       <SettleButton
                         expenseId={item.expenseId}
                         description={item.description}

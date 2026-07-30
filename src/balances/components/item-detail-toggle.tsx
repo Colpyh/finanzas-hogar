@@ -13,6 +13,8 @@ const TYPE_LABELS: Record<string, string> = {
 type Props = {
   categoryName: string;
   type: "fixed" | "variable" | "installment" | "one_time";
+  /** Signed URL (1h) de la boleta escaneada — null si no tiene. */
+  receiptUrl?: string | null;
 };
 
 /**
@@ -20,7 +22,7 @@ type Props = {
  * de un flex row con `flex-wrap` — el bloque expandido lleva `w-full` para
  * saltar a su propia línea sin competir por ancho con el botón "Saldar".
  */
-export function ItemDetailToggle({ categoryName, type }: Props) {
+export function ItemDetailToggle({ categoryName, type, receiptUrl }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -34,13 +36,22 @@ export function ItemDetailToggle({ categoryName, type }: Props) {
         <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="w-full text-[12px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 space-y-0.5">
+        <div className="w-full text-[12px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 space-y-1.5">
           <p>
             Categoría: <span className="text-foreground font-medium">{categoryName}</span>
           </p>
           <p>
             Tipo: <span className="text-foreground font-medium">{TYPE_LABELS[type] ?? type}</span>
           </p>
+          {receiptUrl && (
+            <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="block pt-0.5">
+              <img
+                src={receiptUrl}
+                alt="Boleta escaneada"
+                className="rounded-lg border border-border max-h-40 w-auto"
+              />
+            </a>
+          )}
         </div>
       )}
     </>
