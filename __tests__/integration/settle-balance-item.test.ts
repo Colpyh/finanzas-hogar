@@ -31,11 +31,14 @@ jest.mock("@/household/queries", () => ({
 
 const mockSelect = jest.fn();
 const mockInsert = jest.fn();
+const mockTxInsert = jest.fn();
+const mockTransaction = jest.fn();
 
 jest.mock("@/shared/lib/db", () => ({
   db: {
     select: mockSelect,
     insert: mockInsert,
+    transaction: mockTransaction,
   },
 }));
 
@@ -67,6 +70,9 @@ const EXPENSE_ROW = {
 describe("settleBalanceItem", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({ insert: mockTxInsert })
+    );
   });
 
   it("returns error when user has no household", async () => {
@@ -150,5 +156,88 @@ describe("settleBalanceItem", () => {
 
     expect(mockRevalidatePath).toHaveBeenCalledWith("/balances");
     expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("settleAllWithMember", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({ insert: mockTxInsert })
+    );
+  });
+
+  const ITEM_1 = { expenseId: UUID_EXPENSE, periodMonth: PERIOD, debtorId: UUID_OTHER };
+  const ITEM_2 = { expenseId: "550e8400-e29b-41d4-a716-446655440014", periodMonth: PERIOD, debtorId: UUID_USER };
+
+  it("returns {} without touching the DB when items is empty", async () => {
+    const { settleAllWithMember } = await import("@/balances/actions");
+    const result = await settleAllWithMember([]);
+    expect(result).toEqual({});
+    expect(mockSelect).not.toHaveBeenCalled();
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects when any debtor is not a household member", async () => {
+    const { settleAllWithMember } = await import("@/balances/actions");
+    const result = await settleAllWithMember([
+      ITEM_1,
+      { ...ITEM_2, debtorId: "550e8400-e29b-41d4-a716-4466554400ff" },
+    ]);
+    expect(result).toEqual({ error: "El deudor no pertenece al hogar" });
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("settles multiple items across both directions in a single transaction", async () => {
+    mockSelect
+      .mockReturnValueOnce(selectChain([EXPENSE_ROW])) // computeShareAmount item 1
+      .mockReturnValueOnce(selectChain([{ ...EXPENSE_ROW, id: ITEM_2.expenseId }])); // item 2
+    mockTxInsert.mockReturnValue(insertChain());
+
+    const { settleAllWithMember } = await import("@/balances/actions");
+    const result = await settleAllWithMember([ITEM_1, ITEM_2]);
+
+    expect(result).toEqual({});
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockTxInsert).toHaveBeenCalledTimes(2);
+    // insertChain() se llama una sola vez (mockReturnValue) → mismo objeto en
+    // ambas invocaciones de tx.insert → las dos llamadas a .values() quedan
+    // en el mismo mock, en orden.
+    const valuesMock = mockTxInsert.mock.results[0].value.values as jest.Mock;
+    expect(valuesMock.mock.calls[0][0].paidBy).toBe(UUID_OTHER);
+    expect(valuesMock.mock.calls[1][0].paidBy).toBe(UUID_USER);
+  });
+
+  it("aborts and returns error when one of the expenses no longer exists", async () => {
+    mockSelect
+      .mockReturnValueOnce(selectChain([EXPENSE_ROW])) // item 1 found
+      .mockReturnValueOnce(selectChain([])); // item 2 not found
+
+    const { settleAllWithMember } = await import("@/balances/actions");
+    const result = await settleAllWithMember([ITEM_1, ITEM_2]);
+
+    expect(result).toEqual({ error: "Alguno de los gastos ya no existe" });
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("returns a distinct error on unique constraint violation (race with another settle)", async () => {
+    mockSelect
+      .mockReturnValueOnce(selectChain([EXPENSE_ROW]))
+      .mockReturnValueOnce(selectChain([{ ...EXPENSE_ROW, id: ITEM_2.expenseId }]));
+
+    const uniqueErr = Object.assign(
+      new Error('duplicate key value violates unique constraint "uq_expense_period_user"'),
+      { code: "23505" }
+    );
+    mockTransaction.mockImplementationOnce(async () => {
+      throw uniqueErr;
+    });
+
+    const { settleAllWithMember } = await import("@/balances/actions");
+    const result = await settleAllWithMember([ITEM_1, ITEM_2]);
+
+    expect(result).toEqual({
+      error: "Alguno de los ítems ya estaba saldado — refrescá la página e intentá de nuevo.",
+    });
   });
 });

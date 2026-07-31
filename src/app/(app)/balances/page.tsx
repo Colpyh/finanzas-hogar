@@ -4,6 +4,7 @@ import { getHouseholdMembers, getUserHousehold } from "@/household/queries";
 import { getPendingBalances } from "@/balances/queries";
 import { formatCurrency } from "@/shared/components/currency-display";
 import { SettleButton } from "@/balances/components/settle-button";
+import { SettleAllButton } from "@/balances/components/settle-all-button";
 import { ItemDetailToggle } from "@/balances/components/item-detail-toggle";
 import { createClient } from "@/shared/lib/supabase/server";
 
@@ -116,6 +117,16 @@ export default async function BalancesPage() {
                   >
                     {formatCurrency(Math.abs(b.net))}
                   </p>
+                  <div className="mt-3 flex justify-center">
+                    <SettleAllButton
+                      memberName={b.memberName}
+                      items={b.items.map((item) => ({
+                        expenseId: item.expenseId,
+                        periodMonth: item.periodMonth,
+                        debtorId: item.debtorId,
+                      }))}
+                    />
+                  </div>
                 </div>
               );
             })}
