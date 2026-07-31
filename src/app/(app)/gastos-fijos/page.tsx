@@ -32,6 +32,9 @@ type EnrichedExpense = {
   currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;
   paidByName?: string | null;
+  /** Nombre de la otra persona en un gasto compartido de 2 — para el atajo
+   * "Registrar pago de X" aunque todavía nadie haya pagado este mes. */
+  otherMemberName?: string | null;
   myShareAmount?: string;
 };
 
@@ -91,6 +94,8 @@ export default async function GastosFijosPage({ searchParams }: Props) {
         const paidByName = otherPaidPayment
           ? (memberMap.get(otherPaidPayment.paidBy) ?? null)
           : null;
+        const otherMemberId = isShared ? members.find((m) => m.userId !== user.id)?.userId : undefined;
+        const otherMemberName = otherMemberId ? (memberMap.get(otherMemberId) ?? null) : null;
         const isVariable = e.type === "variable";
         // Para variables, el monto real del mes viene de los pagos registrados este
         // mes (fixed_expense_payment.amount), no del default e.amount (suele ser 0).
@@ -122,6 +127,7 @@ export default async function GastosFijosPage({ searchParams }: Props) {
           currentUserStatus,
           confirmedCount,
           paidByName,
+          otherMemberName,
           myShareAmount,
         };
       });

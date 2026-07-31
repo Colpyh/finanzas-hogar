@@ -26,6 +26,9 @@ type Props = {
   isSettled: boolean;
   currentUserStatus: "none" | "reserved" | "paid";
   paidByName?: string | null;
+  /** Nombre de la otra persona en un gasto compartido de 2 (aunque nadie haya
+   * pagado todavía) — para el botón "Registrar pago de X". */
+  otherMemberName?: string | null;
   myShareAmount?: string;
   periodMonth: string;
   memberCount: number;
@@ -70,6 +73,8 @@ function ActionBtn({
 type OptimisticState = {
   status?: "reserved" | "paid";
   settled?: boolean;
+  /** El OTRO miembro pagó (registrado por mí) sin tocar mi propio estado. */
+  otherPaid?: boolean;
 } | null;
 
 export function FixedExpenseCard({
@@ -78,6 +83,7 @@ export function FixedExpenseCard({
   isSettled: serverSettled,
   currentUserStatus: serverStatus,
   paidByName,
+  otherMemberName,
   myShareAmount,
   periodMonth,
   memberCount,
@@ -91,10 +97,12 @@ export function FixedExpenseCard({
   const [confirmMarkBothOpen, setConfirmMarkBothOpen] = useState(false);
   const [confirmUnmarkOpen, setConfirmUnmarkOpen] = useState(false);
   const [confirmUnmarkMineOpen, setConfirmUnmarkMineOpen] = useState(false);
+  const [confirmRegisterOtherOpen, setConfirmRegisterOtherOpen] = useState(false);
   const [upgrading, startUpgrade] = useTransition();
   const [markingBoth, startMarkBoth] = useTransition();
   const [unmarking, startUnmark] = useTransition();
   const [unmarkingMine, startUnmarkMine] = useTransition();
+  const [registeringOther, startRegisterOther] = useTransition();
   // Optimista: la card refleja el pago al tap; revierte con toast si falla.
   const [optimistic, setOptimistic] = useState<OptimisticState>(null);
 
@@ -104,7 +112,7 @@ export function FixedExpenseCard({
   }, [serverPaidThisMonth, serverSettled, serverStatus]);
 
   const currentUserStatus = optimistic?.status ?? serverStatus;
-  const isPaidThisMonth = optimistic?.status != null || serverPaidThisMonth;
+  const isPaidThisMonth = optimistic?.status != null || optimistic?.otherPaid || serverPaidThisMonth;
   const isSettled = optimistic?.settled ?? serverSettled;
 
   function handleUpgrade() {
@@ -137,6 +145,25 @@ export function FixedExpenseCard({
           toast.error(result.error);
         } else {
           toast.success("Saldado por ambos");
+        }
+      } catch {
+        setOptimistic(null);
+        toast.error("Error al registrar el pago. Intentá de nuevo.");
+      }
+    });
+  }
+
+  function handleRegisterOther() {
+    setConfirmRegisterOtherOpen(false);
+    setOptimistic({ otherPaid: true });
+    startRegisterOther(async () => {
+      try {
+        const result = await markPaidForOther(expense.id, periodMonth);
+        if (result?.error) {
+          setOptimistic(null);
+          toast.error(result.error);
+        } else {
+          toast.success(`Pago de ${otherMemberName ?? "el otro"} registrado`);
         }
       } catch {
         setOptimistic(null);
@@ -281,7 +308,18 @@ export function FixedExpenseCard({
       );
     } else {
       actionButtons = (
-        <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Registrar pago"><Check size={13} /></ActionBtn>
+        <>
+          <ActionBtn onClick={() => setDialogOpen(true)} variant="primary" title="Registrar mi pago"><Check size={13} /></ActionBtn>
+          {twoMembers && (
+            <ActionBtn
+              onClick={() => setConfirmRegisterOtherOpen(true)}
+              title={`Registrar pago de ${otherMemberName ?? "el otro"}`}
+              disabled={registeringOther}
+            >
+              <Users size={13} />
+            </ActionBtn>
+          )}
+        </>
       );
     }
   }
@@ -381,6 +419,16 @@ export function FixedExpenseCard({
         variant="destructive"
         loading={unmarking}
         onConfirm={handleUnmark}
+      />
+
+      <ConfirmDialog
+        open={confirmRegisterOtherOpen}
+        onOpenChange={setConfirmRegisterOtherOpen}
+        title={`¿Registrar pago de ${otherMemberName ?? "el otro miembro"}?`}
+        description={`Esto registrará el pago de "${expense.description}" a nombre de ${otherMemberName ?? "el otro miembro"}. Tu parte queda igual, pendiente de registrar.`}
+        confirmText="Sí, registrar"
+        loading={registeringOther}
+        onConfirm={handleRegisterOther}
       />
 
       <ConfirmDialog

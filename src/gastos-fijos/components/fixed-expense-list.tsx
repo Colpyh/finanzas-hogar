@@ -17,6 +17,7 @@ type EnrichedExpense = {
   currentUserStatus: "none" | "reserved" | "paid";
   confirmedCount: number;
   paidByName?: string | null;
+  otherMemberName?: string | null;
   myShareAmount?: string;
 };
 
@@ -52,6 +53,7 @@ function GroupCard({ expenses, periodMonth, memberCount }: { expenses: EnrichedE
           isSettled={exp.isSettled}
           currentUserStatus={exp.currentUserStatus}
           paidByName={exp.paidByName}
+          otherMemberName={exp.otherMemberName}
           myShareAmount={exp.myShareAmount}
           periodMonth={periodMonth}
           memberCount={memberCount}
