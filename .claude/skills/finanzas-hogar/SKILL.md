@@ -6,7 +6,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: colpyh
-  version: "1.7"
+  version: "1.8"
 ---
 
 ## Stack
@@ -232,6 +232,8 @@ db.select().from(expense).where(
 - **Extractor con IA**: interfaz propia `ExtractedReceipt` (`src/receipts/types.ts`); implementación actual **Gemini free tier** (`src/receipts/gemini.ts`, env `GEMINI_API_KEY`, modelo via `GEMINI_MODEL` default gemini-2.5-flash). Cambiar de proveedor = reemplazar UN archivo. Devuelve null en fallo de datos; lanza SOLO por config faltante.
 - **Regla de oro**: el total IMPRESO manda — si `itemsMatchTotal` da false, la UI marca el detalle como "revisar" pero nunca ajusta el total.
 - **Storage**: bucket privado `receipts`, path `{householdId}/{uuid}.jpg`, RLS por hogar (`is_household_member` sobre `storage.foldername(name)[1]`). Upload con el cliente AUTENTICADO (regla del proyecto: service client SOLO en webhooks). Display vía signed URL de 1h (`ReceiptDetail`).
+- **Compresión compartida**: `compressImage(file, {maxSize, quality})` vive en `src/receipts/lib/compress-image.ts` (canvas → JPEG), reusada por `ReceiptCapture` (boleta, 1280px/0.82 — necesita legibilidad para la IA) y por `PurchaseForm` (imagen simple de respaldo, 1000px/0.72 — sin OCR de por medio, se puede comprimir más).
+- **Imagen simple de respaldo (sin IA)**: en el alta manual de "Nueva compra" (`PurchaseForm`, cuando `!receipt` — o sea NO viene del flujo de boleta escaneada), hay un control "Adjuntar imagen (opcional)" que sube una foto cualquiera SIN extracción. Server action `uploadReceiptImage(base64, mimeType)` (`src/receipts/actions.ts`) — solo hace el upload al bucket `receipts` (comparte `validateImage`/`uploadToReceiptsBucket` con `analyzeReceipt`), a diferencia de `analyzeReceipt` trata el fallo de upload como error DURO (no hay ítems/total que rescatar). El path resultante se manda como `receiptImagePath` en `createPurchase` — mismo campo que usa la boleta escaneada, sin schema nuevo. Los dos flujos son mutuamente excluyentes por la presencia del prop `receipt` en `PurchaseForm`.
 
 ## Análisis con IA (insights)
 
