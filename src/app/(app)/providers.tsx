@@ -5,6 +5,7 @@ import { AppNav } from "@/shared/components/app-nav";
 import { BottomNav } from "@/shared/components/bottom-nav";
 import { UserThemeSync } from "@/shared/components/user-theme-sync";
 import { ShakeListener } from "@/shared/components/shake-listener";
+import { ChatLauncher } from "@/chat/components/chat-launcher";
 
 type Props = {
   household: HouseholdContextValue;
@@ -24,6 +25,7 @@ export function AppProviders({ household, userId, userEmail, pendingCount = 0, c
         <main className="flex-1 md:pl-[252px] pb-16 md:pb-0">{children}</main>
       </div>
       <BottomNav pendingCount={pendingCount} />
+      <ChatLauncher />
     </HouseholdContext.Provider>
   );
 }

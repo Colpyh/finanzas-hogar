@@ -6,7 +6,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: colpyh
-  version: "2.0"
+  version: "2.1"
 ---
 
 ## Stack
@@ -243,6 +243,14 @@ db.select().from(expense).where(
 - **Patrón Gemini reutilizable** (idéntico a receipts): `src/insights/gemini.ts` — `fetch` a `generativelanguage.googleapis.com`, `responseSchema` JSON estructurado, `GEMINI_API_KEY` + `GEMINI_MODEL` (default gemini-2.5-flash). Interfaz propia (`FinancialInsights` en `types.ts`) → cambiar de proveedor = reemplazar UN archivo. Devuelve null en fallo; lanza SOLO por config faltante.
 - **Bajo demanda, NO automático**: cuida cuota del free tier y no bloquea el render (~2-4s). Efímero (sin persistencia). Corte previo: si el mes no tiene datos, ni se llama a la IA.
 - **Privacidad**: solo viajan números + nombres de categorías/cuotas — NUNCA nombres de miembros ni de comercios. Mismo criterio que el OCR (que ya manda imágenes).
+
+## Chat con IA (asistente)
+
+- **Feature**: botón flotante global (`ChatLauncher`, montado en `(app)/providers.tsx`, apilado sobre el slot del `QuickAddFab`) → `Sheet` lateral → Server Action `sendChatMessage(history)` (`src/chat/actions.ts`). SOLO LECTURA: responde preguntas sobre los datos del hogar; para registrar/editar/saldar redirige a la sección de la app.
+- **Function calling de Gemini** (`src/chat/gemini.ts` → `runChat`): loop de hasta 4 vueltas de herramientas; la última fuerza texto con `functionCallingConfig.mode: "NONE"`. El turno del modelo se reenvía INTACTO (gemini-2.5 exige devolver `thoughtSignature`). Las partes `thought: true` se descartan del texto final. 429 → mensaje de cuota distinto. Lanza SOLO si falta `GEMINI_API_KEY` (misma key que receipts/insights). Cambiar de proveedor = reemplazar ese archivo.
+- **Herramientas** (`src/chat/tools.ts`): `resumen_mes`, `evolucion_anual`, `compras_del_mes`, `gastos_fijos`, `cuotas`, `balances` — reusan las queries existentes (misma visibilidad de privados, misma caché). `householdId`/`userId` salen SIEMPRE del contexto autenticado, nunca de los args de la IA. Agregar una herramienta = declaración en `CHAT_TOOL_DECLARATIONS` + handler en `HANDLERS`.
+- **Privacidad**: nombres de miembros NUNCA viajan — `buildMemberAliases` (`src/chat/aliases.ts`) traduce nombre real ↔ "Tú"/"Persona N" en ambos sentidos (insensible a tildes/mayúsculas). A diferencia de insights, SÍ viajan descripciones de compras (comercios) — sin eso no puede responder "¿cuánto gasté en X?".
+- **Efímero**: el historial vive en el estado del cliente (se pierde al recargar); al server viajan los últimos `MAX_HISTORY` (12) mensajes.
 
 ## Patrones de UI
 

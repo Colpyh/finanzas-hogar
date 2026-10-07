@@ -3,6 +3,11 @@ import type { z } from "zod";
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
+/** URL de generateContent del modelo configurado (compartida con chat/gemini.ts). */
+export function geminiGenerateUrl(apiKey: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+}
+
 type GeminiPart =
   | { text: string }
   | { inline_data: { mime_type: string; data: string } };
@@ -44,7 +49,7 @@ export async function callGemini<T>({
   let res: Response;
   try {
     res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      geminiGenerateUrl(apiKey),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
