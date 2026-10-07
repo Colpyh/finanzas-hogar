@@ -29,9 +29,19 @@ function selectChain(rows: unknown[]) {
   };
 }
 
+/** Segunda query: cuotas compartidas con ajuste manual (installmentsPaidOffset != 0). */
+function offsetsChain(rows: unknown[]) {
+  return {
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockResolvedValue(rows),
+  };
+}
+
 describe("getSharedInstallmentsPaidCounts", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockSelect.mockReset();
+    // Por defecto ningún gasto tiene ajuste manual.
+    mockSelect.mockImplementation(() => offsetsChain([]));
   });
 
   it("counts a period only when ALL members paid it", async () => {
@@ -89,6 +99,56 @@ describe("getSharedInstallmentsPaidCounts", () => {
     );
     const after = await getSharedInstallmentsPaidCounts(UUID_HOUSEHOLD, 2);
     expect(after.get(EXPENSE_A) ?? 0).toBe(0);
+  });
+});
+
+describe("getSharedInstallmentsPaidCounts — ajuste manual (offset)", () => {
+  beforeEach(() => {
+    mockSelect.mockReset();
+  });
+
+  it("suma el ajuste al conteo derivado de los pagos", async () => {
+    mockSelect
+      .mockReturnValueOnce(
+        selectChain([
+          { expenseId: EXPENSE_A, periodMonth: "2026-06-01", payers: 2 },
+          { expenseId: EXPENSE_A, periodMonth: "2026-07-01", payers: 2 },
+        ])
+      )
+      .mockReturnValueOnce(offsetsChain([{ id: EXPENSE_A, offset: 4, total: 12 }]));
+
+    const { getSharedInstallmentsPaidCounts } = await import("@/shared/lib/db/installments");
+    const counts = await getSharedInstallmentsPaidCounts(UUID_HOUSEHOLD, 2);
+
+    expect(counts.get(EXPENSE_A)).toBe(6);
+  });
+
+  it("aplica el ajuste aunque todavía no haya pagos registrados", async () => {
+    mockSelect
+      .mockReturnValueOnce(selectChain([]))
+      .mockReturnValueOnce(offsetsChain([{ id: EXPENSE_B, offset: 3, total: 12 }]));
+
+    const { getSharedInstallmentsPaidCounts } = await import("@/shared/lib/db/installments");
+    const counts = await getSharedInstallmentsPaidCounts(UUID_HOUSEHOLD, 2);
+
+    expect(counts.get(EXPENSE_B)).toBe(3);
+  });
+
+  it("acota el resultado a [0, total]", async () => {
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ expenseId: EXPENSE_A, periodMonth: "2026-07-01", payers: 2 }]))
+      .mockReturnValueOnce(
+        offsetsChain([
+          { id: EXPENSE_A, offset: 20, total: 12 },
+          { id: EXPENSE_B, offset: -5, total: 12 },
+        ])
+      );
+
+    const { getSharedInstallmentsPaidCounts } = await import("@/shared/lib/db/installments");
+    const counts = await getSharedInstallmentsPaidCounts(UUID_HOUSEHOLD, 2);
+
+    expect(counts.get(EXPENSE_A)).toBe(12);
+    expect(counts.get(EXPENSE_B)).toBe(0);
   });
 });
 

@@ -54,9 +54,13 @@ export function EditInstallmentDialog({ expense }: Props) {
         expense.id,
         {
           description,
-          // Compartidas: installmentsPaid se deriva de los pagos reales, no se
-          // edita a mano (ver shared/lib/db/installments.ts).
-          ...(isShared ? {} : { installmentsPaid }),
+          // Solo si cambió (o cambió compartido): en compartidas el server lo
+          // guarda como ajuste sobre el conteo derivado de los pagos, y
+          // reenviar el valor mostrado sin tocarlo podría pisarlo.
+          ...(installmentsPaid !== expense.installmentsPaid ||
+          isShared !== (expense.isShared ?? false)
+            ? { installmentsPaid }
+            : {}),
           isShared,
         },
         force ? { force: true } : undefined
@@ -110,20 +114,21 @@ export function EditInstallmentDialog({ expense }: Props) {
                 (máx. {expense.installmentsTotal})
               </span>
             </label>
-            {isShared ? (
-              <p className="text-sm text-muted-foreground px-3 py-2 rounded-lg border border-border bg-muted/30">
-                {installmentsPaid} — se calcula solo según los pagos registrados por cada miembro
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={expense.installmentsTotal}
+              value={installmentsPaid}
+              onChange={(e) => setInstallmentsPaid(Number(e.target.value))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              required
+            />
+            {isShared && (
+              <p className="text-xs text-muted-foreground">
+                Sube solo cuando todos registran el pago del mes. Corrígelo si empezaste con cuotas ya
+                pagadas o se te pasó un mes (si después registras ese mes, vuelve a ajustarlo).
               </p>
-            ) : (
-              <input
-                type="number"
-                min={0}
-                max={expense.installmentsTotal}
-                value={installmentsPaid}
-                onChange={(e) => setInstallmentsPaid(Number(e.target.value))}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                required
-              />
             )}
           </div>
 

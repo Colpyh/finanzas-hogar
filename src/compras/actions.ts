@@ -10,6 +10,7 @@ import { requireHousehold } from "@/household/guards";
 import { pendingDebtGuard, getPendingDebtSummary, type PendingDebtSummary } from "@/balances/guards";
 import { currentPeriodMonth, monthFromDate, isUniqueViolation } from "@/shared/lib/db/helpers";
 import { splitShareForDb } from "@/shared/lib/split-share";
+import { getSharedInstallmentDerivedCount } from "@/shared/lib/db/installments";
 import { createPurchaseSchema, createInstallmentSchema, updateExpenseSchema, updateInstallmentSchema } from "./types";
 
 export async function createPurchase(rawData: unknown): Promise<{ error?: string }> {
@@ -345,17 +346,31 @@ export async function updateInstallment(
   }
 
   // Compartidas: installmentsPaid se DERIVA de fixed_expense_payment (ver
-  // shared/lib/db/installments.ts) — no se persiste manualmente, así este
-  // form no puede desincronizar el conteo real.
+  // shared/lib/db/installments.ts) — la columna no se toca. Lo que el usuario
+  // corrige a mano se guarda como AJUSTE sobre el conteo derivado de hoy, así
+  // registrar/deshacer pagos después sigue moviendo el número correctamente.
   const willBeShared = data.isShared ?? current.isShared;
+
+  let paidUpdate: { installmentsPaid?: number; installmentsPaidOffset?: number } = {};
+  if (data.installmentsPaid !== undefined) {
+    if (willBeShared) {
+      const members = await getHouseholdMembers(household.id);
+      const derived = await getSharedInstallmentDerivedCount(
+        household.id,
+        expenseId,
+        members.length || 1
+      );
+      paidUpdate = { installmentsPaidOffset: data.installmentsPaid - derived };
+    } else {
+      paidUpdate = { installmentsPaid: data.installmentsPaid };
+    }
+  }
 
   await db
     .update(expense)
     .set({
       description: data.description,
-      ...(!willBeShared && data.installmentsPaid !== undefined
-        ? { installmentsPaid: data.installmentsPaid }
-        : {}),
+      ...paidUpdate,
       ...(data.isShared !== undefined ? { isShared: data.isShared } : {}),
     })
     .where(and(eq(expense.id, expenseId), eq(expense.householdId, household.id)));

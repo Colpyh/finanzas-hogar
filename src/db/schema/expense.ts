@@ -48,6 +48,9 @@ export const expense = pgTable(
     // Installment fields
     installmentsTotal: smallint("installments_total"),
     installmentsPaid: smallint("installments_paid").default(0),
+    // Solo compartidas: ajuste manual sumado al conteo derivado de pagos
+    // (cuotas pagadas antes de usar la app, o un mes que se pasó registrar).
+    installmentsPaidOffset: smallint("installments_paid_offset").default(0).notNull(),
     installmentAmount: numeric("installment_amount", { precision: 12, scale: 2 }),
     startMonth: date("start_month", { mode: "string" }), // YYYY-MM-DD (truncated to 1st)
 

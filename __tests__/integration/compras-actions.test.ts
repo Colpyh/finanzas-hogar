@@ -125,10 +125,26 @@ describe("updateInstallment — installmentsPaid derivado para compartidas", () 
     return { chain, setCalls };
   }
 
-  it("no persiste installmentsPaid cuando el gasto YA es compartido", async () => {
-    mockSelect.mockReturnValueOnce(
-      selectChain([{ installmentsTotal: 12, isShared: true }])
-    );
+  /** Query del conteo derivado (meses pagados por todos) — hay 1 miembro en el mock. */
+  function derivedChain(months: number) {
+    return {
+      from: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockResolvedValue(
+        Array.from({ length: months }, (_, i) => ({
+          expenseId: UUID_EXPENSE,
+          periodMonth: `2026-0${i + 1}-01`,
+          payers: 1,
+        }))
+      ),
+    };
+  }
+
+  it("compartida: guarda la corrección como ajuste sobre el conteo derivado, nunca en la columna", async () => {
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ installmentsTotal: 12, isShared: true }]))
+      .mockReturnValueOnce(derivedChain(3));
     const { chain, setCalls } = updateSetCaptureChain();
     mockUpdate.mockReturnValueOnce(chain);
 
@@ -141,12 +157,13 @@ describe("updateInstallment — installmentsPaid derivado para compartidas", () 
 
     expect(result).toEqual({});
     expect(setCalls[0]).not.toHaveProperty("installmentsPaid");
+    expect(setCalls[0]?.installmentsPaidOffset).toBe(2); // 5 deseadas − 3 derivadas
   });
 
-  it("no persiste installmentsPaid al pasar de no-compartida a compartida", async () => {
-    mockSelect.mockReturnValueOnce(
-      selectChain([{ installmentsTotal: 12, isShared: false }])
-    );
+  it("al pasar de no-compartida a compartida conserva el conteo como ajuste", async () => {
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ installmentsTotal: 12, isShared: false }]))
+      .mockReturnValueOnce(derivedChain(0));
     const { chain, setCalls } = updateSetCaptureChain();
     mockUpdate.mockReturnValueOnce(chain);
 
@@ -158,6 +175,20 @@ describe("updateInstallment — installmentsPaid derivado para compartidas", () 
     });
 
     expect(setCalls[0]).not.toHaveProperty("installmentsPaid");
+    expect(setCalls[0]?.installmentsPaidOffset).toBe(5);
+  });
+
+  it("compartida sin installmentsPaid (solo descripción) no toca el ajuste", async () => {
+    mockSelect.mockReturnValueOnce(selectChain([{ installmentsTotal: 12, isShared: true }]));
+    const { chain, setCalls } = updateSetCaptureChain();
+    mockUpdate.mockReturnValueOnce(chain);
+
+    const { updateInstallment } = await import("@/compras/actions");
+    await updateInstallment(UUID_EXPENSE, { description: "Solo renombrar", isShared: true });
+
+    expect(setCalls[0]).not.toHaveProperty("installmentsPaidOffset");
+    expect(setCalls[0]).not.toHaveProperty("installmentsPaid");
+    expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
   it("sigue persistiendo installmentsPaid para gastos NO compartidos", async () => {
